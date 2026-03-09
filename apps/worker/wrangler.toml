@@ -8,6 +8,6 @@ enabled = true
 
 [[d1_databases]]
 binding = "DB"
-database_name = "replace-with-your-d1-name"
-database_id = "replace-with-your-d1-database-id"
-# preview_database_id = "replace-with-your-preview-d1-id"
+database_name = "orders-db"
+database_id = "00000000-0000-0000-0000-000000000000"
+preview_database_id = "00000000-0000-0000-0000-000000000000"
