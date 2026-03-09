@@ -1,0 +1,8 @@
+{
+  "name": "amss",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
