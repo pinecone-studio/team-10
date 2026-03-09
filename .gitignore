@@ -1,0 +1,11 @@
+vite.config.*.timestamp*
+vitest.config.*.timestamp*
+.nx/polygraph
+
+node_modules/
+.nx/
+.codex/
+dist/
+coverage/
+.env
+.env.local
