@@ -8,6 +8,6 @@ enabled = true
 
 [[d1_databases]]
 binding = "DB"
-database_name = "replace-with-your-d1-name"
-database_id = "replace-with-your-d1-database-id"
-# preview_database_id = "replace-with-your-preview-d1-id"
+database_name = "team10-db"
+database_id = "ccf9e7e3-15ff-48fe-ab6e-835b618e6263"
+preview_database_id = "ccf9e7e3-15ff-48fe-ab6e-835b618e6263"
