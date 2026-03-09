@@ -1,0 +1,13 @@
+name = "worker"
+main = "src/index.ts"
+compatibility_date = "2026-03-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "replace-with-your-d1-name"
+database_id = "replace-with-your-d1-database-id"
+# preview_database_id = "replace-with-your-preview-d1-id"
