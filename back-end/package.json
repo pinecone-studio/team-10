@@ -2,30 +2,24 @@
   "name": "back-end",
   "version": "0.1.0",
   "private": true,
-  "description": "Cloudflare Worker backend with D1 and R2 support",
+  "description": "Next.js GraphQL backend",
   "scripts": {
     "dev": "next dev",
-    "dev:api": "wrangler dev",
     "build": "next build",
-    "build:api": "wrangler deploy --dry-run",
     "start": "next start",
     "lint": "eslint .",
-    "codegen": "graphql-codegen --config codegen.ts",
-    "typecheck:api": "tsc -p tsconfig.worker.json --noEmit",
-    "cf-typegen": "wrangler types"
+    "codegen": "graphql-codegen --config codegen.ts"
   },
   "dependencies": {
     "@apollo/server": "^5.1.0",
     "@as-integrations/next": "^4.1.0",
     "@graphql-tools/merge": "^9.1.7",
-    "drizzle-orm": "^0.45.1",
     "graphql": "^16.11.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260301.0",
     "@graphql-codegen/cli": "^5.0.3",
     "@graphql-codegen/schema-ast": "^5.0.1",
     "@graphql-codegen/typescript": "^4.1.0",
@@ -37,7 +31,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "wrangler": "^4.7.0"
+    "typescript": "^5"
   }
 }

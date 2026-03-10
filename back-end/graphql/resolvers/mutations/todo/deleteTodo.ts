@@ -1,7 +1,12 @@
 import type { MutationResolvers } from "../../../generated/types";
-import { deleteTodo as deleteTodoItem } from "../../../lib/todo-api";
+import { todos } from "../../store";
 
 export const deleteTodo: NonNullable<MutationResolvers["deleteTodo"]> = (
   _,
   { id },
-) => deleteTodoItem(id);
+) => {
+  const index = todos.findIndex((t) => t.id === id);
+  if (index === -1) return false;
+  todos.splice(index, 1);
+  return true;
+};
