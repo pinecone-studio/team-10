@@ -1,0 +1,48 @@
+name: PR Change Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  enforce-single-surface:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate changed areas
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          CHANGED_FILES="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
+          echo "Changed files:"
+          echo "${CHANGED_FILES}"
+
+          backend_changed=false
+          frontend_changed=false
+
+          if echo "${CHANGED_FILES}" | grep -qE '^apps/worker/'; then
+            backend_changed=true
+          fi
+
+          if echo "${CHANGED_FILES}" | grep -qE '^apps/web/'; then
+            frontend_changed=true
+          fi
+
+          echo "backend_changed=${backend_changed}"
+          echo "frontend_changed=${frontend_changed}"
+
+          if [ "${backend_changed}" = true ] && [ "${frontend_changed}" = true ]; then
+            echo "::error::This PR changes both backend (apps/worker) and frontend (apps/web). Split into separate PRs."
+            exit 1
+          fi
