@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS assets;
 DROP TABLE IF EXISTS storage;
 DROP TABLE IF EXISTS receive_items;
 DROP TABLE IF EXISTS receives;
+DROP TABLE IF EXISTS order_item_images;
 DROP TABLE IF EXISTS order_item_attributes;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
@@ -61,6 +62,7 @@ CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user INTEGER NOT NULL,
   office_id INTEGER NOT NULL,
+  -- Each order references a single process definition.
   order_process_id INTEGER NOT NULL,
   why_ordered TEXT NOT NULL,
   status TEXT NOT NULL CHECK (
@@ -87,7 +89,6 @@ CREATE TABLE IF NOT EXISTS order_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   order_id INTEGER NOT NULL,
   item_name TEXT NOT NULL,
-  image TEXT,
   category TEXT NOT NULL,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   unit_cost REAL NOT NULL CHECK (unit_cost >= 0),
@@ -97,6 +98,17 @@ CREATE TABLE IF NOT EXISTS order_items (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS order_item_images (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_item_id INTEGER NOT NULL,
+  image_url TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE,
+  UNIQUE (order_item_id, image_url)
 );
 
 CREATE TABLE IF NOT EXISTS order_item_attributes (
@@ -199,6 +211,7 @@ CREATE TABLE IF NOT EXISTS assets (
       'assigned',
       'inRepair',
       'pendingDisposal',
+      'sold',
       'disposed',
       'lost'
     )
@@ -284,7 +297,16 @@ CREATE TABLE IF NOT EXISTS asset_disposals (
     )
   ),
   disposal_reason TEXT NOT NULL,
-  disposal_method TEXT,
+  disposal_method TEXT CHECK (
+    disposal_method IS NULL OR disposal_method IN (
+      'sale',
+      'donation',
+      'recycle',
+      'destroy',
+      'returnToVendor',
+      'other'
+    )
+  ),
   disposed_at TEXT,
   note TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -335,6 +357,8 @@ CREATE INDEX IF NOT EXISTS idx_orders_expected_arrival_at ON orders(expected_arr
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_category ON order_items(category);
+CREATE INDEX IF NOT EXISTS idx_order_item_images_order_item_id ON order_item_images(order_item_id);
+CREATE INDEX IF NOT EXISTS idx_order_item_images_sort_order ON order_item_images(sort_order);
 
 CREATE INDEX IF NOT EXISTS idx_order_item_attributes_order_item_id ON order_item_attributes(order_item_id);
 CREATE INDEX IF NOT EXISTS idx_order_item_attributes_name_value ON order_item_attributes(attribute_name, attribute_value);

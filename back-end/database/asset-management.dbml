@@ -51,8 +51,18 @@ Enum assetStatusEnum {
   assigned
   inRepair
   pendingDisposal
+  sold
   disposed
   lost
+}
+
+Enum disposalMethodEnum {
+  sale
+  donation
+  recycle
+  destroy
+  returnToVendor
+  other
 }
 
 Enum storageTypeEnum {
@@ -117,7 +127,7 @@ Table orders {
   id integer [pk, increment]
   user integer [not null]
   officeId integer [not null]
-  orderProcessId integer [not null]
+  orderProcessId integer [not null, note: 'Each order uses one process definition.']
   whyOrdered text [not null]
   status orderStatusEnum [not null]
   expectedArrivalAt timestamp
@@ -130,7 +140,6 @@ Table orderItems {
   id integer [pk, increment]
   orderId integer [not null]
   itemName text [not null]
-  image text [note: 'Image URL, file key, or file path for display']
   category text [not null, note: 'Example: laptop, monitor, keyboard']
   quantity integer [not null]
   unitCost real [not null]
@@ -139,6 +148,19 @@ Table orderItems {
   eta timestamp
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
+}
+
+Table orderItemImages {
+  id integer [pk, increment]
+  orderItemId integer [not null]
+  imageUrl text [not null, note: 'Public URL, storage key, or relative file path']
+  sortOrder integer [not null, default: 0]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  Indexes {
+    (orderItemId, imageUrl) [unique]
+  }
 }
 
 Table orderItemAttributes {
@@ -249,7 +271,7 @@ Table assetDisposals {
   disposedByUserId integer
   status disposalStatusEnum [not null]
   disposalReason text [not null]
-  disposalMethod text
+  disposalMethod disposalMethodEnum
   disposedAt timestamp
   note text
   createdAt timestamp [not null]
@@ -261,6 +283,7 @@ Ref: orders.officeId > offices.id
 Ref: orders.orderProcessId > orderProcesses.id
 
 Ref: orderItems.orderId > orders.id
+Ref: orderItemImages.orderItemId > orderItems.id
 Ref: orderItemAttributes.orderItemId > orderItems.id
 
 Ref: receives.orderId > orders.id
