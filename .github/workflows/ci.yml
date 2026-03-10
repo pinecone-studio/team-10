@@ -1,32 +1,57 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build frontend
-        run: |
-          cd apps/web
-          npm install
-          npm run build
+      - name: Fetch PR base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags --prune --depth=1 origin ${{ github.base_ref }}
 
-      - name: Check worker
-        run: |
-          cd apps/worker
-          npm install
+      - name: Lint affected
+        if: github.event_name == 'pull_request'
+        run: npm exec nx -- affected --targets=lint --base=origin/${{ github.base_ref }} --head=${{ github.sha }} --exclude=shared --outputStyle=static
+
+      - name: Build affected
+        if: github.event_name == 'pull_request'
+        run: npm exec nx -- affected --targets=build --base=origin/${{ github.base_ref }} --head=${{ github.sha }} --exclude=shared --outputStyle=static
+
+      - name: Test affected
+        if: github.event_name == 'pull_request'
+        run: npm exec nx -- affected --targets=test --base=origin/${{ github.base_ref }} --head=${{ github.sha }} --exclude=shared --outputStyle=static
+
+      - name: Lint all app projects on main
+        if: github.event_name == 'push'
+        run: npm exec nx -- run-many --targets=lint --projects=web,worker --outputStyle=static
+
+      - name: Build all app projects on main
+        if: github.event_name == 'push'
+        run: npm exec nx -- run-many --targets=build --projects=web,worker --outputStyle=static
+
+      - name: Test all app projects on main
+        if: github.event_name == 'push'
+        run: npm exec nx -- run-many --targets=test --projects=web,worker --outputStyle=static
