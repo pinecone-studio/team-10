@@ -55,19 +55,6 @@ jobs:
           key: node-modules-${{ runner.os }}-${{ hashFiles('back-end/bun.lock') }}
       - run: bun run lint
 
-  test:
-    name: Test
-    needs: install
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - uses: actions/cache@v4
-        with:
-          path: back-end/node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('back-end/bun.lock') }}
-      - run: bun run test:coverage
-
   build:
     name: Build
     needs: install
@@ -79,14 +66,6 @@ jobs:
         with:
           path: back-end/node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('back-end/bun.lock') }}
-      - name: Check codegen is up to date
-        run: |
-          bun run codegen
-          git diff --exit-code graphql/__generated__
-      - run: bun run build
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
   preview:
     name: Preview

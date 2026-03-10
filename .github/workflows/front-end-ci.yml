@@ -53,7 +53,6 @@ jobs:
         with:
           path: front-end/node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('front-end/bun.lockb') }}
-      - run: bun run codegen
       - run: bun run lint
 
   build:
@@ -67,7 +66,6 @@ jobs:
         with:
           path: front-end/node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('front-end/bun.lockb') }}
-      - run: bun run codegen
       - run: bun run build
 
   preview:
