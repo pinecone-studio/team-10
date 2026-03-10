@@ -9,6 +9,7 @@ import { QrLookupPanel } from './components/orders/QrLookupPanel';
 import { OrderStats } from './components/orders/OrderStats';
 import { NotificationCenter } from './components/ui/NotificationCenter';
 import { Toast } from './components/ui/Toast';
+import { clerkAppearance } from './lib/clerkAppearance';
 import { useNotifications } from './hooks/useNotifications';
 import { useOrders } from './hooks/useOrders';
 import { useSession } from './hooks/useSession';
@@ -31,7 +32,7 @@ function App() {
   const ordersForList = canAssign ? orders.filter((order) => order.status === 'IT_RECEIVED') : orders;
   const itemCount = ordersForList.reduce((sum, order) => sum + order.items.length, 0);
   const listTotalSpend = ordersForList.reduce((sum, order) => sum + order.totalCost, 0);
-  const { notifications, unreadCount, error: notificationError, markRead } = useNotifications(token);
+  const { notifications, unreadCount, isLoading: isNotificationsLoading, readingId, error: notificationError, markRead } = useNotifications(token);
 
   useEffect(() => {
     if (!toast) return;
@@ -41,17 +42,27 @@ function App() {
 
   if (!isLoggedIn || !session) {
     return (
-      <div className="shell">
+      <div className="auth-shell-page">
         <section className="auth-shell panel">
-          <h2>Organization Access</h2>
-          <p className="subtitle">Sign in with Clerk. Your role is loaded from backend policy.</p>
-          {authError ? <p className="inline-error">{authError}</p> : null}
-          {isAuthLoading ? <p className="status-message">Checking access...</p> : null}
-          {!isAuthLoading ? (
-            <div className="clerk-wrap">
-              <SignIn routing="hash" />
-            </div>
-          ) : null}
+          <aside className="auth-intro">
+            <p className="eyebrow">Assets Portal</p>
+            <h2>Organization Access</h2>
+            <p className="subtitle">Secure sign-in for Inventory, Finance, IT and HR workflow.</p>
+            <ul className="auth-points">
+              <li>Role-based access control</li>
+              <li>Order-to-assignment audit trail</li>
+              <li>QR-based asset lookup</li>
+            </ul>
+          </aside>
+          <div className="auth-form">
+            {authError ? <p className="inline-error">{authError}</p> : null}
+            {isAuthLoading ? <p className="status-message">Checking access...</p> : null}
+            {!isAuthLoading ? (
+              <div className="clerk-wrap">
+                <SignIn routing="hash" appearance={clerkAppearance} />
+              </div>
+            ) : null}
+          </div>
         </section>
       </div>
     );
@@ -73,6 +84,8 @@ function App() {
       <NotificationCenter
         notifications={notifications}
         unreadCount={unreadCount}
+        isLoading={isNotificationsLoading}
+        readingId={readingId}
         error={notificationError}
         onRead={markRead}
       />

@@ -9,26 +9,46 @@ type OrderReceivePanelProps = {
 
 export function OrderReceivePanel({ order, disabled, onReceive }: OrderReceivePanelProps) {
   const [form, setForm] = useState<Record<string, Omit<ReceiveOrderItemInput, 'itemId'>>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingItems = order.items.filter((item) => item.receiveStatus === 'PENDING');
+  const isDisabled = disabled || isSubmitting;
 
   const update = (itemId: string, key: 'serialNumber' | 'manufacturedAt' | 'powerSpec' | 'conditionNote', value: string) => {
-    setForm((prev) => ({ ...prev, [itemId]: { serialNumber: prev[itemId]?.serialNumber || '', manufacturedAt: prev[itemId]?.manufacturedAt || '', powerSpec: prev[itemId]?.powerSpec || '', conditionNote: prev[itemId]?.conditionNote || '', [key]: value } }));
+    setForm((prev) => ({
+      ...prev,
+      [itemId]: {
+        serialNumber: prev[itemId]?.serialNumber || '',
+        manufacturedAt: prev[itemId]?.manufacturedAt || '',
+        powerSpec: prev[itemId]?.powerSpec || '',
+        conditionNote: prev[itemId]?.conditionNote || '',
+        [key]: value,
+      },
+    }));
   };
 
   const submit = async () => {
-    const payload = pendingItems.map((item) => ({ itemId: item.id, serialNumber: form[item.id]?.serialNumber || '', manufacturedAt: form[item.id]?.manufacturedAt || '', powerSpec: form[item.id]?.powerSpec || '', conditionNote: form[item.id]?.conditionNote || '' }));
+    const payload = pendingItems.map((item) => ({
+      itemId: item.id,
+      serialNumber: form[item.id]?.serialNumber || '',
+      manufacturedAt: form[item.id]?.manufacturedAt || '',
+      powerSpec: form[item.id]?.powerSpec || '',
+      conditionNote: form[item.id]?.conditionNote || '',
+    }));
     if (!payload.length) return;
     const invalid = payload.find((item) => !item.serialNumber.trim() || !item.manufacturedAt.trim() || !item.powerSpec.trim());
     if (invalid) {
-      setError('Serial, Manufactured YYYY-MM, Power spec бүгд шаардлагатай.');
+      setError('Serial, manufactured date, and power spec are required.');
       return;
     }
     setError(null);
+    setIsSubmitting(true);
     try {
       await onReceive(payload);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Receive failed');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -56,16 +76,18 @@ export function OrderReceivePanel({ order, disabled, onReceive }: OrderReceivePa
       {pendingItems.map((item) => (
         <div key={item.id} className="receive-row">
           <strong>{item.itemName}</strong>
-          <input placeholder="Serial" value={form[item.id]?.serialNumber || ''} onChange={(e) => update(item.id, 'serialNumber', e.target.value)} />
-          <input type="month" placeholder="Manufactured YYYY-MM" value={form[item.id]?.manufacturedAt || ''} onChange={(e) => update(item.id, 'manufacturedAt', e.target.value)} />
-          <input placeholder="Power spec" value={form[item.id]?.powerSpec || ''} onChange={(e) => update(item.id, 'powerSpec', e.target.value)} />
-          <input placeholder="Condition note" value={form[item.id]?.conditionNote || ''} onChange={(e) => update(item.id, 'conditionNote', e.target.value)} />
+          <input disabled={isDisabled} placeholder="Serial" value={form[item.id]?.serialNumber || ''} onChange={(e) => update(item.id, 'serialNumber', e.target.value)} />
+          <input disabled={isDisabled} type="month" placeholder="Manufactured YYYY-MM" value={form[item.id]?.manufacturedAt || ''} onChange={(e) => update(item.id, 'manufacturedAt', e.target.value)} />
+          <input disabled={isDisabled} placeholder="Power spec" value={form[item.id]?.powerSpec || ''} onChange={(e) => update(item.id, 'powerSpec', e.target.value)} />
+          <input disabled={isDisabled} placeholder="Condition note" value={form[item.id]?.conditionNote || ''} onChange={(e) => update(item.id, 'conditionNote', e.target.value)} />
         </div>
       ))}
-      <button type="button" className="button-muted" disabled={disabled} onClick={applyDemo}>
+      <button type="button" className="button-muted" disabled={isDisabled} onClick={applyDemo}>
         Demo
       </button>
-      <button type="button" disabled={disabled} onClick={() => void submit()}>Confirm Receive</button>
+      <button type="button" disabled={isDisabled} onClick={() => void submit()}>
+        {isSubmitting ? 'Confirming...' : 'Confirm Receive'}
+      </button>
     </div>
   );
 }

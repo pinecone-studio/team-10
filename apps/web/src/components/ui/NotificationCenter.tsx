@@ -4,17 +4,20 @@ import type { Notification } from '../../types/order';
 type NotificationCenterProps = {
   notifications: Notification[];
   unreadCount: number;
+  isLoading: boolean;
+  readingId: string | null;
   error: string | null;
   onRead: (notificationId: string) => Promise<void>;
 };
 
-export function NotificationCenter({ notifications, unreadCount, error, onRead }: NotificationCenterProps) {
+export function NotificationCenter({ notifications, unreadCount, isLoading, readingId, error, onRead }: NotificationCenterProps) {
   return (
     <section className="panel">
       <div className="notif-head">
         <h2>Notifications</h2>
         <span className="notif-count">{unreadCount} unread</span>
       </div>
+      {isLoading ? <p className="row-meta">Loading notifications...</p> : null}
       {unreadCount > 0 ? (
         <div className="notif-alert">
           <span className="notif-dot" aria-hidden="true" />
@@ -22,7 +25,7 @@ export function NotificationCenter({ notifications, unreadCount, error, onRead }
         </div>
       ) : null}
       {error ? <p className="inline-error">{error}</p> : null}
-      {!notifications.length ? <p className="row-meta">No notifications yet.</p> : null}
+      {!isLoading && !notifications.length ? <p className="row-meta">No notifications yet.</p> : null}
       <div className="notif-list">
         {notifications.map((n) => (
           <article key={n.id} className={`notif-item ${n.isRead ? 'read' : ''}`.trim()}>
@@ -31,8 +34,8 @@ export function NotificationCenter({ notifications, unreadCount, error, onRead }
             <div className="notif-meta">
               <span>{formatDateTime(n.createdAt)}</span>
               {!n.isRead ? (
-                <button type="button" className="button-muted" onClick={() => void onRead(n.id)}>
-                  Mark read
+                <button type="button" className="button-muted" disabled={readingId === n.id} onClick={() => void onRead(n.id)}>
+                  {readingId === n.id ? 'Marking...' : 'Mark read'}
                 </button>
               ) : null}
             </div>
