@@ -127,7 +127,7 @@ Table orders {
   id integer [pk, increment]
   user integer [not null]
   officeId integer [not null]
-  orderProcessId integer [not null, note: 'Each order uses one process definition.']
+  orderProcessId integer [not null, note: 'thh zuvhun one process']
   whyOrdered text [not null]
   status orderStatusEnum [not null]
   expectedArrivalAt timestamp

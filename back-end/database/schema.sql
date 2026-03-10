@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user INTEGER NOT NULL,
   office_id INTEGER NOT NULL,
-  -- Each order references a single process definition.
+  -- thh zuvhun one process
   order_process_id INTEGER NOT NULL,
   why_ordered TEXT NOT NULL,
   status TEXT NOT NULL CHECK (
