@@ -9,16 +9,24 @@
     "build:api": "wrangler deploy --dry-run",
     "start": "next start",
     "lint": "eslint .",
+    "codegen": "graphql-codegen --config codegen.yml",
     "typecheck:api": "tsc -p tsconfig.worker.json --noEmit",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
+    "@apollo/server": "^5.1.0",
+    "@as-integrations/next": "^4.1.0",
+    "@graphql-tools/merge": "^9.1.7",
+    "graphql": "^16.11.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260301.0",
+    "@graphql-codegen/cli": "^5.0.3",
+    "@graphql-codegen/typescript": "^4.1.0",
+    "@graphql-codegen/typescript-resolvers": "^4.4.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
