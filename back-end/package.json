@@ -4,9 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:api": "wrangler dev",
     "build": "next build",
+    "build:api": "wrangler deploy --dry-run",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "typecheck:api": "tsc -p tsconfig.worker.json --noEmit",
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
     "next": "16.1.6",
@@ -14,6 +18,7 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260301.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -21,6 +26,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.7.0"
   }
 }
