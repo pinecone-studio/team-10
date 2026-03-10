@@ -1,0 +1,18 @@
+export const TodoTypeDefs = `
+  type Todo {
+    id: ID!
+    title: String!
+    completed: Boolean!
+  }
+
+  type Query {
+    todos: [Todo!]!
+    todo(id: ID!): Todo
+  }
+
+  type Mutation {
+    createTodo(title: String!): Todo!
+    updateTodo(id: ID!, title: String, completed: Boolean): Todo
+    deleteTodo(id: ID!): Boolean!
+  }
+`;
