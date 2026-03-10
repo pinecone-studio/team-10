@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Users/elbegamar/workspace/team-10/back-end && npm run codegen 2>&1)",
+      "Bash(npm run:*)",
+      "Bash(cd /Users/elbegamar/workspace/team-10/front-end && npm install @apollo/client graphql && npm install -D @graphql-codegen/cli @graphql-codegen/client-preset 2>&1 | tail -5)",
+      "Bash(npm install:*)",
+      "Bash(cd /Users/elbegamar/workspace/team-10/front-end && node -e \"const p = require\\('./node_modules/@apollo/client/package.json'\\); console.log\\(p.version\\)\" && node -e \"const m = require\\('./node_modules/@apollo/client'\\); console.log\\(Object.keys\\(m\\).filter\\(k => k.includes\\('Provider'\\) || k.includes\\('Suspense'\\) || k.includes\\('skip'\\)\\)\\)\")",
+      "Bash(node -e \"const m = require\\('/Users/elbegamar/workspace/team-10/front-end/node_modules/@apollo/client/react'\\); console.log\\(Object.keys\\(m\\).filter\\(k => k.includes\\('Provider'\\) || k.includes\\('Suspense'\\) || k.includes\\('skip'\\) || k.includes\\('useQuery'\\) || k.includes\\('useMutation'\\)\\)\\)\")",
+      "Bash(npx next:*)",
+      "Bash(npx graphql-codegen:*)"
+    ]
+  }
+}
