@@ -2,6 +2,7 @@
   "name": "back-end",
   "version": "0.1.0",
   "private": true,
+  "description": "Cloudflare Worker backend with D1 and R2 support",
   "scripts": {
     "dev": "next dev",
     "dev:api": "wrangler dev",
