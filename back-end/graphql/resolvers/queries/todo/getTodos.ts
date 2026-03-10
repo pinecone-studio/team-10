@@ -1,3 +1,4 @@
-import { todos as todosStore } from "../../store";
+import type { QueryResolvers } from "../../../generated/types";
+import { fetchTodos } from "../../../lib/todo-api";
 
-export const todos = () => todosStore;
+export const todos: NonNullable<QueryResolvers["todos"]> = async () => fetchTodos();

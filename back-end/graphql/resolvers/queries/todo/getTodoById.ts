@@ -1,4 +1,5 @@
-import { todos } from "../../store";
+import type { QueryResolvers } from "../../../generated/types";
+import { fetchTodoById } from "../../../lib/todo-api";
 
-export const todo = (_: unknown, { id }: { id: string }) =>
-  todos.find((t) => t.id === id) ?? null;
+export const todo: NonNullable<QueryResolvers["todo"]> = async (_, { id }) =>
+  fetchTodoById(id);
