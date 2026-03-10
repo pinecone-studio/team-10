@@ -1,6 +1,12 @@
 import { preflightResponse, jsonResponse, toErrorResponse } from "./lib/http";
-import { handleAssetCollection, handleAssetItem } from "./routes/assets";
-import { handleTodoCollection, handleTodoItem } from "./routes/todos";
+import {
+  createAssetMutation,
+  deleteAssetMutation,
+  updateAssetMutation,
+} from "./mutations/assets";
+import { createTodoMutation, deleteTodoMutation, updateTodoMutation } from "./mutations/todo";
+import { queryAsset, queryAssetContent, queryAssets } from "./queries/assets";
+import { queryTodo, queryTodoImage, queryTodos } from "./queries/todos";
 import type { Env } from "./types";
 
 const worker = {
@@ -20,19 +26,59 @@ const worker = {
       }
 
       if (segments.length === 2 && segments[0] === "api" && segments[1] === "assets") {
-        return handleAssetCollection(request, env);
+        if (request.method === "GET") {
+          return queryAssets(env);
+        }
+
+        if (request.method === "POST") {
+          return createAssetMutation(request, env);
+        }
+
+        return jsonResponse(405, { error: "Method not allowed" });
       }
 
       if (segments.length === 2 && segments[0] === "api" && segments[1] === "todos") {
-        return handleTodoCollection(request, env);
+        if (request.method === "GET") {
+          return queryTodos(env);
+        }
+
+        if (request.method === "POST") {
+          return createTodoMutation(request, env);
+        }
+
+        return jsonResponse(405, { error: "Method not allowed" });
       }
 
       if (segments.length === 3 && segments[0] === "api" && segments[1] === "assets") {
-        return handleAssetItem(request, env, segments[2], false);
+        if (request.method === "GET") {
+          return queryAsset(segments[2], env);
+        }
+
+        if (request.method === "PUT") {
+          return updateAssetMutation(request, env, segments[2]);
+        }
+
+        if (request.method === "DELETE") {
+          return deleteAssetMutation(segments[2], env);
+        }
+
+        return jsonResponse(405, { error: "Method not allowed" });
       }
 
       if (segments.length === 3 && segments[0] === "api" && segments[1] === "todos") {
-        return handleTodoItem(request, env, segments[2], false);
+        if (request.method === "GET") {
+          return queryTodo(segments[2], env);
+        }
+
+        if (request.method === "PUT") {
+          return updateTodoMutation(request, env, segments[2]);
+        }
+
+        if (request.method === "DELETE") {
+          return deleteTodoMutation(segments[2], env);
+        }
+
+        return jsonResponse(405, { error: "Method not allowed" });
       }
 
       if (
@@ -41,7 +87,11 @@ const worker = {
         segments[1] === "assets" &&
         segments[3] === "content"
       ) {
-        return handleAssetItem(request, env, segments[2], true);
+        if (request.method === "GET") {
+          return queryAssetContent(segments[2], env);
+        }
+
+        return jsonResponse(405, { error: "Method not allowed" });
       }
 
       if (
@@ -50,7 +100,11 @@ const worker = {
         segments[1] === "todos" &&
         segments[3] === "image"
       ) {
-        return handleTodoItem(request, env, segments[2], true);
+        if (request.method === "GET") {
+          return queryTodoImage(segments[2], env);
+        }
+
+        return jsonResponse(405, { error: "Method not allowed" });
       }
 
       return jsonResponse(404, { error: "Route not found" });

@@ -2,7 +2,6 @@ import {
   createAssetRecord,
   deleteAssetRecord,
   getAssetById,
-  listAssets,
   updateAssetRecord,
 } from "../lib/asset-repository";
 import {
@@ -13,55 +12,14 @@ import {
   validateCreatePayload,
   validateUpdatePayload,
 } from "../lib/payload";
-import {
-  deleteAssetObject,
-  getAssetContentResponse,
-  putAssetObject,
-} from "../lib/r2-storage";
 import { jsonResponse } from "../lib/http";
+import { deleteAssetObject, putAssetObject } from "../lib/r2-storage";
 import type { AssetRecord, Env } from "../types";
 
-export async function handleAssetCollection(
+export async function createAssetMutation(
   request: Request,
   env: Env
 ): Promise<Response> {
-  if (request.method === "GET") {
-    return jsonResponse(200, { items: await listAssets(env) });
-  }
-
-  if (request.method === "POST") {
-    return createAsset(request, env);
-  }
-
-  return jsonResponse(405, { error: "Method not allowed" });
-}
-
-export async function handleAssetItem(
-  request: Request,
-  env: Env,
-  assetId: string,
-  wantsContent: boolean
-): Promise<Response> {
-  if (request.method === "GET" && wantsContent) {
-    return getAssetContentResponse(await getAssetById(assetId, env), env);
-  }
-
-  if (request.method === "GET") {
-    return jsonResponse(200, { item: await getAssetById(assetId, env) });
-  }
-
-  if (request.method === "PUT") {
-    return updateAsset(request, env, assetId);
-  }
-
-  if (request.method === "DELETE") {
-    return removeAsset(env, assetId);
-  }
-
-  return jsonResponse(405, { error: "Method not allowed" });
-}
-
-async function createAsset(request: Request, env: Env): Promise<Response> {
   const payload = await parsePayload(request);
   validateCreatePayload(payload);
 
@@ -88,7 +46,7 @@ async function createAsset(request: Request, env: Env): Promise<Response> {
   return jsonResponse(201, { item: await getAssetById(assetId, env) });
 }
 
-async function updateAsset(
+export async function updateAssetMutation(
   request: Request,
   env: Env,
   assetId: string
@@ -101,12 +59,7 @@ async function updateAsset(
 
   if (payload.fileBase64) {
     const nextBuffer = decodeBase64(payload.fileBase64);
-    await putAssetObject(
-      nextAsset.object_key,
-      nextBuffer,
-      nextAsset.content_type,
-      env
-    );
+    await putAssetObject(nextAsset.object_key, nextBuffer, nextAsset.content_type, env);
 
     if (nextAsset.object_key !== current.object_key) {
       await deleteAssetObject(current.object_key, env);
@@ -119,7 +72,7 @@ async function updateAsset(
   return jsonResponse(200, { item: await getAssetById(assetId, env) });
 }
 
-async function removeAsset(env: Env, assetId: string): Promise<Response> {
+export async function deleteAssetMutation(assetId: string, env: Env): Promise<Response> {
   const asset = await getAssetById(assetId, env);
   await deleteAssetObject(asset.object_key, env);
   await deleteAssetRecord(assetId, env);

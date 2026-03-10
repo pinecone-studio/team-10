@@ -25,19 +25,34 @@ $created = Invoke-RestMethod `
 
 $id = $created.item.id
 
+if (-not $id) {
+  throw "Create todo failed: response did not include item.id"
+}
+
 Write-Host "Created todo id:" $id
-Write-Host ($created | ConvertTo-Json -Depth 6)
 
 $list = Invoke-RestMethod -Uri "$BaseUrl/api/todos" -Method Get
+if (-not ($list.items | Where-Object { $_.id -eq $id })) {
+  throw "List todos failed: created todo was not returned"
+}
+
 Write-Host "Todo count after create:" $list.items.Count
 
 $single = Invoke-RestMethod -Uri "$BaseUrl/api/todos/$id" -Method Get
+if ($single.item.id -ne $id) {
+  throw "Get todo failed: fetched item id does not match created id"
+}
+
 Write-Host "Fetched single todo title:" $single.item.title
 
 $imageResponse = Invoke-WebRequest `
   -Uri "$BaseUrl/api/todos/$id/image" `
   -Method Get `
   -UseBasicParsing
+
+if ($imageResponse.RawContentLength -le 0) {
+  throw "Get todo image failed: response did not include image bytes"
+}
 
 Write-Host "Fetched image bytes:" $imageResponse.RawContentLength
 
@@ -53,10 +68,27 @@ $updated = Invoke-RestMethod `
   -ContentType "application/json" `
   -Body $updateBody
 
-Write-Host "Updated todo completed flag:" $updated.item.is_completed
+if ($updated.item.title -ne "Backend todo updated") {
+  throw "Update todo failed: title was not updated"
+}
+
+if ($updated.item.is_completed -ne 1) {
+  throw "Update todo failed: is_completed was not set to 1"
+}
+
+Write-Host "Updated todo id:" $updated.item.id
 
 $deleted = Invoke-RestMethod -Uri "$BaseUrl/api/todos/$id" -Method Delete
-Write-Host ($deleted | ConvertTo-Json -Depth 4)
+if (-not $deleted.deleted -or $deleted.id -ne $id) {
+  throw "Delete todo failed: response did not confirm deletion"
+}
+
+Write-Host "Deleted todo id:" $deleted.id
 
 $afterDelete = Invoke-RestMethod -Uri "$BaseUrl/api/todos" -Method Get
+if ($afterDelete.items | Where-Object { $_.id -eq $id }) {
+  throw "Delete todo failed: deleted todo is still returned in list"
+}
+
 Write-Host "Todo count after delete:" $afterDelete.items.Count
+Write-Host "Todo CRUD checks passed"

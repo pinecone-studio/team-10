@@ -1,20 +1,15 @@
+import { desc, eq } from "drizzle-orm";
+import { getDb } from "../db/client";
+import { assets } from "../db/schema";
 import { HttpError } from "./http";
 import type { AssetRecord, Env } from "../types";
 
-const assetSelect = `
-  SELECT id, title, description, object_key, file_name, content_type, file_size, created_at, updated_at
-  FROM assets
-`;
-
 export async function listAssets(env: Env): Promise<AssetRecord[]> {
-  const result = await env.DB.prepare(`${assetSelect} ORDER BY created_at DESC`).all<AssetRecord>();
-  return result.results ?? [];
+  return getDb(env).select().from(assets).orderBy(desc(assets.created_at));
 }
 
 export async function getAssetById(assetId: string, env: Env): Promise<AssetRecord> {
-  const asset = await env.DB.prepare(`${assetSelect} WHERE id = ?1`)
-    .bind(assetId)
-    .first<AssetRecord>();
+  const asset = await getDb(env).select().from(assets).where(eq(assets.id, assetId)).get();
 
   if (!asset) {
     throw new HttpError(404, "Asset not found");
@@ -27,53 +22,27 @@ export async function createAssetRecord(
   asset: AssetRecord,
   env: Env
 ): Promise<void> {
-  await env.DB.prepare(
-    `INSERT INTO assets (
-      id, title, description, object_key, file_name, content_type, file_size, created_at, updated_at
-    ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
-  )
-    .bind(
-      asset.id,
-      asset.title,
-      asset.description,
-      asset.object_key,
-      asset.file_name,
-      asset.content_type,
-      asset.file_size,
-      asset.created_at,
-      asset.updated_at
-    )
-    .run();
+  await getDb(env).insert(assets).values(asset);
 }
 
 export async function updateAssetRecord(
   asset: AssetRecord,
   env: Env
 ): Promise<void> {
-  await env.DB.prepare(
-    `UPDATE assets
-     SET title = ?1,
-         description = ?2,
-         object_key = ?3,
-         file_name = ?4,
-         content_type = ?5,
-         file_size = ?6,
-         updated_at = ?7
-     WHERE id = ?8`
-  )
-    .bind(
-      asset.title,
-      asset.description,
-      asset.object_key,
-      asset.file_name,
-      asset.content_type,
-      asset.file_size,
-      asset.updated_at,
-      asset.id
-    )
-    .run();
+  await getDb(env)
+    .update(assets)
+    .set({
+      title: asset.title,
+      description: asset.description,
+      object_key: asset.object_key,
+      file_name: asset.file_name,
+      content_type: asset.content_type,
+      file_size: asset.file_size,
+      updated_at: asset.updated_at,
+    })
+    .where(eq(assets.id, asset.id));
 }
 
 export async function deleteAssetRecord(assetId: string, env: Env): Promise<void> {
-  await env.DB.prepare("DELETE FROM assets WHERE id = ?1").bind(assetId).run();
+  await getDb(env).delete(assets).where(eq(assets.id, assetId));
 }
