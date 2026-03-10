@@ -5,6 +5,12 @@
     "apps/*",
     "packages/*"
   ],
+  "scripts": {
+    "dev": "nx run-many -t dev -p worker,web --parallel=2 --output-style=stream",
+    "db:local:migrate": "npm exec --workspace worker wrangler -- d1 execute team10-db --local --file schema.sql",
+    "db:local:reset": "npm exec --workspace worker wrangler -- d1 execute team10-db --local --command \"DROP TABLE IF EXISTS audit_logs; DROP TABLE IF EXISTS order_status_history; DROP TABLE IF EXISTS order_items; DROP TABLE IF EXISTS orders; DROP TABLE IF EXISTS users;\" && npm run db:local:migrate",
+    "dev:with-db": "npm run db:local:migrate && npm run dev"
+  },
   "devDependencies": {
     "@nx/eslint": "22.5.4",
     "@nx/vite": "22.5.4",

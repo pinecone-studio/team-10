@@ -7,6 +7,12 @@
 	"observability": {
 		"enabled": true
 	},
+	"vars": {
+		"ORG_EMAIL_DOMAIN": "assets.com",
+		"SYSTEM_ADMIN_EMAILS": "admin@assets.com",
+		"CLERK_ISSUER": "https://definite-griffon-89.clerk.accounts.dev",
+		"CLERK_JWKS_URL": "https://definite-griffon-89.clerk.accounts.dev/.well-known/jwks.json"
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",
