@@ -9,7 +9,7 @@
     "build:api": "wrangler deploy --dry-run",
     "start": "next start",
     "lint": "eslint .",
-    "codegen": "graphql-codegen --config codegen.yml",
+    "codegen": "graphql-codegen --config codegen.ts",
     "typecheck:api": "tsc -p tsconfig.worker.json --noEmit",
     "cf-typegen": "wrangler types"
   },
@@ -25,6 +25,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260301.0",
     "@graphql-codegen/cli": "^5.0.3",
+    "@graphql-codegen/schema-ast": "^5.0.1",
     "@graphql-codegen/typescript": "^4.1.0",
     "@graphql-codegen/typescript-resolvers": "^4.4.0",
     "@tailwindcss/postcss": "^4",
