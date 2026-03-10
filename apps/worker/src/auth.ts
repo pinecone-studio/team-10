@@ -5,6 +5,8 @@ export type ClerkIdentity = {
   clerkUserId: string;
   email: string;
   fullName: string;
+  role?: 'EMPLOYEE' | 'INVENTORY_HEAD' | 'FINANCE' | 'IT_ADMIN' | 'HR_MANAGER' | 'SYSTEM_ADMIN';
+  isDevAuth?: boolean;
 };
 
 type ClerkJwtClaims = {

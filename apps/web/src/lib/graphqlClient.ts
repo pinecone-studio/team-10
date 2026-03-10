@@ -13,8 +13,16 @@ export class GraphQLError extends Error {
   }
 }
 
-type RequestOptions = {
+export type DevAuthHeaders = {
+  email: string;
+  fullName: string;
+  userId?: string;
+  role?: 'EMPLOYEE' | 'INVENTORY_HEAD' | 'FINANCE' | 'IT_ADMIN' | 'HR_MANAGER' | 'SYSTEM_ADMIN';
+};
+
+export type RequestOptions = {
   token?: string | null;
+  devAuth?: DevAuthHeaders;
 };
 
 export async function graphqlRequest<TData, TVariables extends object | undefined>(
@@ -29,6 +37,14 @@ export async function graphqlRequest<TData, TVariables extends object | undefine
       headers: {
         'content-type': 'application/json',
         ...(options?.token ? { authorization: `Bearer ${options.token}` } : {}),
+        ...(options?.devAuth
+          ? {
+              'x-dev-user-email': options.devAuth.email,
+              'x-dev-user-name': options.devAuth.fullName,
+              ...(options.devAuth.userId ? { 'x-dev-user-id': options.devAuth.userId } : {}),
+              ...(options.devAuth.role ? { 'x-dev-user-role': options.devAuth.role } : {}),
+            }
+          : {}),
       },
       body: JSON.stringify({ query, variables }),
     });

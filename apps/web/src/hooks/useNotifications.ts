@@ -1,23 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { graphqlRequest } from '../lib/graphqlClient';
+import { graphqlRequest, type RequestOptions } from '../lib/graphqlClient';
 import type { Notification } from '../types/order';
 
 type NotificationsData = { notifications: Notification[] };
 
-export function useNotifications(token: string | null) {
+export function useNotifications(auth: RequestOptions) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [readingId, setReadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const isAuthorized = Boolean(auth.token || auth.devAuth);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!isAuthorized) return;
     setIsLoading(true);
     try {
       const data = await graphqlRequest<NotificationsData, undefined>(
         'query { notifications { id type title message entityType entityId isRead createdAt readAt } }',
         undefined,
-        { token },
+        auth,
       );
       setNotifications(data.notifications);
       setError(null);
@@ -28,17 +29,17 @@ export function useNotifications(token: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [isAuthorized, auth]);
 
   const markRead = useCallback(
     async (notificationId: string) => {
-      if (!token) throw new Error('Unauthorized');
+      if (!isAuthorized) throw new Error('Unauthorized');
       setReadingId(notificationId);
       try {
         await graphqlRequest<{ markNotificationRead: { id: string } }, { notificationId: string }>(
           'mutation($notificationId: ID!) { markNotificationRead(notificationId: $notificationId) { id } }',
           { notificationId },
-          { token },
+          auth,
         );
         await load();
       } catch (e) {
@@ -47,18 +48,18 @@ export function useNotifications(token: string | null) {
         setReadingId(null);
       }
     },
-    [token, load],
+    [isAuthorized, load, auth],
   );
 
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthorized) return;
     const first = window.setTimeout(() => void load(), 0);
     const timer = window.setInterval(() => void load(), 15000);
     return () => {
       window.clearTimeout(first);
       window.clearInterval(timer);
     };
-  }, [token, load]);
+  }, [isAuthorized, load]);
 
   const unreadCount = useMemo(() => notifications.filter((x) => !x.isRead).length, [notifications]);
   return { notifications, unreadCount, isLoading, readingId, error, reload: load, markRead };

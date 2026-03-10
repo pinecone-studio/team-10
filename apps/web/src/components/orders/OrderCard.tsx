@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatCurrency, formatDateTime } from '../../lib/format';
 import type { Order, User } from '../../types/order';
 import { OrderAssignPanel } from './OrderAssignPanel';
@@ -18,65 +19,69 @@ type OrderCardProps = {
 };
 
 export function OrderCard({ order, canFinanceReview, canReceive, canAssign, users, isSaving, onReview, onReceive, onAssign }: OrderCardProps) {
+  const [expanded, setExpanded] = useState(false);
   const statusLabel = order.status.replace('FINANCE_', 'FINANCE ').replace('_', ' ');
   const showFinanceAction = canFinanceReview && order.status === 'SUBMITTED';
   const showReceiveAction = canReceive && order.status === 'FINANCE_APPROVED';
   const showAssignAction = canAssign && order.status === 'IT_RECEIVED';
+  const assignedCount = order.items.filter((item) => item.assignedTo).length;
 
   return (
     <article className="order-card">
       <div className="order-head">
         <div>
           <h3>{order.whyOrdered}</h3>
-          <p>{order.orderProcess}</p>
+          <p>#{order.id} · {order.whichOffice} · {statusLabel}</p>
         </div>
-        <strong>{formatCurrency(order.totalCost)}</strong>
+        <div className="order-head-actions">
+          <strong>{formatCurrency(order.totalCost)}</strong>
+          <button type="button" className="button-muted" onClick={() => setExpanded((prev) => !prev)}>
+            {expanded ? 'Hide Details' : 'View Details'}
+          </button>
+        </div>
       </div>
 
-      <dl className="order-meta">
-        <div>
-          <dt>Requester</dt>
-          <dd>{order.requester.fullName}</dd>
-        </div>
-        <div>
-          <dt>Office</dt>
-          <dd>{order.whichOffice}</dd>
-        </div>
-        <div>
-          <dt>Status</dt>
-          <dd>{statusLabel}</dd>
-        </div>
-        <div>
-          <dt>Arrival</dt>
-          <dd>{formatDateTime(order.whenToArrive)}</dd>
-        </div>
-        <div>
-          <dt>Updated</dt>
-          <dd>{formatDateTime(order.updatedAt)}</dd>
-        </div>
-      </dl>
-      {order.financeComment ? <p className="row-meta">Finance note: {order.financeComment}</p> : null}
-      {showFinanceAction ? (
-        <OrderReviewPanel
-          disabled={isSaving}
-          onReview={(decision, comment) => onReview(order.id, decision, comment || '')}
-          title="Finance Review"
-          notePlaceholder="Finance note (optional)"
-        />
-      ) : null}
-      {showReceiveAction ? (
-        <OrderReceivePanel order={order} disabled={isSaving} onReceive={(items) => onReceive(order.id, items)} />
-      ) : null}
-      {showAssignAction ? (
-        <OrderAssignPanel order={order} users={users} disabled={isSaving} onAssign={(items) => onAssign(order.id, items)} />
-      ) : null}
-      {order.status === 'IT_RECEIVED' ? (
-        <p className="row-meta">
-          Received by IT Admin. Assigned: {order.items.filter((item) => item.assignedTo).length}/{order.items.length}
-        </p>
-      ) : null}
+      <div className="order-summary-strip">
+        <span>Requester: <strong>{order.requester.fullName}</strong></span>
+        <span>Items: <strong>{order.items.length}</strong></span>
+        <span>Assigned: <strong>{assignedCount}/{order.items.length}</strong></span>
+        <span>Updated: <strong>{formatDateTime(order.updatedAt)}</strong></span>
+      </div>
 
-      <OrderItemTable items={order.items} />
+      {expanded ? (
+        <>
+          <dl className="order-meta">
+            <div>
+              <dt>Process</dt>
+              <dd>{order.orderProcess}</dd>
+            </div>
+            <div>
+              <dt>Arrival</dt>
+              <dd>{formatDateTime(order.whenToArrive)}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{statusLabel}</dd>
+            </div>
+          </dl>
+          {order.financeComment ? <p className="row-meta">Finance note: {order.financeComment}</p> : null}
+          {showFinanceAction ? (
+            <OrderReviewPanel
+              disabled={isSaving}
+              onReview={(decision, comment) => onReview(order.id, decision, comment || '')}
+              title="Finance Review"
+              notePlaceholder="Finance note (optional)"
+            />
+          ) : null}
+          {showReceiveAction ? (
+            <OrderReceivePanel order={order} disabled={isSaving} onReceive={(items) => onReceive(order.id, items)} />
+          ) : null}
+          {showAssignAction ? (
+            <OrderAssignPanel order={order} users={users} disabled={isSaving} onAssign={(items) => onAssign(order.id, items)} />
+          ) : null}
+          <OrderItemTable items={order.items} />
+        </>
+      ) : null}
     </article>
   );
 }

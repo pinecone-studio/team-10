@@ -46,27 +46,34 @@ export const createRootResolvers = (env: WorkerEnv, viewer: ClerkIdentity | null
     if (!viewer) deny();
     if (cache) return cache;
     cache = (async () => {
-      assertOrgEmail(viewer.email, env);
+      if (!viewer.isDevAuth) {
+        assertOrgEmail(viewer.email, env);
+      }
       const [row] = await db.select().from(users).where(or(eq(users.clerkUserId, viewer.clerkUserId), eq(users.email, normalizeEmail(viewer.email)))).limit(1);
       if (row) {
+        if (viewer.isDevAuth) {
+          return viewer.role ? { ...row, role: viewer.role } : row;
+        }
         const promote = isSystemAdminEmail(viewer.email, env) && row.role !== 'SYSTEM_ADMIN';
         if (row.clerkUserId !== viewer.clerkUserId || row.fullName !== viewer.fullName || promote) {
           const [u] = await db.update(users).set({ clerkUserId: viewer.clerkUserId, fullName: viewer.fullName, role: promote ? 'SYSTEM_ADMIN' : row.role, updatedAt: sql`CURRENT_TIMESTAMP` }).where(eq(users.id, row.id)).returning();
-          return u ?? row;
+          const saved = u ?? row;
+          return viewer.role ? { ...saved, role: viewer.role } : saved;
         }
-        return row;
+        return viewer.role ? { ...row, role: viewer.role } : row;
       }
       const role: Role = isSystemAdminEmail(viewer.email, env) ? 'SYSTEM_ADMIN' : 'EMPLOYEE';
       const [created] = await db.insert(users).values({ clerkUserId: viewer.clerkUserId, email: viewer.email, fullName: viewer.fullName, role, passwordHash: 'CLERK_AUTH' }).returning();
       if (!created) throw new Error('Failed to create profile');
       await log(created.id, 'SYNC_USER', 'user', String(created.id), { role });
-      return created;
+      return viewer.role ? { ...created, role: viewer.role } : created;
     })();
     return cache;
   };
   const mapOrders = async () => {
     const actor = await me();
-    const where = actor.role === 'EMPLOYEE' ? eq(orderItems.assignedTo, actor.id) : undefined;
+    const employeeViewScoped = actor.role === 'EMPLOYEE' && !viewer?.isDevAuth;
+    const where = employeeViewScoped ? eq(orderItems.assignedTo, actor.id) : undefined;
     const itemScope = where ? await db.select().from(orderItems).where(where) : null;
     const scopedOrderIds = itemScope ? [...new Set(itemScope.map((i) => i.orderId))] : null;
     const rows = scopedOrderIds ? (scopedOrderIds.length ? await db.select().from(orders).where(inArray(orders.id, scopedOrderIds)).orderBy(desc(orders.id)) : []) : await db.select().from(orders).orderBy(desc(orders.id));
@@ -78,7 +85,7 @@ export const createRootResolvers = (env: WorkerEnv, viewer: ClerkIdentity | null
     const userMap = new Map(people.map((u) => [u.id, mapUser(u)]));
     const mapItem = (i: (typeof items)[number]) => ({ id: String(i.id), orderId: String(i.orderId), itemName: i.itemName, category: i.category, quantity: i.quantity, unitCost: i.unitCost, fromWhere: i.fromWhere, additionalNotes: i.additionalNotes, eta: i.eta, qrCode: i.qrCode, manufacturedAt: i.manufacturedAt, serialNumber: i.serialNumber, powerSpec: i.powerSpec, conditionNote: i.conditionNote, receiveStatus: i.receiveStatus, receivedAt: i.receivedAt, receivedBy: i.receivedBy ? userMap.get(i.receivedBy) ?? null : null, assignedTo: i.assignedTo ? userMap.get(i.assignedTo) ?? null : null, assignedAt: i.assignedAt, assignmentNote: i.assignmentNote });
     const itemMap = new Map<number, ReturnType<typeof mapItem>[]>(); for (const it of items) itemMap.set(it.orderId, [...(itemMap.get(it.orderId) ?? []), mapItem(it)]);
-    return rows.map((r) => ({ id: String(r.id), requester: userMap.get(r.requesterId), whyOrdered: r.whyOrdered, orderProcess: r.orderProcess, whichOffice: r.whichOffice, status: r.status, financeApprover: r.financeApproverId ? userMap.get(r.financeApproverId) : null, financeComment: r.financeComment, financeActionAt: r.financeActionAt, whenToArrive: r.whenToArrive, totalCost: r.totalCost, items: (itemMap.get(r.id) ?? []).filter((i) => actor.role !== 'EMPLOYEE' || i.assignedTo?.id === String(actor.id)), createdAt: r.createdAt, updatedAt: r.updatedAt }));
+    return rows.map((r) => ({ id: String(r.id), requester: userMap.get(r.requesterId), whyOrdered: r.whyOrdered, orderProcess: r.orderProcess, whichOffice: r.whichOffice, status: r.status, financeApprover: r.financeApproverId ? userMap.get(r.financeApproverId) : null, financeComment: r.financeComment, financeActionAt: r.financeActionAt, whenToArrive: r.whenToArrive, totalCost: r.totalCost, items: (itemMap.get(r.id) ?? []).filter((i) => actor.role !== 'EMPLOYEE' || !employeeViewScoped || i.assignedTo?.id === String(actor.id)), createdAt: r.createdAt, updatedAt: r.updatedAt }));
   };
 
   return {

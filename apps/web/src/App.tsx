@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { SignIn } from '@clerk/react';
 import './App.css';
 import { UserAdminPanel } from './components/admin/UserAdminPanel';
 import { CreateOrderForm } from './components/forms/CreateOrderForm';
@@ -9,16 +8,29 @@ import { QrLookupPanel } from './components/orders/QrLookupPanel';
 import { OrderStats } from './components/orders/OrderStats';
 import { NotificationCenter } from './components/ui/NotificationCenter';
 import { Toast } from './components/ui/Toast';
-import { clerkAppearance } from './lib/clerkAppearance';
 import { useNotifications } from './hooks/useNotifications';
 import { useOrders } from './hooks/useOrders';
 import { useSession } from './hooks/useSession';
 
 function App() {
-  const { session, token, user, role, isLoggedIn, isAuthLoading, authError, createUser, updateUserRole, deleteUser, logout } =
+  const {
+    session,
+    user,
+    role,
+    selectedRole,
+    roles,
+    setSelectedRole,
+    requestOptions,
+    isLoggedIn,
+    isAuthLoading,
+    authError,
+    createUser,
+    updateUserRole,
+    deleteUser,
+  } =
     useSession();
   const { orders, users, isLoading, isSaving, error, totalSpend, createOrder, reviewOrder, receiveOrderItems, assignOrderItems, reload } = useOrders(
-    token,
+    requestOptions,
     role === 'SYSTEM_ADMIN' || role === 'HR_MANAGER',
     role !== 'SYSTEM_ADMIN',
   );
@@ -32,7 +44,8 @@ function App() {
   const ordersForList = canAssign ? orders.filter((order) => order.status === 'IT_RECEIVED') : orders;
   const itemCount = ordersForList.reduce((sum, order) => sum + order.items.length, 0);
   const listTotalSpend = ordersForList.reduce((sum, order) => sum + order.totalCost, 0);
-  const { notifications, unreadCount, isLoading: isNotificationsLoading, readingId, error: notificationError, markRead } = useNotifications(token);
+  const { notifications, unreadCount, isLoading: isNotificationsLoading, readingId, error: notificationError, markRead } =
+    useNotifications(requestOptions);
 
   useEffect(() => {
     if (!toast) return;
@@ -40,29 +53,12 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  if (!isLoggedIn || !session) {
+  if (isAuthLoading && !session) {
     return (
-      <div className="auth-shell-page">
-        <section className="auth-shell panel">
-          <aside className="auth-intro">
-            <p className="eyebrow">Assets Portal</p>
-            <h2>Organization Access</h2>
-            <p className="subtitle">Secure sign-in for Inventory, Finance, IT and HR workflow.</p>
-            <ul className="auth-points">
-              <li>Role-based access control</li>
-              <li>Order-to-assignment audit trail</li>
-              <li>QR-based asset lookup</li>
-            </ul>
-          </aside>
-          <div className="auth-form">
-            {authError ? <p className="inline-error">{authError}</p> : null}
-            {isAuthLoading ? <p className="status-message">Checking access...</p> : null}
-            {!isAuthLoading ? (
-              <div className="clerk-wrap">
-                <SignIn routing="hash" appearance={clerkAppearance} />
-              </div>
-            ) : null}
-          </div>
+      <div className="shell">
+        <AppHeader selectedRole={selectedRole} roles={roles} onRoleChange={setSelectedRole} />
+        <section className="panel">
+          <p className="status-message">Preparing role workspace...</p>
         </section>
       </div>
     );
@@ -70,16 +66,15 @@ function App() {
 
   return (
     <div className="shell">
-      <AppHeader />
+      <AppHeader selectedRole={selectedRole} roles={roles} onRoleChange={setSelectedRole} />
       <div className="session-bar panel">
         <p>
-          Signed in as <strong>{user?.fullName}</strong> ({user?.role}) - {user?.email}
+          Role simulation: <strong>{user?.fullName ?? selectedRole}</strong> ({role}) - {user?.email ?? requestOptions.devAuth?.email}
         </p>
-        <button type="button" className="button-muted" onClick={logout}>
-          Logout
-        </button>
+        {!isLoggedIn ? <span className="row-meta">Session not ready</span> : null}
       </div>
-      {error ? <p className="error-banner">Error: {error}</p> : null}
+      {authError ? <p className="error-banner">Auth error: {authError}</p> : null}
+      {error && error !== authError ? <p className="error-banner">Error: {error}</p> : null}
       {toast ? <Toast message={toast} /> : null}
       <NotificationCenter
         notifications={notifications}

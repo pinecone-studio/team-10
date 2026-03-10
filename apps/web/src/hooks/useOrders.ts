@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { graphqlRequest } from '../lib/graphqlClient';
+import { graphqlRequest, type RequestOptions } from '../lib/graphqlClient';
 import type { AssignOrderItemInput, CreateOrderInput, Order, ReceiveOrderItemInput, User } from '../types/order';
 
 type OrdersData = { orders: Order[]; users: User[] };
 
-export function useOrders(token: string | null, canSeeUsers: boolean, includeOrders: boolean) {
+export function useOrders(auth: RequestOptions, canSeeUsers: boolean, includeOrders: boolean) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isAuthorized = Boolean(auth.token || auth.devAuth);
 
   const loadOrders = useCallback(async () => {
-    if (!token) return;
+    if (!isAuthorized) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -32,7 +33,7 @@ export function useOrders(token: string | null, canSeeUsers: boolean, includeOrd
           users @include(if: $includeUsers) { id email fullName role createdAt }
         }`,
         { includeUsers: canSeeUsers, includeOrders },
-        { token },
+        auth,
       );
       setOrders(includeOrders ? data.orders : []);
       setUsers(canSeeUsers ? data.users : []);
@@ -41,7 +42,7 @@ export function useOrders(token: string | null, canSeeUsers: boolean, includeOrd
     } finally {
       setIsLoading(false);
     }
-  }, [token, canSeeUsers, includeOrders]);
+  }, [isAuthorized, canSeeUsers, includeOrders, auth]);
 
   useEffect(() => {
     void loadOrders();
@@ -49,25 +50,25 @@ export function useOrders(token: string | null, canSeeUsers: boolean, includeOrd
 
   const createOrder = useCallback(
     async (input: CreateOrderInput) => {
-      if (!token) throw new Error('Unauthorized');
+      if (!isAuthorized) throw new Error('Unauthorized');
       setIsSaving(true);
       try {
         await graphqlRequest<{ createOrder: { id: string } }, { input: CreateOrderInput }>(
           `mutation($input: CreateOrderInput!) { createOrder(input: $input) { id } }`,
           { input },
-          { token },
+          auth,
         );
         await loadOrders();
       } finally {
         setIsSaving(false);
       }
     },
-    [token, loadOrders],
+    [isAuthorized, loadOrders, auth],
   );
 
   const reviewOrder = useCallback(
     async (orderId: string, decision: 'APPROVE' | 'REJECT', comment?: string) => {
-      if (!token) throw new Error('Unauthorized');
+      if (!isAuthorized) throw new Error('Unauthorized');
       setIsSaving(true);
       try {
         await graphqlRequest<{ reviewOrder: { id: string } }, { orderId: string; decision: string; comment?: string }>(
@@ -75,19 +76,19 @@ export function useOrders(token: string | null, canSeeUsers: boolean, includeOrd
             reviewOrder(orderId: $orderId, decision: $decision, comment: $comment) { id }
           }`,
           { orderId, decision, comment: comment || undefined },
-          { token },
+          auth,
         );
         await loadOrders();
       } finally {
         setIsSaving(false);
       }
     },
-    [token, loadOrders],
+    [isAuthorized, loadOrders, auth],
   );
 
   const receiveOrderItems = useCallback(
     async (orderId: string, items: ReceiveOrderItemInput[]) => {
-      if (!token) throw new Error('Unauthorized');
+      if (!isAuthorized) throw new Error('Unauthorized');
       setIsSaving(true);
       try {
         await graphqlRequest<{ receiveOrderItems: { id: string } }, { orderId: string; items: ReceiveOrderItemInput[] }>(
@@ -95,19 +96,19 @@ export function useOrders(token: string | null, canSeeUsers: boolean, includeOrd
             receiveOrderItems(orderId: $orderId, items: $items) { id }
           }`,
           { orderId, items },
-          { token },
+          auth,
         );
         await loadOrders();
       } finally {
         setIsSaving(false);
       }
     },
-    [token, loadOrders],
+    [isAuthorized, loadOrders, auth],
   );
 
   const assignOrderItems = useCallback(
     async (orderId: string, items: AssignOrderItemInput[]) => {
-      if (!token) throw new Error('Unauthorized');
+      if (!isAuthorized) throw new Error('Unauthorized');
       setIsSaving(true);
       try {
         await graphqlRequest<{ assignOrderItems: { id: string } }, { orderId: string; items: AssignOrderItemInput[] }>(
@@ -115,14 +116,14 @@ export function useOrders(token: string | null, canSeeUsers: boolean, includeOrd
             assignOrderItems(orderId: $orderId, items: $items) { id }
           }`,
           { orderId, items },
-          { token },
+          auth,
         );
         await loadOrders();
       } finally {
         setIsSaving(false);
       }
     },
-    [token, loadOrders],
+    [isAuthorized, loadOrders, auth],
   );
 
   const totalSpend = useMemo(() => orders.reduce((s, o) => s + o.totalCost, 0), [orders]);
