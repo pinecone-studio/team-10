@@ -1,0 +1,18 @@
+name = "team10-backend"
+main = ".open-next/worker.js"
+compatibility_date = "2026-03-11"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "team10-backend-db"
+database_id = "791d560f-40ef-4d79-b69e-9d2a9e09d866"
+
+[vars]
+# Non-secret runtime values. Keep API tokens in Wrangler secrets.
+CLOUDFLARE_ACCOUNT_ID = "e2890305843a35feb5b1c3636a515f60"
+CLOUDFLARE_D1_DATABASE_ID = "791d560f-40ef-4d79-b69e-9d2a9e09d866"
