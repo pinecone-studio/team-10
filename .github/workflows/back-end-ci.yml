@@ -16,9 +16,19 @@ defaults:
     working-directory: ./back-end
 
 jobs:
-  verify:
-    name: Verify
-    if: contains(github.event.pull_request.labels.*.name, 'code-ready')
+  guard:
+    name: Check code-ready label
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ contains(github.event.pull_request.labels.*.name, 'code-ready') }}
+    steps:
+      - run: echo "Label check complete"
+        working-directory: .
+
+  lint:
+    name: Lint
+    needs: guard
+    if: needs.guard.outputs.ready == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,5 +39,52 @@ jobs:
           cache-dependency-path: back-end/package-lock.json
       - run: npm ci
       - run: npm run lint
+
+  build:
+    name: Build
+    needs: guard
+    if: needs.guard.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: back-end/package-lock.json
+      - run: npm ci
       - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: back-end-build
+          path: |
+            back-end/.next
+            back-end/graphql/generated
+          if-no-files-found: error
+
+  test:
+    name: Test
+    needs: guard
+    if: needs.guard.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: back-end/package-lock.json
+      - run: npm ci
+      - run: npm run codegen
       - run: npm test
+
+  preview:
+    name: Preview Artifact
+    needs: [guard, lint, build, test]
+    runs-on: ubuntu-latest
+    if: needs.guard.outputs.ready == 'true'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: back-end-build
+          path: back-end-preview
