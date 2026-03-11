@@ -1,13 +1,34 @@
 import type { MutationResolvers } from "../../../generated/types";
-import { todos } from "../../store";
+import { eq } from "drizzle-orm";
+import { todos as todosTable } from "@/database/schema";
 
-export const updateTodo: NonNullable<MutationResolvers["updateTodo"]> = (
+export const updateTodo: NonNullable<MutationResolvers["updateTodo"]> = async (
   _,
-  { id, title, completed }
+  { id, title, completed },
+  { db },
 ) => {
-  const todo = todos.find((t) => t.id === id);
-  if (!todo) return null;
-  if (title != null) todo.title = title;
-  if (completed != null) todo.completed = completed;
-  return todo;
+  const parsedId = Number(id);
+  if (!Number.isInteger(parsedId)) return null;
+
+  const updates: Partial<typeof todosTable.$inferInsert> = {};
+  if (title != null) updates.title = title;
+  if (completed != null) updates.completed = completed;
+
+  if (Object.keys(updates).length > 0) {
+    await db.update(todosTable).set(updates).where(eq(todosTable.id, parsedId));
+  }
+
+  const [row] = await db
+    .select()
+    .from(todosTable)
+    .where(eq(todosTable.id, parsedId))
+    .limit(1);
+
+  if (!row) return null;
+
+  return {
+    id: String(row.id),
+    title: row.title,
+    completed: row.completed,
+  };
 };
