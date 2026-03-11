@@ -1,2 +1,3 @@
-export * from "./todo/getTodoById";
-export * from "./todo/getTodos";
+import type { QueryResolvers } from "../../generated/types.ts";
+
+export const _empty: NonNullable<QueryResolvers["_empty"]> = () => true;

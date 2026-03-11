@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "npm run codegen && next build",
     "start": "next start",
+    "test": "node --experimental-strip-types --test",
     "lint": "eslint",
     "codegen": "graphql-codegen --config codegen.ts",
     "db:drizzle:generate": "drizzle-kit generate",

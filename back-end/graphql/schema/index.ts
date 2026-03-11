@@ -1,4 +1,4 @@
 import { mergeTypeDefs } from "@graphql-tools/merge";
-import { TodoTypeDefs } from "./todo";
+import { BaseTypeDefs } from "./base.ts";
 
-export const typeDefs = mergeTypeDefs([TodoTypeDefs]);
+export const typeDefs = mergeTypeDefs([BaseTypeDefs]);
