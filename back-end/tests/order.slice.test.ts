@@ -226,6 +226,66 @@ test("Mutation.createOrder persists and can be queried back", async () => {
   }
 });
 
+test("Mutation.createOrder auto-creates demo reference rows for explicit ids", async () => {
+  const executor = await createExecutor();
+
+  try {
+    const created = await executor.execute<{
+      createOrder: {
+        id: string;
+        userId: string;
+        officeId: string;
+        orderProcessId: string;
+        whyOrdered: string;
+        status: string;
+      };
+    }>(
+      `
+        mutation CreateOrder(
+          $userId: ID
+          $officeId: ID
+          $orderProcessId: ID
+          $whyOrdered: String!
+          $status: String!
+        ) {
+          createOrder(
+            userId: $userId
+            officeId: $officeId
+            orderProcessId: $orderProcessId
+            whyOrdered: $whyOrdered
+            status: $status
+          ) {
+            id
+            userId
+            officeId
+            orderProcessId
+            whyOrdered
+            status
+          }
+        }
+      `,
+      {
+        userId: "1",
+        officeId: "1",
+        orderProcessId: "1",
+        whyOrdered: "Postman order",
+        status: "pending",
+      },
+    );
+
+    assert.deepEqual(created.createOrder, {
+      id: "1",
+      userId: "1",
+      officeId: "1",
+      orderProcessId: "1",
+      whyOrdered: "Postman order",
+      status: "pending",
+    });
+  } finally {
+    await executor.stop();
+  }
+});
+
 test("Mutation.updateOrderStatus changes the stored order", async () => {
   const executor = await createExecutor({
     orders: [

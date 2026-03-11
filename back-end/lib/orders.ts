@@ -90,11 +90,57 @@ async function resolveUserId(
   currentUserId?: string | null,
 ) {
   if (providedUserId) {
-    return parseIntegerId("userId", providedUserId);
+    const requestedUserId = parseIntegerId("userId", providedUserId);
+    const [existingUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, requestedUserId))
+      .limit(1);
+
+    if (existingUser) {
+      return existingUser.id;
+    }
+
+    const [createdUser] = await db
+      .insert(users)
+      .values({
+        id: requestedUserId,
+        email: `demo-user-${requestedUserId}@example.local`,
+        fullName: `Demo User ${requestedUserId}`,
+        role: "employee",
+        passwordHash: "demo-password",
+        isActive: true,
+      })
+      .returning({ id: users.id });
+
+    return createdUser.id;
   }
 
   if (currentUserId) {
-    return parseIntegerId("currentUserId", currentUserId);
+    const requestedUserId = parseIntegerId("currentUserId", currentUserId);
+    const [existingUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, requestedUserId))
+      .limit(1);
+
+    if (existingUser) {
+      return existingUser.id;
+    }
+
+    const [createdUser] = await db
+      .insert(users)
+      .values({
+        id: requestedUserId,
+        email: `demo-user-${requestedUserId}@example.local`,
+        fullName: `Demo User ${requestedUserId}`,
+        role: "employee",
+        passwordHash: "demo-password",
+        isActive: true,
+      })
+      .returning({ id: users.id });
+
+    return createdUser.id;
   }
 
   const [employeeUser] = await db
@@ -119,14 +165,43 @@ async function resolveUserId(
     return activeUser.id;
   }
 
-  throw new Error(
-    "createOrder requires a userId or at least one active user in the database.",
-  );
+  const [createdUser] = await db
+    .insert(users)
+    .values({
+      email: "demo-user-1@example.local",
+      fullName: "Demo User",
+      role: "employee",
+      passwordHash: "demo-password",
+      isActive: true,
+    })
+    .returning({ id: users.id });
+
+  return createdUser.id;
 }
 
 async function resolveOfficeId(db: AppDb, providedOfficeId?: string | null) {
   if (providedOfficeId) {
-    return parseIntegerId("officeId", providedOfficeId);
+    const requestedOfficeId = parseIntegerId("officeId", providedOfficeId);
+    const [existingOffice] = await db
+      .select({ id: offices.id })
+      .from(offices)
+      .where(eq(offices.id, requestedOfficeId))
+      .limit(1);
+
+    if (existingOffice) {
+      return existingOffice.id;
+    }
+
+    const [createdOffice] = await db
+      .insert(offices)
+      .values({
+        id: requestedOfficeId,
+        officeName: `Demo Office ${requestedOfficeId}`,
+        location: "Demo Location",
+      })
+      .returning({ id: offices.id });
+
+    return createdOffice.id;
   }
 
   const [office] = await db
@@ -139,9 +214,15 @@ async function resolveOfficeId(db: AppDb, providedOfficeId?: string | null) {
     return office.id;
   }
 
-  throw new Error(
-    "createOrder requires an officeId or at least one office in the database.",
-  );
+  const [createdOffice] = await db
+    .insert(offices)
+    .values({
+      officeName: "Demo Office",
+      location: "Demo Location",
+    })
+    .returning({ id: offices.id });
+
+  return createdOffice.id;
 }
 
 async function resolveOrderProcessId(
@@ -149,7 +230,30 @@ async function resolveOrderProcessId(
   providedOrderProcessId?: string | null,
 ) {
   if (providedOrderProcessId) {
-    return parseIntegerId("orderProcessId", providedOrderProcessId);
+    const requestedOrderProcessId = parseIntegerId(
+      "orderProcessId",
+      providedOrderProcessId,
+    );
+    const [existingOrderProcess] = await db
+      .select({ id: orderProcesses.id })
+      .from(orderProcesses)
+      .where(eq(orderProcesses.id, requestedOrderProcessId))
+      .limit(1);
+
+    if (existingOrderProcess) {
+      return existingOrderProcess.id;
+    }
+
+    const [createdOrderProcess] = await db
+      .insert(orderProcesses)
+      .values({
+        id: requestedOrderProcessId,
+        processName: `Demo Process ${requestedOrderProcessId}`,
+        description: "Auto-created for order demo",
+      })
+      .returning({ id: orderProcesses.id });
+
+    return createdOrderProcess.id;
   }
 
   const [orderProcess] = await db
@@ -162,9 +266,15 @@ async function resolveOrderProcessId(
     return orderProcess.id;
   }
 
-  throw new Error(
-    "createOrder requires an orderProcessId or at least one order process in the database.",
-  );
+  const [createdOrderProcess] = await db
+    .insert(orderProcesses)
+    .values({
+      processName: "Demo Order Process",
+      description: "Auto-created for order demo",
+    })
+    .returning({ id: orderProcesses.id });
+
+  return createdOrderProcess.id;
 }
 
 export async function listOrders(db: AppDb): Promise<OrderRecord[]> {

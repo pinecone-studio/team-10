@@ -240,6 +240,18 @@ export class FakeD1Database implements D1DatabaseLike {
 
     if (
       normalized.startsWith(
+        'select "id" from "users" where "users"."id" = ? limit ?',
+      )
+    ) {
+      const rows = this.users
+        .filter((user) => user.id === Number(params[0]))
+        .slice(0, Number(params[1]));
+
+      return this.formatIdRows(rows.map((user) => user.id), mode);
+    }
+
+    if (
+      normalized.startsWith(
         'select "id" from "users" where "users"."is_active" = ? order by "users"."id" asc limit ?',
       )
     ) {
@@ -248,6 +260,31 @@ export class FakeD1Database implements D1DatabaseLike {
         .slice(0, Number(params[1]));
 
       return this.formatIdRows(rows.map((user) => user.id), mode);
+    }
+
+    if (normalized.startsWith('insert into "users"')) {
+      const explicitId = params[0] == null ? undefined : Number(params[0]);
+      const user: StoredUser = {
+        id: explicitId ?? this.nextUserId++,
+        role: String(params[3]),
+        isActive: Boolean(params[5]),
+      };
+
+      this.nextUserId = Math.max(this.nextUserId, user.id + 1);
+      this.users.push(user);
+      return this.formatIdRows([user.id], mode);
+    }
+
+    if (
+      normalized.startsWith(
+        'select "id" from "offices" where "offices"."id" = ? limit ?',
+      )
+    ) {
+      const rows = this.offices
+        .filter((office) => office.id === Number(params[0]))
+        .slice(0, Number(params[1]));
+
+      return this.formatIdRows(rows.map((office) => office.id), mode);
     }
 
     if (
@@ -261,6 +298,29 @@ export class FakeD1Database implements D1DatabaseLike {
       );
     }
 
+    if (normalized.startsWith('insert into "offices"')) {
+      const explicitId = params[0] == null ? undefined : Number(params[0]);
+      const office: StoredOffice = {
+        id: explicitId ?? this.nextOfficeId++,
+      };
+
+      this.nextOfficeId = Math.max(this.nextOfficeId, office.id + 1);
+      this.offices.push(office);
+      return this.formatIdRows([office.id], mode);
+    }
+
+    if (
+      normalized.startsWith(
+        'select "id" from "order_processes" where "order_processes"."id" = ? limit ?',
+      )
+    ) {
+      const rows = this.orderProcesses
+        .filter((orderProcess) => orderProcess.id === Number(params[0]))
+        .slice(0, Number(params[1]));
+
+      return this.formatIdRows(rows.map((orderProcess) => orderProcess.id), mode);
+    }
+
     if (
       normalized.startsWith(
         'select "id" from "order_processes" order by "order_processes"."id" asc limit ?',
@@ -272,6 +332,20 @@ export class FakeD1Database implements D1DatabaseLike {
           .map((orderProcess) => orderProcess.id),
         mode,
       );
+    }
+
+    if (normalized.startsWith('insert into "order_processes"')) {
+      const explicitId = params[0] == null ? undefined : Number(params[0]);
+      const orderProcess: StoredOrderProcess = {
+        id: explicitId ?? this.nextOrderProcessId++,
+      };
+
+      this.nextOrderProcessId = Math.max(
+        this.nextOrderProcessId,
+        orderProcess.id + 1,
+      );
+      this.orderProcesses.push(orderProcess);
+      return this.formatIdRows([orderProcess.id], mode);
     }
 
     throw new Error(`Unsupported fake D1 query: ${query}`);
