@@ -1,2 +1,9 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type GraphQLContext = {};
+import { db, type DB } from "./db";
+
+export type GraphQLContext = {
+  db: DB;
+};
+
+export const createGraphQLContext = (): GraphQLContext => ({
+  db,
+});
