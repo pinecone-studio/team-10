@@ -5,9 +5,6 @@ on:
     branches:
       - main
       - master
-    paths:
-      - "front-end/**"
-      - ".github/workflows/front-end-deploy.yml"
   workflow_dispatch:
 
 permissions:
@@ -21,6 +18,9 @@ jobs:
   deploy-production:
     name: Deploy to Vercel Production
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.deployment_url }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -46,4 +46,15 @@ jobs:
         run: npx vercel build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy Project Artifacts to Vercel
-        run: npx vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+        id: deploy
+        run: |
+          DEPLOYMENT_URL="$(npx vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")"
+          echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+          echo "Deployment URL: $DEPLOYMENT_URL"
+
+      - name: Publish deployment summary
+        run: |
+          echo "### Front-End Production Deploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: ${{ steps.deploy.outputs.deployment_url }}" >> "$GITHUB_STEP_SUMMARY"

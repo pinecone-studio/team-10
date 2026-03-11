@@ -2,7 +2,7 @@ name: Back-End CI
 
 on:
   pull_request:
-    types: [labeled, synchronize, reopened]
+    types: [opened, labeled, synchronize, reopened]
     paths:
       - "back-end/**"
 

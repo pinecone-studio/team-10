@@ -1,0 +1,49 @@
+name: Back-End Deploy (Cloudflare)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "back-end/**"
+      - ".github/workflows/back-end-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: ./back-end
+
+concurrency:
+  group: back-end-deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy-production:
+    name: Deploy to Cloudflare Production
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: back-end/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build OpenNext output
+        run: npm run cf:build
+
+      - name: Deploy to Cloudflare Workers
+        run: npm run cf:deploy
