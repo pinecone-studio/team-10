@@ -41,6 +41,12 @@ type D1HttpClientConfig = {
 
 const DEFAULT_BASE_URL = "https://api.cloudflare.com/client/v4";
 
+function queryResultToRawRows(
+  results: Array<Record<string, unknown>>,
+): unknown[][] {
+  return results.map((row) => Object.keys(row).map((key) => row[key]));
+}
+
 class HttpD1PreparedStatement implements D1PreparedStatementLike {
   private readonly client: HttpD1Database;
   private readonly query: string;
@@ -75,7 +81,6 @@ class HttpD1PreparedStatement implements D1PreparedStatementLike {
 
 export class HttpD1Database implements D1DatabaseLike {
   private readonly queryUrl: string;
-  private readonly rawUrl: string;
   private readonly headers: HeadersInit;
 
   constructor(config: D1HttpClientConfig) {
@@ -83,7 +88,6 @@ export class HttpD1Database implements D1DatabaseLike {
     const databasePath = `${baseUrl}/accounts/${config.accountId}/d1/database/${config.databaseId}`;
 
     this.queryUrl = `${databasePath}/query`;
-    this.rawUrl = `${databasePath}/raw`;
     this.headers = {
       Authorization: `Bearer ${config.apiToken}`,
       "Content-Type": "application/json",
@@ -106,8 +110,13 @@ export class HttpD1Database implements D1DatabaseLike {
   }
 
   async executeRaw<T>(query: string, params: unknown[]): Promise<T[]> {
-    const result = await this.request<D1QueryResult<T>>(this.rawUrl, query, params);
-    return result.results;
+    const result = await this.request<D1QueryResult<Record<string, unknown>>>(
+      this.queryUrl,
+      query,
+      params,
+    );
+
+    return queryResultToRawRows(result.results) as T[];
   }
 
   async executeExec(query: string, params: unknown[]): Promise<D1ExecResult> {

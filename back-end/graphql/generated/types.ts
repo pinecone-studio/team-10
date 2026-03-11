@@ -19,9 +19,22 @@ export type Scalars = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  createOrder: Order;
   createTodo: Todo;
   deleteTodo: Scalars['Boolean']['output'];
+  updateOrderStatus?: Maybe<Order>;
   updateTodo?: Maybe<Todo>;
+};
+
+
+export type MutationCreateOrderArgs = {
+  expectedArrivalAt?: InputMaybe<Scalars['String']['input']>;
+  officeId?: InputMaybe<Scalars['ID']['input']>;
+  orderProcessId?: InputMaybe<Scalars['ID']['input']>;
+  status: Scalars['String']['input'];
+  totalCost?: InputMaybe<Scalars['Float']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+  whyOrdered: Scalars['String']['input'];
 };
 
 
@@ -35,16 +48,41 @@ export type MutationDeleteTodoArgs = {
 };
 
 
+export type MutationUpdateOrderStatusArgs = {
+  id: Scalars['ID']['input'];
+  status: Scalars['String']['input'];
+};
+
+
 export type MutationUpdateTodoArgs = {
   completed?: InputMaybe<Scalars['Boolean']['input']>;
   id: Scalars['ID']['input'];
   title?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type Order = {
+  __typename?: 'Order';
+  expectedArrivalAt?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  officeId: Scalars['ID']['output'];
+  orderProcessId: Scalars['ID']['output'];
+  status: Scalars['String']['output'];
+  totalCost?: Maybe<Scalars['Float']['output']>;
+  userId: Scalars['ID']['output'];
+  whyOrdered: Scalars['String']['output'];
+};
+
 export type Query = {
   __typename?: 'Query';
+  order?: Maybe<Order>;
+  orders: Array<Order>;
   todo?: Maybe<Todo>;
   todos: Array<Todo>;
+};
+
+
+export type QueryOrderArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -131,8 +169,10 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = {
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
+  Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
   Mutation: ResolverTypeWrapper<{}>;
+  Order: ResolverTypeWrapper<Order>;
   Query: ResolverTypeWrapper<{}>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   Todo: ResolverTypeWrapper<Todo>;
@@ -141,20 +181,38 @@ export type ResolversTypes = {
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = {
   Boolean: Scalars['Boolean']['output'];
+  Float: Scalars['Float']['output'];
   ID: Scalars['ID']['output'];
   Mutation: {};
+  Order: Order;
   Query: {};
   String: Scalars['String']['output'];
   Todo: Todo;
 };
 
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
+  createOrder?: Resolver<ResolversTypes['Order'], ParentType, ContextType, RequireFields<MutationCreateOrderArgs, 'status' | 'whyOrdered'>>;
   createTodo?: Resolver<ResolversTypes['Todo'], ParentType, ContextType, RequireFields<MutationCreateTodoArgs, 'title'>>;
   deleteTodo?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteTodoArgs, 'id'>>;
+  updateOrderStatus?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<MutationUpdateOrderStatusArgs, 'id' | 'status'>>;
   updateTodo?: Resolver<Maybe<ResolversTypes['Todo']>, ParentType, ContextType, RequireFields<MutationUpdateTodoArgs, 'id'>>;
 };
 
+export type OrderResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Order'] = ResolversParentTypes['Order']> = {
+  expectedArrivalAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  officeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  orderProcessId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  totalCost?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
+  userId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  whyOrdered?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
+  order?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<QueryOrderArgs, 'id'>>;
+  orders?: Resolver<Array<ResolversTypes['Order']>, ParentType, ContextType>;
   todo?: Resolver<Maybe<ResolversTypes['Todo']>, ParentType, ContextType, RequireFields<QueryTodoArgs, 'id'>>;
   todos?: Resolver<Array<ResolversTypes['Todo']>, ParentType, ContextType>;
 };
@@ -168,6 +226,7 @@ export type TodoResolvers<ContextType = GraphQLContext, ParentType extends Resol
 
 export type Resolvers<ContextType = GraphQLContext> = {
   Mutation?: MutationResolvers<ContextType>;
+  Order?: OrderResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   Todo?: TodoResolvers<ContextType>;
 };
