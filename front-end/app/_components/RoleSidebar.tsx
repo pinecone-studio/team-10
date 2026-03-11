@@ -16,7 +16,13 @@ type NavIcon =
   | "dispose"
   | "broken";
 
-const navItems = [
+type NavItem = {
+  label: string;
+  icon: NavIcon;
+  href?: string;
+};
+
+const navItems: readonly NavItem[] = [
   { label: "HOME", icon: "home", href: "/" },
   { label: "ORDER", icon: "order" },
   { label: "RECEIVE", icon: "receive" },
@@ -24,7 +30,7 @@ const navItems = [
   { label: "BROKEN OR MISSING ASSET", icon: "broken" },
   { label: "DISTRIBUTION", icon: "distribution" },
   { label: "DISPOSE", icon: "dispose" },
-] as const;
+];
 
 const roleNavItems: Record<AppRole, readonly string[]> = {
   employee: ["DISTRIBUTION", "DISPOSE"],
