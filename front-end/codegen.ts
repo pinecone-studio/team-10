@@ -1,7 +1,7 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
 const config: CodegenConfig = {
-  schema: "http://localhost:3000/api/graphql", // deploy hiisen link. For local development use localhost to generate types
+  schema: "../back-end/graphql/generated/schema.graphql",
   documents: ["app/**/*.{ts,tsx}", "app/**/*.graphql"],
   generates: {
     "./graphql/generated/": {
