@@ -9,7 +9,10 @@ const printedSchema = JSON.stringify(document);
 assert.match(printedSchema, /"Query"/);
 assert.match(printedSchema, /"Mutation"/);
 assert.match(printedSchema, /"Todo"/);
+assert.match(printedSchema, /"Order"/);
 assert.match(printedSchema, /"todos"/);
+assert.match(printedSchema, /"orders"/);
 assert.match(printedSchema, /"createTodo"/);
+assert.match(printedSchema, /"createOrder"/);
 
 console.log("Back-end smoke test passed.");

@@ -1,10 +1,25 @@
 type Mutation {
+  createOrder(expectedArrivalAt: String, officeId: ID, orderProcessId: ID, status: String!, totalCost: Float, userId: ID, whyOrdered: String!): Order!
   createTodo(title: String!): Todo!
   deleteTodo(id: ID!): Boolean!
+  updateOrderStatus(id: ID!, status: String!): Order
   updateTodo(completed: Boolean, id: ID!, title: String): Todo
 }
 
+type Order {
+  expectedArrivalAt: String
+  id: ID!
+  officeId: ID!
+  orderProcessId: ID!
+  status: String!
+  totalCost: Float
+  userId: ID!
+  whyOrdered: String!
+}
+
 type Query {
+  order(id: ID!): Order
+  orders: [Order!]!
   todo(id: ID!): Todo
   todos: [Todo!]!
 }
