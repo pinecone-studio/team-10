@@ -1,8 +1,6 @@
-import { ApolloServer } from "@apollo/server";
 import { startServerAndCreateNextHandler } from "@as-integrations/next";
 import { type NextRequest, NextResponse } from "next/server";
-import { typeDefs } from "@/graphql/schema";
-import { resolvers } from "@/graphql/resolvers";
+import { createGraphQLServer } from "@/graphql/server";
 import { createGraphQLContext, type GraphQLContext } from "@/lib/context";
 
 const CORS_HEADERS = {
@@ -11,16 +9,12 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-const server = new ApolloServer<GraphQLContext>({
-  typeDefs,
-  resolvers,
-  introspection: true,
-});
+const server = createGraphQLServer();
 
 const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
   server,
   {
-    context: async () => createGraphQLContext(),
+    context: async (req) => createGraphQLContext(req),
   },
 );
 
