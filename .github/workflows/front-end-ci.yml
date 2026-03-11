@@ -1,11 +1,8 @@
 name: Front-End CI
 
 on:
-  push:
-    paths:
-      - "front-end/**"
-      - ".github/workflows/front-end-ci.yml"
   pull_request:
+    types: [opened, labeled, synchronize, reopened]
     branches:
       - main
       - master
@@ -21,8 +18,19 @@ defaults:
     working-directory: ./front-end
 
 jobs:
+  guard:
+    name: Check code-ready label
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ contains(github.event.pull_request.labels.*.name, 'code-ready') }}
+    steps:
+      - run: echo "Label check complete"
+        working-directory: .
+
   lint:
     name: Lint
+    needs: guard
+    if: needs.guard.outputs.ready == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +44,8 @@ jobs:
 
   test:
     name: Test
+    needs: guard
+    if: needs.guard.outputs.ready == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +59,8 @@ jobs:
 
   build:
     name: Build
+    needs: guard
+    if: needs.guard.outputs.ready == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

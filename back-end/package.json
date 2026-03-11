@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "npm run codegen && next build",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:deploy": "opennextjs-cloudflare deploy",
     "start": "next start",
     "lint": "eslint .",
     "test": "node ./scripts/ci-smoke.mjs",

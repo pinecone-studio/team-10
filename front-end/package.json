@@ -5,6 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "npm run codegen && next build",
+    "vercel:pull": "npx -y vercel@latest pull --yes --environment=production",
+    "vercel:build": "npx -y vercel@latest build --prod",
+    "vercel:deploy": "npx -y vercel@latest --prod --yes",
+    "vercel:deploy:prebuilt": "npx -y vercel@latest deploy --prebuilt --prod",
+    "deploy:prod": "npm run vercel:pull && npm run vercel:deploy",
+    "deploy:prod:prebuilt": "npm run vercel:pull && npm run vercel:build && npm run vercel:deploy:prebuilt",
     "start": "next start",
     "lint": "eslint .",
     "test": "node ./scripts/ci-smoke.mjs",

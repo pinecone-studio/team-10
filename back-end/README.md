@@ -51,6 +51,11 @@ npm run cf:build
 npm run cf:deploy
 ```
 
+For GitHub Actions deployment, add these repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
 ### 4) Smoke test after deploy
 
 ```bash
