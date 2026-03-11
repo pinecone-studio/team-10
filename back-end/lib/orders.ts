@@ -101,7 +101,7 @@ async function resolveUserId(
       return existingUser.id;
     }
 
-    const [createdUser] = await db
+    await db
       .insert(users)
       .values({
         id: requestedUserId,
@@ -111,9 +111,9 @@ async function resolveUserId(
         passwordHash: "demo-password",
         isActive: true,
       })
-      .returning({ id: users.id });
+      .run();
 
-    return createdUser.id;
+    return requestedUserId;
   }
 
   if (currentUserId) {
@@ -128,7 +128,7 @@ async function resolveUserId(
       return existingUser.id;
     }
 
-    const [createdUser] = await db
+    await db
       .insert(users)
       .values({
         id: requestedUserId,
@@ -138,9 +138,9 @@ async function resolveUserId(
         passwordHash: "demo-password",
         isActive: true,
       })
-      .returning({ id: users.id });
+      .run();
 
-    return createdUser.id;
+    return requestedUserId;
   }
 
   const [employeeUser] = await db
@@ -165,16 +165,28 @@ async function resolveUserId(
     return activeUser.id;
   }
 
-  const [createdUser] = await db
+  const demoEmail = "demo-user-1@example.local";
+
+  await db
     .insert(users)
     .values({
-      email: "demo-user-1@example.local",
+      email: demoEmail,
       fullName: "Demo User",
       role: "employee",
       passwordHash: "demo-password",
       isActive: true,
     })
-    .returning({ id: users.id });
+    .run();
+
+  const [createdUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, demoEmail))
+    .limit(1);
+
+  if (!createdUser) {
+    throw new Error("Failed to create a demo user for createOrder.");
+  }
 
   return createdUser.id;
 }
@@ -192,16 +204,16 @@ async function resolveOfficeId(db: AppDb, providedOfficeId?: string | null) {
       return existingOffice.id;
     }
 
-    const [createdOffice] = await db
+    await db
       .insert(offices)
       .values({
         id: requestedOfficeId,
         officeName: `Demo Office ${requestedOfficeId}`,
         location: "Demo Location",
       })
-      .returning({ id: offices.id });
+      .run();
 
-    return createdOffice.id;
+    return requestedOfficeId;
   }
 
   const [office] = await db
@@ -214,13 +226,25 @@ async function resolveOfficeId(db: AppDb, providedOfficeId?: string | null) {
     return office.id;
   }
 
-  const [createdOffice] = await db
+  const officeName = "Demo Office";
+
+  await db
     .insert(offices)
     .values({
-      officeName: "Demo Office",
+      officeName,
       location: "Demo Location",
     })
-    .returning({ id: offices.id });
+    .run();
+
+  const [createdOffice] = await db
+    .select({ id: offices.id })
+    .from(offices)
+    .where(eq(offices.officeName, officeName))
+    .limit(1);
+
+  if (!createdOffice) {
+    throw new Error("Failed to create a demo office for createOrder.");
+  }
 
   return createdOffice.id;
 }
@@ -244,16 +268,16 @@ async function resolveOrderProcessId(
       return existingOrderProcess.id;
     }
 
-    const [createdOrderProcess] = await db
+    await db
       .insert(orderProcesses)
       .values({
         id: requestedOrderProcessId,
         processName: `Demo Process ${requestedOrderProcessId}`,
         description: "Auto-created for order demo",
       })
-      .returning({ id: orderProcesses.id });
+      .run();
 
-    return createdOrderProcess.id;
+    return requestedOrderProcessId;
   }
 
   const [orderProcess] = await db
@@ -266,13 +290,25 @@ async function resolveOrderProcessId(
     return orderProcess.id;
   }
 
-  const [createdOrderProcess] = await db
+  const processName = "Demo Order Process";
+
+  await db
     .insert(orderProcesses)
     .values({
-      processName: "Demo Order Process",
+      processName,
       description: "Auto-created for order demo",
     })
-    .returning({ id: orderProcesses.id });
+    .run();
+
+  const [createdOrderProcess] = await db
+    .select({ id: orderProcesses.id })
+    .from(orderProcesses)
+    .where(eq(orderProcesses.processName, processName))
+    .limit(1);
+
+  if (!createdOrderProcess) {
+    throw new Error("Failed to create a demo order process for createOrder.");
+  }
 
   return createdOrderProcess.id;
 }

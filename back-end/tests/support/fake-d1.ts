@@ -55,16 +55,19 @@ type StoredOrder = {
 
 type StoredUser = {
   id: number;
+  email: string;
   role: string;
   isActive: boolean;
 };
 
 type StoredOffice = {
   id: number;
+  officeName: string;
 };
 
 type StoredOrderProcess = {
   id: number;
+  processName: string;
 };
 
 type SeedConfig = {
@@ -252,6 +255,18 @@ export class FakeD1Database implements D1DatabaseLike {
 
     if (
       normalized.startsWith(
+        'select "id" from "users" where "users"."email" = ? limit ?',
+      )
+    ) {
+      const rows = this.users
+        .filter((user) => user.email === String(params[0]))
+        .slice(0, Number(params[1]));
+
+      return this.formatIdRows(rows.map((user) => user.id), mode);
+    }
+
+    if (
+      normalized.startsWith(
         'select "id" from "users" where "users"."is_active" = ? order by "users"."id" asc limit ?',
       )
     ) {
@@ -266,8 +281,9 @@ export class FakeD1Database implements D1DatabaseLike {
       const explicitId = params[0] == null ? undefined : Number(params[0]);
       const user: StoredUser = {
         id: explicitId ?? this.nextUserId++,
-        role: String(params[3]),
-        isActive: Boolean(params[5]),
+        email: String(params[explicitId == null ? 0 : 1]),
+        role: String(params[explicitId == null ? 2 : 3]),
+        isActive: Boolean(params[explicitId == null ? 4 : 5]),
       };
 
       this.nextUserId = Math.max(this.nextUserId, user.id + 1);
@@ -289,6 +305,18 @@ export class FakeD1Database implements D1DatabaseLike {
 
     if (
       normalized.startsWith(
+        'select "id" from "offices" where "offices"."office_name" = ? limit ?',
+      )
+    ) {
+      const rows = this.offices
+        .filter((office) => office.officeName === String(params[0]))
+        .slice(0, Number(params[1]));
+
+      return this.formatIdRows(rows.map((office) => office.id), mode);
+    }
+
+    if (
+      normalized.startsWith(
         'select "id" from "offices" order by "offices"."id" asc limit ?',
       )
     ) {
@@ -302,6 +330,7 @@ export class FakeD1Database implements D1DatabaseLike {
       const explicitId = params[0] == null ? undefined : Number(params[0]);
       const office: StoredOffice = {
         id: explicitId ?? this.nextOfficeId++,
+        officeName: String(params[explicitId == null ? 0 : 1]),
       };
 
       this.nextOfficeId = Math.max(this.nextOfficeId, office.id + 1);
@@ -316,6 +345,18 @@ export class FakeD1Database implements D1DatabaseLike {
     ) {
       const rows = this.orderProcesses
         .filter((orderProcess) => orderProcess.id === Number(params[0]))
+        .slice(0, Number(params[1]));
+
+      return this.formatIdRows(rows.map((orderProcess) => orderProcess.id), mode);
+    }
+
+    if (
+      normalized.startsWith(
+        'select "id" from "order_processes" where "order_processes"."process_name" = ? limit ?',
+      )
+    ) {
+      const rows = this.orderProcesses
+        .filter((orderProcess) => orderProcess.processName === String(params[0]))
         .slice(0, Number(params[1]));
 
       return this.formatIdRows(rows.map((orderProcess) => orderProcess.id), mode);
@@ -338,6 +379,7 @@ export class FakeD1Database implements D1DatabaseLike {
       const explicitId = params[0] == null ? undefined : Number(params[0]);
       const orderProcess: StoredOrderProcess = {
         id: explicitId ?? this.nextOrderProcessId++,
+        processName: String(params[explicitId == null ? 0 : 1]),
       };
 
       this.nextOrderProcessId = Math.max(
@@ -386,6 +428,7 @@ export class FakeD1Database implements D1DatabaseLike {
       this.nextUserId = Math.max(this.nextUserId, id + 1);
       this.users.push({
         id,
+        email: `demo-user-${id}@example.local`,
         role: user.role ?? "employee",
         isActive: user.isActive ?? true,
       });
@@ -396,7 +439,7 @@ export class FakeD1Database implements D1DatabaseLike {
     for (const office of seedOffices) {
       const id = office.id ?? this.nextOfficeId++;
       this.nextOfficeId = Math.max(this.nextOfficeId, id + 1);
-      this.offices.push({ id });
+      this.offices.push({ id, officeName: `Demo Office ${id}` });
     }
   }
 
@@ -404,7 +447,7 @@ export class FakeD1Database implements D1DatabaseLike {
     for (const orderProcess of seedOrderProcesses) {
       const id = orderProcess.id ?? this.nextOrderProcessId++;
       this.nextOrderProcessId = Math.max(this.nextOrderProcessId, id + 1);
-      this.orderProcesses.push({ id });
+      this.orderProcesses.push({ id, processName: `Demo Process ${id}` });
     }
   }
 
@@ -507,6 +550,8 @@ class FakeD1PreparedStatement implements D1PreparedStatementLike {
   }
 
   async run() {
+    await this.database.execute(this.query, this.params, "rows");
+
     return {
       success: true,
       meta: {},
