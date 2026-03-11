@@ -18,8 +18,6 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
@@ -28,6 +26,40 @@ To learn more about Next.js, take a look at the following resources:
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Cloudflare Workers
+
+### 1) Configure runtime and D1 binding
+
+Update [`wrangler.toml`](./wrangler.toml):
+
+- Replace `database_id` with your real `CLOUDFLARE_D1_DATABASE_ID`.
+- Replace `[vars]` placeholders with your real account/database IDs.
+
+### 2) Add runtime secret (only if needed by this backend)
+
+This backend currently uses `CLOUDFLARE_API_TOKEN` at runtime in `lib/db.ts`.
+
+```bash
+npx wrangler secret put CLOUDFLARE_API_TOKEN
+```
+
+### 3) Deploy
+
+```bash
+npm run cf:build
+npm run cf:deploy
+```
+
+### 4) Smoke test after deploy
+
+```bash
+./scripts/smoke-graphql.sh https://<your-worker-url>
+```
+
+It runs:
+- `GET /api/health` (service is up)
+- `POST /api/graphql` with a `todos` query (GraphQL path is working)
 
 ## Deploy on Vercel
 
