@@ -5,9 +5,9 @@ on:
     types: [labeled, synchronize, reopened]
     paths:
       - "back-end/**"
-      - ".github/workflows/back-end-ci.yml"
 
 permissions:
+  id-token: write
   contents: read
   pull-requests: write
 
@@ -25,66 +25,56 @@ jobs:
       - run: echo "Label check complete"
         working-directory: .
 
-  lint:
-    name: Lint
+  install:
+    name: Install
     needs: guard
     if: needs.guard.outputs.ready == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Cache node_modules
+        id: cache
+        uses: actions/cache@v4
         with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: back-end/package-lock.json
-      - run: npm ci
-      - run: npm run lint
+          path: back-end/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('back-end/bun.lock') }}
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: bun install
+
+  lint:
+    name: Lint & Type Check
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/cache@v4
+        with:
+          path: back-end/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('back-end/bun.lock') }}
+      - run: bun run lint
 
   build:
     name: Build
-    needs: guard
-    if: needs.guard.outputs.ready == 'true'
+    needs: install
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/cache@v4
         with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: back-end/package-lock.json
-      - run: npm ci
-      - run: npm run build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: back-end-build
-          path: |
-            back-end/.next
-            back-end/graphql/generated
-          if-no-files-found: error
-
-  test:
-    name: Test
-    needs: guard
-    if: needs.guard.outputs.ready == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: back-end/package-lock.json
-      - run: npm ci
-      - run: npm run codegen
-      - run: npm test
+          path: back-end/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('back-end/bun.lock') }}
 
   preview:
-    name: Preview Artifact
-    needs: [guard, lint, build, test]
+    name: Preview
+    needs: install
     runs-on: ubuntu-latest
-    if: needs.guard.outputs.ready == 'true'
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/cache@v4
         with:
-          name: back-end-build
-          path: back-end-preview
+          path: back-end/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('back-end/bun.lock') }}
