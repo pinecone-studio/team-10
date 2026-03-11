@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "node ./scripts/ci-smoke.mjs",
+    "test:graphql": "node --experimental-strip-types tests/todo.slice.test.ts",
     "codegen": "graphql-codegen --config codegen.ts",
     "db:drizzle:generate": "drizzle-kit generate",
     "db:drizzle:push": "drizzle-kit push",

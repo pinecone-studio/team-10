@@ -112,7 +112,6 @@ export const todos = sqliteTable(
   },
   (table) => [
     index("idx_todos_completed").on(table.completed),
-    index("idx_todos_created_at").on(table.createdAt),
   ],
 );
 

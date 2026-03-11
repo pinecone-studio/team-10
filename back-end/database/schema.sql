@@ -30,9 +30,6 @@ CREATE TABLE IF NOT EXISTS todos (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed);
-CREATE INDEX IF NOT EXISTS idx_todos_created_at ON todos(created_at);
-
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   clerk_user_id TEXT UNIQUE,
@@ -357,7 +354,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_clerk_user_id ON users(clerk_user_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-
+CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed);
 CREATE INDEX IF NOT EXISTS idx_offices_office_name ON offices(office_name);
 CREATE INDEX IF NOT EXISTS idx_order_processes_process_name ON order_processes(process_name);
 

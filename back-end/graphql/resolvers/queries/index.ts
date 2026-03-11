@@ -1,2 +1,2 @@
-export * from "./todo/getTodoById";
-export * from "./todo/getTodos";
+export * from "./todo/getTodoById.ts";
+export * from "./todo/getTodos.ts";

@@ -43,4 +43,6 @@ yarn-error.log*
 next-env.d.ts
 
 # codegen
-graphql/generated/
+graphql/generated/*
+!graphql/generated/schema.graphql
+!graphql/generated/types.ts

@@ -1,14 +1,14 @@
 import type { AppRole } from "../_lib/roles";
-import { RoleSwitcher } from "./RoleSwitcher";
 import { getRoleMeta } from "../_lib/roles";
+import { RoleSwitcher } from "./RoleSwitcher";
 
 const navItems = [
   { label: "HOME", icon: "grid", active: true },
-  { label: "ORDER", icon: "box" },
-  { label: "RECEIVE", icon: "chart" },
-  { label: "STORAGE", icon: "users" },
-  { label: "DISTRIBUTION", icon: "file" },
-  { label: "DISPOSE", icon: "gear" },
+  { label: "ORDER", icon: "box", active: false },
+  { label: "RECEIVE", icon: "chart", active: false },
+  { label: "STORAGE", icon: "users", active: false },
+  { label: "DISTRIBUTION", icon: "file", active: false },
+  { label: "DISPOSE", icon: "gear", active: false },
 ] as const;
 
 type RoleSidebarProps = {
