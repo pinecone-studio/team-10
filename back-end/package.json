@@ -7,12 +7,16 @@
     "build": "npm run codegen && next build",
     "start": "next start",
     "lint": "eslint",
-    "codegen": "graphql-codegen --config codegen.ts"
+    "codegen": "graphql-codegen --config codegen.ts",
+    "db:drizzle:generate": "drizzle-kit generate",
+    "db:drizzle:push": "drizzle-kit push",
+    "db:remote:migrate": "npx wrangler d1 execute team10-backend-db --remote --file ./database/schema.sql"
   },
   "dependencies": {
     "@apollo/server": "^5.1.0",
     "@as-integrations/next": "^4.1.0",
     "@graphql-tools/merge": "^9.1.7",
+    "drizzle-orm": "^0.44.5",
     "graphql": "^16.11.0",
     "next": "16.1.6",
     "react": "19.2.3",
@@ -27,6 +31,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
+    "drizzle-kit": "^0.31.5",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",

@@ -1,0 +1,313 @@
+Project assetManagementSystem {
+  database_type: "SQLite"
+  Note: '''
+  Asset Management System schema draft for dbdiagram.io.
+  Uses camelCase naming, enums for fixed status/value sets, and only physical assets.
+  Storage is not connected to offices. Orders do not connect to storage directly.
+  Items become assets after receiving, and assets then move into storage.
+  '''
+}
+
+Enum roleEnum {
+  employee
+  inventoryHead
+  finance
+  itAdmin
+  hrManager
+  systemAdmin
+}
+
+Enum orderStatusEnum {
+  pending
+  approved
+  rejected
+  ordered
+  partiallyReceived
+  received
+  closed
+}
+
+Enum receiveStatusEnum {
+  pending
+  partiallyReceived
+  received
+  cancelled
+}
+
+Enum conditionStatusEnum {
+  good
+  fair
+  damaged
+  defective
+  incomplete
+  used
+}
+
+Enum assetStatusEnum {
+  received
+  inStorage
+  available
+  pendingAssignment
+  assigned
+  inRepair
+  pendingDisposal
+  sold
+  disposed
+  lost
+}
+
+Enum disposalMethodEnum {
+  sale
+  donation
+  recycle
+  destroy
+  returnToVendor
+  other
+}
+
+Enum storageTypeEnum {
+  room
+  shelf
+  cabinet
+  locker
+  warehouse
+  vault
+}
+
+Enum assignmentRequestStatusEnum {
+  pending
+  approved
+  declined
+  cancelled
+}
+
+Enum distributionStatusEnum {
+  pendingHandover
+  active
+  returned
+  cancelled
+}
+
+Enum disposalStatusEnum {
+  pending
+  financeApproved
+  disposed
+  cancelled
+}
+
+Table users {
+  id integer [pk, increment]
+  clerkUserId text [unique, note: 'Optional external auth ID']
+  email text [not null, unique]
+  fullName text [not null]
+  role roleEnum [not null]
+  passwordHash text [not null]
+  isActive boolean [not null, default: true]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table offices {
+  id integer [pk, increment]
+  officeName text [not null, unique]
+  location text [not null]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table orderProcesses {
+  id integer [pk, increment]
+  processName text [not null, unique]
+  description text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table orders {
+  id integer [pk, increment]
+  user integer [not null]
+  officeId integer [not null]
+  orderProcessId integer [not null, note: 'thh zuvhun one process']
+  whyOrdered text [not null]
+  status orderStatusEnum [not null]
+  expectedArrivalAt timestamp
+  totalCost real
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table orderItems {
+  id integer [pk, increment]
+  orderId integer [not null]
+  itemName text [not null]
+  category text [not null, note: 'Example: laptop, monitor, keyboard']
+  quantity integer [not null]
+  unitCost real [not null]
+  fromWhere text [not null]
+  additionalNotes text
+  eta timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table orderItemImages {
+  id integer [pk, increment]
+  orderItemId integer [not null]
+  imageUrl text [not null, note: 'Public URL, storage key, or relative file path']
+  sortOrder integer [not null, default: 0]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  Indexes {
+    (orderItemId, imageUrl) [unique]
+  }
+}
+
+Table orderItemAttributes {
+  id integer [pk, increment]
+  orderItemId integer [not null]
+  attributeName text [not null]
+  attributeValue text [not null]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  Indexes {
+    (orderItemId, attributeName) [unique]
+  }
+}
+
+Table receives {
+  id integer [pk, increment]
+  orderId integer [not null]
+  receivedByUserId integer [not null]
+  officeId integer [not null]
+  status receiveStatusEnum [not null]
+  receivedAt timestamp [not null]
+  note text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table receiveItems {
+  id integer [pk, increment]
+  receiveId integer [not null]
+  orderItemId integer [not null]
+  quantityReceived integer [not null]
+  conditionStatus conditionStatusEnum [not null]
+  note text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table storage {
+  id integer [pk, increment]
+  storageName text [not null, unique]
+  storageType storageTypeEnum [not null]
+  description text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table assets {
+  id integer [pk, increment]
+  receiveItemId integer [not null]
+  assetCode text [not null, unique, note: 'System-generated format: [CATEGORY]-[YEAR]-[SEQUENCE], e.g. MAC-2026-001']
+  qrCode text [not null, unique]
+  assetName text [not null]
+  category text [not null]
+  serialNumber text
+  conditionStatus conditionStatusEnum [not null]
+  assetStatus assetStatusEnum [not null]
+  currentStorageId integer
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table assetAttributes {
+  id integer [pk, increment]
+  assetId integer [not null]
+  attributeName text [not null]
+  attributeValue text [not null]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  Indexes {
+    (assetId, attributeName) [unique]
+  }
+}
+
+Table assetAssignmentRequests {
+  id integer [pk, increment]
+  assetId integer [not null]
+  employeeId integer [not null]
+  employeeScannedAt timestamp [not null]
+  reviewedByUserId integer
+  reviewedAt timestamp
+  reviewNote text
+  status assignmentRequestStatusEnum [not null]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table assetDistributions {
+  id integer [pk, increment]
+  assignmentRequestId integer [unique, note: 'One approved request should create at most one distribution']
+  assetId integer [not null]
+  employeeId integer [not null]
+  distributedByUserId integer [not null]
+  distributedAt timestamp [not null]
+  status distributionStatusEnum [not null]
+  returnedAt timestamp
+  note text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table assetDisposals {
+  id integer [pk, increment]
+  assetId integer [not null]
+  requestedByUserId integer [not null]
+  approvedByUserId integer
+  disposedByUserId integer
+  status disposalStatusEnum [not null]
+  disposalReason text [not null]
+  disposalMethod disposalMethodEnum
+  disposedAt timestamp
+  note text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Ref: orders.user > users.id
+Ref: orders.officeId > offices.id
+Ref: orders.orderProcessId > orderProcesses.id
+
+Ref: orderItems.orderId > orders.id
+Ref: orderItemImages.orderItemId > orderItems.id
+Ref: orderItemAttributes.orderItemId > orderItems.id
+
+Ref: receives.orderId > orders.id
+Ref: receives.receivedByUserId > users.id
+Ref: receives.officeId > offices.id
+
+Ref: receiveItems.receiveId > receives.id
+Ref: receiveItems.orderItemId > orderItems.id
+
+Ref: assets.receiveItemId > receiveItems.id
+Ref: assets.currentStorageId > storage.id
+
+Ref: assetAttributes.assetId > assets.id
+
+Ref: assetAssignmentRequests.assetId > assets.id
+Ref: assetAssignmentRequests.employeeId > users.id
+Ref: assetAssignmentRequests.reviewedByUserId > users.id
+
+Ref: assetDistributions.assignmentRequestId - assetAssignmentRequests.id
+Ref: assetDistributions.assetId > assets.id
+Ref: assetDistributions.employeeId > users.id
+Ref: assetDistributions.distributedByUserId > users.id
+
+Ref: assetDisposals.assetId > assets.id
+Ref: assetDisposals.requestedByUserId > users.id
+Ref: assetDisposals.approvedByUserId > users.id
+Ref: assetDisposals.disposedByUserId > users.id
