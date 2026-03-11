@@ -20,6 +20,15 @@ DROP TABLE IF EXISTS asset_types;
 DROP TABLE IF EXISTS order_processes;
 DROP TABLE IF EXISTS offices;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS todos;
+
+CREATE TABLE IF NOT EXISTS todos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  completed INTEGER NOT NULL DEFAULT 0 CHECK (completed IN (0, 1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -345,6 +354,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_clerk_user_id ON users(clerk_user_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed);
 CREATE INDEX IF NOT EXISTS idx_offices_office_name ON offices(office_name);
 CREATE INDEX IF NOT EXISTS idx_order_processes_process_name ON order_processes(process_name);
 

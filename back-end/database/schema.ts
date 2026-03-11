@@ -102,6 +102,19 @@ const timestamps = () => ({
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const todos = sqliteTable(
+  "todos",
+  {
+    id: idColumn(),
+    title: text("title").notNull(),
+    completed: integer("completed", { mode: "boolean" }).notNull().default(false),
+    ...timestamps(),
+  },
+  (table) => [
+    index("idx_todos_completed").on(table.completed),
+  ],
+);
+
 export const users = sqliteTable(
   "users",
   {
