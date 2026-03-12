@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { AppRole } from "../_lib/roles";
 import { getRoleMeta } from "../_lib/roles";
-import { getSectionHref, navItems, roleNavSections, type NavIcon } from "../_lib/navigation";
+import { getSectionHref, navItems, roleNavSections, type NavIcon, type SectionKey } from "../_lib/navigation";
 import { RoleSwitcher } from "./RoleSwitcher";
 
 type RoleSidebarProps = {
   role?: AppRole;
+  currentSection?: SectionKey;
 };
 
 function Icon({ kind, active }: { kind: NavIcon; active: boolean }) {
@@ -70,11 +71,9 @@ function Icon({ kind, active }: { kind: NavIcon; active: boolean }) {
   );
 }
 
-export function RoleSidebar({ role }: RoleSidebarProps) {
+export function RoleSidebar({ role, currentSection = "order" }: RoleSidebarProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const roleMeta = role ? getRoleMeta(role) : null;
-  const currentSection = searchParams.get("section") ?? "order";
   const visibleItems = navItems.filter(
     (item) => item.section === "home" || (role ? roleNavSections[role].includes(item.section) : false),
   );
