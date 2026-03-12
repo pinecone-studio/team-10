@@ -5,44 +5,12 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { AppRole } from "../_lib/roles";
 import { getRoleMeta } from "../_lib/roles";
+import { getSectionHref, navItems, roleNavSections, type NavIcon, type SectionKey } from "../_lib/navigation";
 import { RoleSwitcher } from "./RoleSwitcher";
-
-type NavIcon =
-  | "home"
-  | "order"
-  | "receive"
-  | "storage"
-  | "distribution"
-  | "dispose"
-  | "broken";
-
-type NavItem = {
-  label: string;
-  icon: NavIcon;
-  href?: string;
-};
-
-const navItems: readonly NavItem[] = [
-  { label: "HOME", icon: "home", href: "/" },
-  { label: "ORDER", icon: "order" },
-  { label: "RECEIVE", icon: "receive" },
-  { label: "STORAGE", icon: "storage" },
-  { label: "BROKEN OR MISSING ASSET", icon: "broken" },
-  { label: "DISTRIBUTION", icon: "distribution" },
-  { label: "DISPOSE", icon: "dispose" },
-];
-
-const roleNavItems: Record<AppRole, readonly string[]> = {
-  employee: ["DISTRIBUTION", "DISPOSE"],
-  inventoryHead: ["ORDER", "RECEIVE", "STORAGE"],
-  finance: ["RECEIVE"],
-  itAdmin: ["STORAGE", "BROKEN OR MISSING ASSET", "DISPOSE"],
-  hrManager: ["DISTRIBUTION", "DISPOSE"],
-  systemAdmin: navItems.filter((item) => item.label !== "HOME").map((item) => item.label),
-};
 
 type RoleSidebarProps = {
   role?: AppRole;
+  currentSection?: SectionKey;
 };
 
 function Icon({ kind, active }: { kind: NavIcon; active: boolean }) {
@@ -103,10 +71,12 @@ function Icon({ kind, active }: { kind: NavIcon; active: boolean }) {
   );
 }
 
-export function RoleSidebar({ role }: RoleSidebarProps) {
+export function RoleSidebar({ role, currentSection = "order" }: RoleSidebarProps) {
   const pathname = usePathname();
   const roleMeta = role ? getRoleMeta(role) : null;
-  const visibleItems = navItems.filter((item) => item.label === "HOME" || (role ? roleNavItems[role].includes(item.label) : false));
+  const visibleItems = navItems.filter(
+    (item) => item.section === "home" || (role ? roleNavSections[role].includes(item.section) : false),
+  );
 
   return (
     <aside className="flex min-h-screen w-[244px] shrink-0 flex-col bg-[#010101] px-[20px] pt-[58px] pb-[36px] text-white">
@@ -131,31 +101,26 @@ export function RoleSidebar({ role }: RoleSidebarProps) {
       </div>
 
       <nav className="mt-[16px] flex flex-1 flex-col gap-[6px]">
-        {visibleItems.map((item) => (
-          item.href ? (
+        {visibleItems.map((item) => {
+          const href = getSectionHref(role, item.section);
+          const isActive =
+            item.section === "home"
+              ? pathname === "/"
+              : pathname === `/${role}` && currentSection === item.section;
+
+          return (
             <Link
               key={item.label}
-              href={item.href}
+              href={href}
               className={`flex h-[32px] items-center gap-[10px] overflow-hidden rounded-[7px] px-[10px] text-left text-[11px] font-medium tracking-[0.01em] transition ${
-                pathname === item.href
-                  ? "bg-[#1c2436] text-white"
-                  : "text-[#b0b0b0] hover:bg-white/5 hover:text-white"
+                isActive ? "bg-[#1c2436] text-white" : "text-[#b0b0b0] hover:bg-white/5 hover:text-white"
               }`}
             >
-              <Icon kind={item.icon} active={pathname === item.href} />
+              <Icon kind={item.icon} active={isActive} />
               <span className="truncate">{item.label}</span>
             </Link>
-          ) : (
-            <button
-              key={item.label}
-              type="button"
-              className="flex h-[32px] items-center gap-[10px] overflow-hidden rounded-[7px] px-[10px] text-left text-[11px] font-medium tracking-[0.01em] text-[#b0b0b0] transition hover:bg-white/5 hover:text-white"
-            >
-              <Icon kind={item.icon} active={false} />
-              <span className="truncate">{item.label}</span>
-            </button>
-          )
-        ))}
+          );
+        })}
       </nav>
 
       <div className="border-t border-white/10 pt-[20px]">
