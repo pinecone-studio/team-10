@@ -64,7 +64,7 @@ For GitHub Actions deployment, add these repository secrets:
 
 It runs:
 - `GET /api/health` (service is up)
-- `POST /api/graphql` with a `todos` query (GraphQL path is working)
+- `POST /api/graphql` with `orders` and `receives` queries (GraphQL path is working)
 
 ## Deploy on Vercel
 

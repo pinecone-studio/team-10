@@ -1,9 +1,10 @@
 type Mutation {
   createOrder(expectedArrivalAt: String, officeId: ID, orderProcessId: ID, status: String!, totalCost: Float, userId: ID, whyOrdered: String!): Order!
-  createTodo(title: String!): Todo!
-  deleteTodo(id: ID!): Boolean!
-  updateOrderStatus(id: ID!, status: String!): Order
-  updateTodo(completed: Boolean, id: ID!, title: String): Todo
+  createReceive(note: String, officeId: ID, orderId: ID, receivedAt: String, receivedByUserId: ID, status: String!): Receive!
+  deleteOrder(id: ID!): Boolean!
+  deleteReceive(id: ID!): Boolean!
+  updateOrder(expectedArrivalAt: String, id: ID!, officeId: ID, orderProcessId: ID, status: String, totalCost: Float, userId: ID, whyOrdered: String): Order
+  updateReceive(id: ID!, note: String, officeId: ID, orderId: ID, receivedAt: String, receivedByUserId: ID, status: String): Receive
 }
 
 type Order {
@@ -20,12 +21,16 @@ type Order {
 type Query {
   order(id: ID!): Order
   orders: [Order!]!
-  todo(id: ID!): Todo
-  todos: [Todo!]!
+  receive(id: ID!): Receive
+  receives: [Receive!]!
 }
 
-type Todo {
-  completed: Boolean!
+type Receive {
   id: ID!
-  title: String!
+  note: String
+  officeId: ID!
+  orderId: ID!
+  receivedAt: String!
+  receivedByUserId: ID!
+  status: String!
 }

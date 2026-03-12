@@ -20,10 +20,11 @@ export type Scalars = {
 export type Mutation = {
   __typename?: 'Mutation';
   createOrder: Order;
-  createTodo: Todo;
-  deleteTodo: Scalars['Boolean']['output'];
-  updateOrderStatus?: Maybe<Order>;
-  updateTodo?: Maybe<Todo>;
+  createReceive: Receive;
+  deleteOrder: Scalars['Boolean']['output'];
+  deleteReceive: Scalars['Boolean']['output'];
+  updateOrder?: Maybe<Order>;
+  updateReceive?: Maybe<Receive>;
 };
 
 
@@ -38,26 +39,46 @@ export type MutationCreateOrderArgs = {
 };
 
 
-export type MutationCreateTodoArgs = {
-  title: Scalars['String']['input'];
-};
-
-
-export type MutationDeleteTodoArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type MutationUpdateOrderStatusArgs = {
-  id: Scalars['ID']['input'];
+export type MutationCreateReceiveArgs = {
+  note?: InputMaybe<Scalars['String']['input']>;
+  officeId?: InputMaybe<Scalars['ID']['input']>;
+  orderId?: InputMaybe<Scalars['ID']['input']>;
+  receivedAt?: InputMaybe<Scalars['String']['input']>;
+  receivedByUserId?: InputMaybe<Scalars['ID']['input']>;
   status: Scalars['String']['input'];
 };
 
 
-export type MutationUpdateTodoArgs = {
-  completed?: InputMaybe<Scalars['Boolean']['input']>;
+export type MutationDeleteOrderArgs = {
   id: Scalars['ID']['input'];
-  title?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationDeleteReceiveArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationUpdateOrderArgs = {
+  expectedArrivalAt?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  officeId?: InputMaybe<Scalars['ID']['input']>;
+  orderProcessId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  totalCost?: InputMaybe<Scalars['Float']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+  whyOrdered?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationUpdateReceiveArgs = {
+  id: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  officeId?: InputMaybe<Scalars['ID']['input']>;
+  orderId?: InputMaybe<Scalars['ID']['input']>;
+  receivedAt?: InputMaybe<Scalars['String']['input']>;
+  receivedByUserId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type Order = {
@@ -76,8 +97,8 @@ export type Query = {
   __typename?: 'Query';
   order?: Maybe<Order>;
   orders: Array<Order>;
-  todo?: Maybe<Todo>;
-  todos: Array<Todo>;
+  receive?: Maybe<Receive>;
+  receives: Array<Receive>;
 };
 
 
@@ -86,15 +107,19 @@ export type QueryOrderArgs = {
 };
 
 
-export type QueryTodoArgs = {
+export type QueryReceiveArgs = {
   id: Scalars['ID']['input'];
 };
 
-export type Todo = {
-  __typename?: 'Todo';
-  completed: Scalars['Boolean']['output'];
+export type Receive = {
+  __typename?: 'Receive';
   id: Scalars['ID']['output'];
-  title: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  officeId: Scalars['ID']['output'];
+  orderId: Scalars['ID']['output'];
+  receivedAt: Scalars['String']['output'];
+  receivedByUserId: Scalars['ID']['output'];
+  status: Scalars['String']['output'];
 };
 
 
@@ -174,8 +199,8 @@ export type ResolversTypes = {
   Mutation: ResolverTypeWrapper<{}>;
   Order: ResolverTypeWrapper<Order>;
   Query: ResolverTypeWrapper<{}>;
+  Receive: ResolverTypeWrapper<Receive>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
-  Todo: ResolverTypeWrapper<Todo>;
 };
 
 /** Mapping between all available schema types and the resolvers parents */
@@ -186,16 +211,17 @@ export type ResolversParentTypes = {
   Mutation: {};
   Order: Order;
   Query: {};
+  Receive: Receive;
   String: Scalars['String']['output'];
-  Todo: Todo;
 };
 
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
   createOrder?: Resolver<ResolversTypes['Order'], ParentType, ContextType, RequireFields<MutationCreateOrderArgs, 'status' | 'whyOrdered'>>;
-  createTodo?: Resolver<ResolversTypes['Todo'], ParentType, ContextType, RequireFields<MutationCreateTodoArgs, 'title'>>;
-  deleteTodo?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteTodoArgs, 'id'>>;
-  updateOrderStatus?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<MutationUpdateOrderStatusArgs, 'id' | 'status'>>;
-  updateTodo?: Resolver<Maybe<ResolversTypes['Todo']>, ParentType, ContextType, RequireFields<MutationUpdateTodoArgs, 'id'>>;
+  createReceive?: Resolver<ResolversTypes['Receive'], ParentType, ContextType, RequireFields<MutationCreateReceiveArgs, 'status'>>;
+  deleteOrder?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteOrderArgs, 'id'>>;
+  deleteReceive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteReceiveArgs, 'id'>>;
+  updateOrder?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<MutationUpdateOrderArgs, 'id'>>;
+  updateReceive?: Resolver<Maybe<ResolversTypes['Receive']>, ParentType, ContextType, RequireFields<MutationUpdateReceiveArgs, 'id'>>;
 };
 
 export type OrderResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Order'] = ResolversParentTypes['Order']> = {
@@ -213,14 +239,18 @@ export type OrderResolvers<ContextType = GraphQLContext, ParentType extends Reso
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
   order?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<QueryOrderArgs, 'id'>>;
   orders?: Resolver<Array<ResolversTypes['Order']>, ParentType, ContextType>;
-  todo?: Resolver<Maybe<ResolversTypes['Todo']>, ParentType, ContextType, RequireFields<QueryTodoArgs, 'id'>>;
-  todos?: Resolver<Array<ResolversTypes['Todo']>, ParentType, ContextType>;
+  receive?: Resolver<Maybe<ResolversTypes['Receive']>, ParentType, ContextType, RequireFields<QueryReceiveArgs, 'id'>>;
+  receives?: Resolver<Array<ResolversTypes['Receive']>, ParentType, ContextType>;
 };
 
-export type TodoResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Todo'] = ResolversParentTypes['Todo']> = {
-  completed?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+export type ReceiveResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Receive'] = ResolversParentTypes['Receive']> = {
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  note?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  officeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  orderId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  receivedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  receivedByUserId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -228,6 +258,6 @@ export type Resolvers<ContextType = GraphQLContext> = {
   Mutation?: MutationResolvers<ContextType>;
   Order?: OrderResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
-  Todo?: TodoResolvers<ContextType>;
+  Receive?: ReceiveResolvers<ContextType>;
 };
 

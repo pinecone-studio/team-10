@@ -24,7 +24,7 @@ echo "2) GraphQL smoke test: ${BASE_URL}/api/graphql"
 GRAPHQL_RESPONSE="$(
   curl -sS "${BASE_URL}/api/graphql" \
     -H "content-type: application/json" \
-    -d '{"query":"query Smoke { todos { id title completed } }"}'
+    -d '{"query":"query Smoke { orders { id status } receives { id status } }"}'
 )"
 echo "${GRAPHQL_RESPONSE}"
 
