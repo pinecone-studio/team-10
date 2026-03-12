@@ -25,6 +25,16 @@ export const OrderTypeDefs = `
       expectedArrivalAt: String
       totalCost: Float
     ): Order!
-    updateOrderStatus(id: ID!, status: String!): Order
+    updateOrder(
+      id: ID!
+      userId: ID
+      officeId: ID
+      orderProcessId: ID
+      whyOrdered: String
+      status: String
+      expectedArrivalAt: String
+      totalCost: Float
+    ): Order
+    deleteOrder(id: ID!): Boolean!
   }
 `;

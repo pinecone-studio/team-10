@@ -1,12 +1,15 @@
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import {
-  offices,
   orders,
-  orderProcesses,
   orderStatusValues,
-  users,
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
+import {
+  parseIntegerId,
+  resolveOfficeId,
+  resolveOrderProcessId,
+  resolveUserId,
+} from "./reference-resolvers.ts";
 
 type OrderStatus = (typeof orderStatusValues)[number];
 
@@ -42,6 +45,16 @@ export type CreateOrderInput = {
   totalCost?: number | null;
 };
 
+export type UpdateOrderInput = {
+  userId?: string | null;
+  officeId?: string | null;
+  orderProcessId?: string | null;
+  whyOrdered?: string | null;
+  status?: string | null;
+  expectedArrivalAt?: string | null;
+  totalCost?: number | null;
+};
+
 const orderSelection = {
   id: orders.id,
   userId: orders.userId,
@@ -66,251 +79,12 @@ function mapOrder(row: OrderRow): OrderRecord {
   };
 }
 
-function parseIntegerId(name: string, value: string) {
-  const numericValue = Number(value);
-
-  if (!Number.isInteger(numericValue)) {
-    throw new Error(`${name} must be an integer.`);
-  }
-
-  return numericValue;
-}
-
 function parseOrderStatus(status: string): OrderStatus {
   if (!orderStatusValues.includes(status as OrderStatus)) {
     throw new Error(`Order status must be one of: ${orderStatusValues.join(", ")}.`);
   }
 
   return status as OrderStatus;
-}
-
-async function resolveUserId(
-  db: AppDb,
-  providedUserId?: string | null,
-  currentUserId?: string | null,
-) {
-  if (providedUserId) {
-    const requestedUserId = parseIntegerId("userId", providedUserId);
-    const [existingUser] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.id, requestedUserId))
-      .limit(1);
-
-    if (existingUser) {
-      return existingUser.id;
-    }
-
-    await db
-      .insert(users)
-      .values({
-        id: requestedUserId,
-        email: `demo-user-${requestedUserId}@example.local`,
-        fullName: `Demo User ${requestedUserId}`,
-        role: "employee",
-        passwordHash: "demo-password",
-        isActive: true,
-      })
-      .run();
-
-    return requestedUserId;
-  }
-
-  if (currentUserId) {
-    const requestedUserId = parseIntegerId("currentUserId", currentUserId);
-    const [existingUser] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.id, requestedUserId))
-      .limit(1);
-
-    if (existingUser) {
-      return existingUser.id;
-    }
-
-    await db
-      .insert(users)
-      .values({
-        id: requestedUserId,
-        email: `demo-user-${requestedUserId}@example.local`,
-        fullName: `Demo User ${requestedUserId}`,
-        role: "employee",
-        passwordHash: "demo-password",
-        isActive: true,
-      })
-      .run();
-
-    return requestedUserId;
-  }
-
-  const [employeeUser] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(and(eq(users.isActive, true), eq(users.role, "employee")))
-    .orderBy(asc(users.id))
-    .limit(1);
-
-  if (employeeUser) {
-    return employeeUser.id;
-  }
-
-  const [activeUser] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.isActive, true))
-    .orderBy(asc(users.id))
-    .limit(1);
-
-  if (activeUser) {
-    return activeUser.id;
-  }
-
-  const demoEmail = "demo-user-1@example.local";
-
-  await db
-    .insert(users)
-    .values({
-      email: demoEmail,
-      fullName: "Demo User",
-      role: "employee",
-      passwordHash: "demo-password",
-      isActive: true,
-    })
-    .run();
-
-  const [createdUser] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, demoEmail))
-    .limit(1);
-
-  if (!createdUser) {
-    throw new Error("Failed to create a demo user for createOrder.");
-  }
-
-  return createdUser.id;
-}
-
-async function resolveOfficeId(db: AppDb, providedOfficeId?: string | null) {
-  if (providedOfficeId) {
-    const requestedOfficeId = parseIntegerId("officeId", providedOfficeId);
-    const [existingOffice] = await db
-      .select({ id: offices.id })
-      .from(offices)
-      .where(eq(offices.id, requestedOfficeId))
-      .limit(1);
-
-    if (existingOffice) {
-      return existingOffice.id;
-    }
-
-    await db
-      .insert(offices)
-      .values({
-        id: requestedOfficeId,
-        officeName: `Demo Office ${requestedOfficeId}`,
-        location: "Demo Location",
-      })
-      .run();
-
-    return requestedOfficeId;
-  }
-
-  const [office] = await db
-    .select({ id: offices.id })
-    .from(offices)
-    .orderBy(asc(offices.id))
-    .limit(1);
-
-  if (office) {
-    return office.id;
-  }
-
-  const officeName = "Demo Office";
-
-  await db
-    .insert(offices)
-    .values({
-      officeName,
-      location: "Demo Location",
-    })
-    .run();
-
-  const [createdOffice] = await db
-    .select({ id: offices.id })
-    .from(offices)
-    .where(eq(offices.officeName, officeName))
-    .limit(1);
-
-  if (!createdOffice) {
-    throw new Error("Failed to create a demo office for createOrder.");
-  }
-
-  return createdOffice.id;
-}
-
-async function resolveOrderProcessId(
-  db: AppDb,
-  providedOrderProcessId?: string | null,
-) {
-  if (providedOrderProcessId) {
-    const requestedOrderProcessId = parseIntegerId(
-      "orderProcessId",
-      providedOrderProcessId,
-    );
-    const [existingOrderProcess] = await db
-      .select({ id: orderProcesses.id })
-      .from(orderProcesses)
-      .where(eq(orderProcesses.id, requestedOrderProcessId))
-      .limit(1);
-
-    if (existingOrderProcess) {
-      return existingOrderProcess.id;
-    }
-
-    await db
-      .insert(orderProcesses)
-      .values({
-        id: requestedOrderProcessId,
-        processName: `Demo Process ${requestedOrderProcessId}`,
-        description: "Auto-created for order demo",
-      })
-      .run();
-
-    return requestedOrderProcessId;
-  }
-
-  const [orderProcess] = await db
-    .select({ id: orderProcesses.id })
-    .from(orderProcesses)
-    .orderBy(asc(orderProcesses.id))
-    .limit(1);
-
-  if (orderProcess) {
-    return orderProcess.id;
-  }
-
-  const processName = "Demo Order Process";
-
-  await db
-    .insert(orderProcesses)
-    .values({
-      processName,
-      description: "Auto-created for order demo",
-    })
-    .run();
-
-  const [createdOrderProcess] = await db
-    .select({ id: orderProcesses.id })
-    .from(orderProcesses)
-    .where(eq(orderProcesses.processName, processName))
-    .limit(1);
-
-  if (!createdOrderProcess) {
-    throw new Error("Failed to create a demo order process for createOrder.");
-  }
-
-  return createdOrderProcess.id;
 }
 
 export async function listOrders(db: AppDb): Promise<OrderRecord[]> {
@@ -362,20 +136,66 @@ export async function createOrder(
   return mapOrder(row);
 }
 
-export async function updateOrderStatus(
+export async function updateOrder(
   db: AppDb,
   id: string,
-  status: string,
+  input: UpdateOrderInput,
+  currentUserId?: string | null,
 ): Promise<OrderRecord | null> {
   const numericId = parseIntegerId("Order id", id);
+  const updates: Partial<typeof orders.$inferInsert> = {};
+
+  if (input.userId !== undefined && input.userId !== null) {
+    updates.userId = await resolveUserId(db, input.userId, currentUserId);
+  }
+
+  if (input.officeId !== undefined && input.officeId !== null) {
+    updates.officeId = await resolveOfficeId(db, input.officeId);
+  }
+
+  if (input.orderProcessId !== undefined && input.orderProcessId !== null) {
+    updates.orderProcessId = await resolveOrderProcessId(
+      db,
+      input.orderProcessId,
+    );
+  }
+
+  if (input.whyOrdered !== undefined && input.whyOrdered !== null) {
+    updates.whyOrdered = input.whyOrdered;
+  }
+
+  if (input.status !== undefined && input.status !== null) {
+    updates.status = parseOrderStatus(input.status);
+  }
+
+  if (input.expectedArrivalAt !== undefined) {
+    updates.expectedArrivalAt = input.expectedArrivalAt ?? null;
+  }
+
+  if (input.totalCost !== undefined) {
+    updates.totalCost = input.totalCost ?? null;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return getOrderById(db, id);
+  }
 
   const [row] = await db
     .update(orders)
-    .set({
-      status: parseOrderStatus(status),
-    })
+    .set(updates)
     .where(eq(orders.id, numericId))
     .returning(orderSelection);
 
   return row ? mapOrder(row) : null;
+}
+
+export async function deleteOrder(db: AppDb, id: string): Promise<boolean> {
+  const numericId = parseIntegerId("Order id", id);
+
+  const rows = await db
+    .delete(orders)
+    .where(eq(orders.id, numericId))
+    .returning({ id: orders.id });
+
+  return rows.length > 0;
 }
