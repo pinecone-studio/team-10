@@ -1,12 +1,21 @@
 "use client";
 
-import { formatCurrency, formatDisplayDate, type StoredOrder } from "../../_lib/order-store";
+import {
+  formatCurrency,
+  formatDisplayDate,
+  type StoredOrder,
+} from "../../_lib/order-store";
 import { TopBar } from "./OrderPrimitives";
 import { getOrderPresentation } from "./orderHelpers";
 
 function VerticalDots() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" className="h-[18px] w-[18px] text-[#6f6f6f]" aria-hidden="true">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      className="h-[18px] w-[18px] text-[#6f6f6f]"
+      aria-hidden="true"
+    >
       <circle cx="8" cy="3.3" r="1.2" fill="currentColor" />
       <circle cx="8" cy="8" r="1.2" fill="currentColor" />
       <circle cx="8" cy="12.7" r="1.2" fill="currentColor" />
@@ -17,7 +26,9 @@ function VerticalDots() {
 export function OrderHistoryView(props: {
   orders: StoredOrder[];
   selectedFilter: "all" | "summary" | "completed" | "cancelled";
-  onFilterChange: (value: "all" | "summary" | "completed" | "cancelled") => void;
+  onFilterChange: (
+    value: "all" | "summary" | "completed" | "cancelled",
+  ) => void;
   onOpenCreate: () => void;
   onOpenDetail: (orderId: string) => void;
 }) {
@@ -30,8 +41,14 @@ export function OrderHistoryView(props: {
 
   return (
     <>
-      <TopBar actionLabel="Create a new order" onAction={props.onOpenCreate} showNotification />
-      <h2 className="pt-[6px] text-[32px] font-semibold leading-[1.2] text-[#111111]">Order history</h2>
+      <TopBar
+        actionLabel="Create a new order"
+        onAction={props.onOpenCreate}
+        showNotification
+      />
+      <h2 className="pt-[6px] text-[24px] font-semibold leading-[1.2] text-[#111111]">
+        Order history
+      </h2>
 
       <div className="flex items-center justify-between pt-[6px]">
         <div className="flex items-center gap-[40px]">
@@ -40,8 +57,10 @@ export function OrderHistoryView(props: {
               key={key}
               type="button"
               onClick={() => props.onFilterChange(key)}
-              className={`text-[20px] leading-none ${
-                props.selectedFilter === key ? "font-semibold text-[#111111] underline underline-offset-[6px]" : "text-[#767676]"
+              className={`text-[18px] leading-none ${
+                props.selectedFilter === key
+                  ? "font-semibold text-[#111111] underline underline-offset-[6px]"
+                  : "text-[#767676]"
               }`}
             >
               {label}
@@ -87,12 +106,36 @@ export function OrderHistoryView(props: {
                   <span>#{order.requestNumber.slice(-4)}</span>
                   <span>Order name</span>
                   <span>{formatDisplayDate(order.requestDate)}</span>
-                  <span className={presentation.status.includes("Waiting") ? "text-[#ff7a00]" : presentation.status.includes("Rejected") ? "text-[#e05639]" : presentation.status.includes("Assigned") ? "text-[#1888d7]" : "text-[#058638]"}>{presentation.type.replace("review", "permission")}</span>
-                  <span className={`inline-flex w-fit rounded-[99px] border px-[8px] py-[1px] text-[13px] ${presentation.tone}`}>
-                    {presentation.status.includes("Waiting") ? "Waiting" : presentation.status.includes("Rejected") ? "Rejected" : presentation.status.includes("Assigned") ? "Assigned" : "Allowed"}
+                  <span
+                    className={
+                      presentation.status.includes("Waiting")
+                        ? "text-[#ff7a00]"
+                        : presentation.status.includes("Rejected")
+                          ? "text-[#e05639]"
+                          : presentation.status.includes("Assigned")
+                            ? "text-[#1888d7]"
+                            : "text-[#058638]"
+                    }
+                  >
+                    {presentation.type.replace("review", "permission")}
+                  </span>
+                  <span
+                    className={`inline-flex w-fit rounded-[99px] border px-[8px] py-[1px] text-[13px] ${presentation.tone}`}
+                  >
+                    {presentation.status.includes("Waiting")
+                      ? "Waiting"
+                      : presentation.status.includes("Rejected")
+                        ? "Rejected"
+                        : presentation.status.includes("Assigned")
+                          ? "Assigned"
+                          : "Allowed"}
                   </span>
                   <span>{formatCurrency(order.totalAmount)}</span>
-                  <button type="button" onClick={() => props.onOpenDetail(order.id)} className="inline-flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => props.onOpenDetail(order.id)}
+                    className="inline-flex items-center"
+                  >
                     <VerticalDots />
                   </button>
                 </div>
