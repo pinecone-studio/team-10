@@ -57,8 +57,8 @@ export function OrderCreateView(props: {
   return (
     <>
       <div>
-        <h2 className="text-[40px] font-semibold leading-[1.2] text-[#111111]">Inventory order</h2>
-        <p className="mt-[2px] text-[17px] text-[#757575]">Create a new order and get approval.</p>
+        <h2 className="text-[32px] font-semibold leading-[1.2] text-[#111111]">Inventory order</h2>
+        <p className="mt-[2px] text-[15px] text-[#757575]">Create a new order and get approval.</p>
       </div>
 
       <section className="rounded-[10px] border border-[#d7d7da] bg-[#efefef] px-[24px] py-[22px]">
@@ -73,7 +73,7 @@ export function OrderCreateView(props: {
 
       <section className="rounded-[10px] border border-[#d7d7da] bg-[#efefef] px-[16px] py-[16px]">
         <div className="flex items-center justify-between border-b border-[#d2d2d6] pb-[14px]">
-          <h3 className="text-[34px] font-semibold text-[#111111]">Create a new order</h3>
+          <h3 className="text-[24px] font-semibold text-[#111111]">Create a new order</h3>
           <ActionButton variant="light" onClick={props.onFillDemo}>Demo data</ActionButton>
         </div>
         <div className="grid grid-cols-3 gap-[14px] pt-[14px]">
@@ -87,8 +87,8 @@ export function OrderCreateView(props: {
 
       <section className="rounded-[10px] border border-[#d7d7da] bg-[#efefef] px-[16px] py-[16px]">
         <div className="flex items-center justify-between border-b border-[#d2d2d6] pb-[14px]">
-          <h3 className="text-[34px] font-semibold text-[#111111]">Custom goods</h3>
-          <span className="text-[14px] text-[#8f8f8f]">{draftItems.length} item</span>
+          <h3 className="text-[24px] font-semibold text-[#111111]">Custom goods</h3>
+          <span className="text-[13px] text-[#8f8f8f]">{draftItems.length} item</span>
         </div>
 
         <div className="mt-[14px] rounded-[6px] border border-[#d6d6da] bg-[#dcdde0] px-[10px] py-[10px]">
@@ -128,8 +128,8 @@ export function OrderCreateView(props: {
           ) : (
             <div className="flex min-h-[165px] flex-col items-center justify-center text-center text-[#888888]">
               <CubeIcon />
-              <p className="mt-[12px] text-[31px] leading-[1.25]">The item has not been added.</p>
-              <p className="text-[31px] leading-[1.25]">Please select and add items from the form above.</p>
+              <p className="mt-[12px] text-[18px] leading-[1.25]">The item has not been added.</p>
+              <p className="text-[18px] leading-[1.25]">Please select and add items from the form above.</p>
             </div>
           )}
         </div>
@@ -140,7 +140,7 @@ export function OrderCreateView(props: {
           type="button"
           onClick={props.onSubmit}
           disabled={!props.canSubmitDraft}
-          className="inline-flex h-[41px] items-center justify-center gap-[10px] rounded-[6px] bg-black px-[24px] text-[17px] font-medium text-white disabled:opacity-50"
+          className="inline-flex h-[41px] items-center justify-center gap-[10px] rounded-[6px] bg-black px-[24px] text-[15px] font-medium text-white disabled:opacity-50"
         >
           Submit for approval
           <span aria-hidden="true">›</span>

@@ -7,17 +7,25 @@ export function WorkspaceShell({
   subtitle,
   actions,
   hideHeader = false,
+  contentAlignment = "center",
+  contentWidthClassName = "max-w-[1137px]",
+  contentPaddingClassName = "",
   children,
 }: {
   title: string;
   subtitle: string;
   actions?: ReactNode;
   hideHeader?: boolean;
+  contentAlignment?: "center" | "left";
+  contentWidthClassName?: string;
+  contentPaddingClassName?: string;
   children: ReactNode;
 }) {
   return (
     <div className="flex-1 bg-[#efefef] px-[20px] py-[32px]">
-      <div className="mx-auto flex h-full w-full max-w-[1137px] flex-col gap-[18px]">
+      <div
+        className={`flex h-full w-full flex-col gap-[18px] ${contentAlignment === "left" ? "mr-auto ml-0" : "mx-auto"} ${contentWidthClassName} ${contentPaddingClassName}`}
+      >
         {hideHeader ? null : (
           <div className="flex items-start justify-between gap-4">
             <div>

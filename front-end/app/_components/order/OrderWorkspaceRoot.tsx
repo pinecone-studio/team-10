@@ -74,7 +74,14 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
   }
 
   return (
-    <WorkspaceShell title="Inventory order" subtitle={`Create and track procurement requests for ${roleLabel}.`} hideHeader>
+    <WorkspaceShell
+      title="Inventory order"
+      subtitle={`Create and track procurement requests for ${roleLabel}.`}
+      hideHeader
+      contentAlignment="left"
+      contentWidthClassName="max-w-none"
+      contentPaddingClassName="pt-[28px] pl-[20px] pr-[40px] lg:pt-[60px] lg:pl-[40px] lg:pr-[60px]"
+    >
       {stage === "history" ? <OrderHistoryView orders={filteredOrders} selectedFilter={selectedFilter} onFilterChange={setSelectedFilter} onOpenCreate={openCreateOrder} onOpenDetail={(orderId) => { setSelectedOrderId(orderId); setStage("detail"); }} /> : null}
       {stage === "create" ? <OrderCreateView draftOrder={draftOrder} goodsDrafts={goodsDrafts} draftItems={draftItems} canAddItems={canAddItems} canSubmitDraft={canSubmitDraft} summaryTotal={summaryTotal} onFillDemo={() => { setDraftOrder({ ...createDraftOrder(), requester: "Bat-Erdene", deliveryDate: getOffsetDateInputValue(3) }); setDraftItems(createDemoItems()); setGoodsDrafts([createGoodsDraft()]); }} onOrderChange={(key, value) => setDraftOrder((current) => ({ ...current, [key]: value }))} onGoodsChange={(draftId, value) => updateGoodsDraft(draftId, (current) => ({ ...current, search: value, selectedItem: findClosestCatalogItem(value), unitPrice: findClosestCatalogItem(value)?.defaultPrice?.toString() ?? current.unitPrice }))} onQuantityChange={(draftId, value) => updateGoodsDraft(draftId, (current) => ({ ...current, quantity: value }))} onUnitPriceChange={(draftId, value) => updateGoodsDraft(draftId, (current) => ({ ...current, unitPrice: value }))} onSelectSuggestion={(draftId, itemId) => { const item = goodsCatalog.find((entry) => entry.id === itemId); if (!item) return; updateGoodsDraft(draftId, (current) => ({ ...current, search: item.name, selectedItem: item, quantity: current.quantity || "1", unitPrice: `${item.defaultPrice}` })); }} onAddItem={addDraftItem} onAddDraftRow={() => setGoodsDrafts((current) => [...current, createGoodsDraft()])} onRemoveDraftRow={(draftId) => setGoodsDrafts((current) => current.length > 1 ? current.filter((draft) => draft.id !== draftId) : current)} onRemoveItem={(index) => setDraftItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} onSubmit={() => setConfirmSubmitOpen(true)} /> : null}
       {stage === "detail" && selectedOrder ? <OrderDetailView order={selectedOrder} onBack={() => setStage(canViewHistory ? "history" : "create")} onCreateNote={() => {}} /> : null}

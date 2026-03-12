@@ -41,9 +41,9 @@ export function SectionCard({
   return (
     <section className="rounded-[10px] border border-[#d7d7da] bg-[#efefef] px-[16px] py-[16px]">
       <div className="flex items-center justify-between border-b border-[#d2d2d6] pb-[16px]">
-        <div className="flex items-center gap-[8px] text-[28px] font-semibold leading-[1] text-[#111111]">
+        <div className="flex items-center gap-[8px] text-[24px] font-semibold leading-[1] text-[#111111]">
           {icon}
-          <span className="text-[28px]">{title}</span>
+          <span className="text-[24px]">{title}</span>
         </div>
         {trailing}
       </div>
@@ -127,10 +127,10 @@ export function TopBar({
         <button
           type="button"
           onClick={onAction}
-          className="inline-flex h-[36px] items-center justify-center gap-[6px] rounded-[6px] border border-[#d8d8dc] bg-[#e9e9eb] px-[18px] text-[16px] leading-none text-[#111111]"
+          className="inline-flex h-[36px] items-center justify-center gap-[6px] rounded-[6px] border border-[#d8d8dc] bg-[#e9e9eb] px-[18px] text-[14px] leading-none text-[#111111]"
         >
           {actionLabel.includes("additional") ? <PlusIcon /> : null}
-          <span className="text-[16px]">{actionLabel}</span>
+          <span className="text-[14px]">{actionLabel}</span>
         </button>
         {showNotification ? (
           <button
