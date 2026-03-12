@@ -44,13 +44,14 @@ export function OrderCreateView(props: {
           <div className="space-y-[12px]">
             {goodsDrafts.map((goodsDraft, index) => (
               <div key={goodsDraft.id} className="rounded-[10px] bg-white/45 px-[10px] py-[10px]">
+                {goodsDrafts.length > 1 ? <p className="mb-[8px] text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8a8a]">Order {index + 1}</p> : null}
                 <div className="grid grid-cols-[1.7fr_0.65fr_0.8fr_auto] gap-[10px]">
                   <InputField label={`Select goods${goodsDrafts.length > 1 ? ` ${index + 1}` : ""}`}><TextInput value={goodsDraft.search} onChange={(event) => props.onGoodsChange(goodsDraft.id, event.target.value)} placeholder="Search by goods name or code" /></InputField>
                   <InputField label="Quantity"><TextInput type="number" value={goodsDraft.quantity} onChange={(event) => props.onQuantityChange(goodsDraft.id, event.target.value)} /></InputField>
                   <InputField label="Unit price"><TextInput type="number" value={goodsDraft.unitPrice} onChange={(event) => props.onUnitPriceChange(goodsDraft.id, event.target.value)} /></InputField>
                   <div className="flex items-end gap-[6px]">
                     <ActionButton variant="light" onClick={() => props.onAddItem(goodsDraft.id)} disabled={!canAddItems[index]}>+ Add</ActionButton>
-                    <button type="button" onClick={props.onAddDraftRow} className="inline-flex h-[34px] items-center justify-center rounded-[7px] border border-[#d7d7d7] bg-white px-[10px] text-[10px] font-medium text-[#4a4a4a]">+ Row</button>
+                    <button type="button" onClick={props.onAddDraftRow} className="inline-flex h-[34px] items-center justify-center rounded-[7px] border border-[#d7d7d7] bg-white px-[10px] text-[10px] font-medium text-[#4a4a4a]">+ Order</button>
                     {goodsDrafts.length > 1 ? <button type="button" onClick={() => props.onRemoveDraftRow(goodsDraft.id)} className="inline-flex h-[34px] items-center justify-center rounded-[7px] border border-[#e1d2d2] bg-[#fff7f7] px-[10px] text-[10px] font-medium text-[#9a5d5d]">Remove</button> : null}
                   </div>
                 </div>
