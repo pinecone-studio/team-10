@@ -25,13 +25,13 @@ export function OrderDetailView(props: {
   return (
     <>
       <TopBar actionLabel="Create additional note" onAction={props.onCreateNote} />
-      <h2 className="pt-[6px] text-[38px] font-semibold leading-[1.2] text-[#111111]">Order detail</h2>
+      <h2 className="pt-[6px] text-[32px] font-semibold leading-[1.2] text-[#111111]">Order detail</h2>
 
       <section className="pt-[8px]">
-        <div className="grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#dbdcdf] px-[16px] py-[18px] text-[17px] text-[#707070]">
+        <div className="grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#dbdcdf] px-[16px] py-[18px] text-[15px] text-[#707070]">
           <span>Id</span><span>Name</span><span>Created date</span><span>Type</span><span>Status</span><span>Total</span><span>Action</span>
         </div>
-        <div className="mt-[14px] grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] items-center gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#efefef] px-[16px] py-[17px] text-[17px] text-[#565656]">
+        <div className="mt-[14px] grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] items-center gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#efefef] px-[16px] py-[17px] text-[15px] text-[#565656]">
           <span>#{props.order.requestNumber.slice(-4)}</span>
           <span>Order name</span>
           <span>{formatDisplayDate(props.order.requestDate)}</span>
@@ -44,12 +44,12 @@ export function OrderDetailView(props: {
         </div>
       </section>
 
-      <h3 className="pt-[18px] text-[38px] font-semibold leading-[1.2] text-[#111111]">Feed</h3>
+      <h3 className="pt-[18px] text-[30px] font-semibold leading-[1.2] text-[#111111]">Feed</h3>
 
       <section className="rounded-[10px] px-[12px] pb-[8px]">
         <div className="space-y-[12px]">
           {feedEvents.map((event, index) => (
-            <div key={`${event.date}-${index}`} className="grid grid-cols-[16px_auto_1fr] items-start gap-[10px] text-[17px] text-[#666666]">
+            <div key={`${event.date}-${index}`} className="grid grid-cols-[16px_auto_1fr] items-start gap-[10px] text-[15px] text-[#666666]">
               <span className={`mt-[6px] inline-flex h-[12px] w-[12px] rounded-full border ${event.featured ? "border-[#888] bg-[#efefef]" : "border-[#b8b8b8]"}`} />
               <span>{event.date}</span>
               <p><span className="font-semibold text-[#222222]">{event.actor}</span> {event.message}</p>
@@ -57,7 +57,7 @@ export function OrderDetailView(props: {
           ))}
         </div>
 
-        <div className="mt-[16px] ml-[32px] rounded-[18px] border border-[#d1d2d7] bg-[#efefef] px-[20px] py-[18px] text-[17px] text-[#757575]">
+        <div className="mt-[16px] ml-[32px] rounded-[18px] border border-[#d1d2d7] bg-[#efefef] px-[20px] py-[18px] text-[15px] text-[#757575]">
           Write a detailed description
         </div>
 
@@ -67,12 +67,12 @@ export function OrderDetailView(props: {
           </div>
           <div className="space-y-[6px] pt-[8px]">
             {props.order.items.map((item, index) => (
-              <div key={`${item.catalogId}-${index}`} className="grid grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr] gap-[12px] py-[6px] text-[16px] text-[#444444]">
+              <div key={`${item.catalogId}-${index}`} className="grid grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr] gap-[12px] py-[6px] text-[15px] text-[#444444]">
                 <span>{item.name}</span><span>{item.code}</span><span>{item.quantity}</span><span>{item.unit}</span><span>{formatCurrency(item.unitPrice)}</span><span>{formatCurrency(item.totalPrice)}</span>
               </div>
             ))}
           </div>
-          <div className="mt-[8px] flex items-center justify-between rounded-[6px] bg-[#dbdcdf] px-[12px] py-[10px] text-[17px] font-semibold text-[#161616]">
+          <div className="mt-[8px] flex items-center justify-between rounded-[6px] bg-[#dbdcdf] px-[12px] py-[10px] text-[15px] font-semibold text-[#161616]">
             <span>Total:</span>
             <span>{formatCurrency(props.order.totalAmount)}</span>
           </div>
@@ -80,7 +80,7 @@ export function OrderDetailView(props: {
       </section>
 
       <div className="pt-[4px]">
-        <button type="button" onClick={props.onBack} className="inline-flex h-[41px] items-center justify-center rounded-[6px] border border-[#d2d2d5] bg-[#ececef] px-[24px] text-[17px] text-[#161616]">Back</button>
+        <button type="button" onClick={props.onBack} className="inline-flex h-[41px] items-center justify-center rounded-[6px] border border-[#d2d2d5] bg-[#ececef] px-[24px] text-[15px] text-[#161616]">Back</button>
       </div>
     </>
   );

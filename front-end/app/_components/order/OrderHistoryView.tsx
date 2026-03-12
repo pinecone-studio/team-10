@@ -31,7 +31,7 @@ export function OrderHistoryView(props: {
   return (
     <>
       <TopBar actionLabel="Create a new order" onAction={props.onOpenCreate} showNotification />
-      <h2 className="pt-[6px] text-[38px] font-semibold leading-[1.2] text-[#111111]">Order history</h2>
+      <h2 className="pt-[6px] text-[32px] font-semibold leading-[1.2] text-[#111111]">Order history</h2>
 
       <div className="flex items-center justify-between pt-[6px]">
         <div className="flex items-center gap-[40px]">
@@ -40,7 +40,7 @@ export function OrderHistoryView(props: {
               key={key}
               type="button"
               onClick={() => props.onFilterChange(key)}
-              className={`text-[31px] leading-none ${
+              className={`text-[20px] leading-none ${
                 props.selectedFilter === key ? "font-semibold text-[#111111] underline underline-offset-[6px]" : "text-[#767676]"
               }`}
             >
@@ -65,7 +65,7 @@ export function OrderHistoryView(props: {
       </div>
 
       <section className="pt-[8px]">
-        <div className="grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#dbdcdf] px-[16px] py-[18px] text-[17px] text-[#707070]">
+        <div className="grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#dbdcdf] px-[16px] py-[18px] text-[15px] text-[#707070]">
           <span>Id</span>
           <span>Name</span>
           <span>Created date</span>
@@ -82,7 +82,7 @@ export function OrderHistoryView(props: {
               return (
                 <div
                   key={order.id}
-                  className="grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] items-center gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#efefef] px-[16px] py-[17px] text-[17px] text-[#565656]"
+                  className="grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] items-center gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#efefef] px-[16px] py-[17px] text-[15px] text-[#565656]"
                 >
                   <span>#{order.requestNumber.slice(-4)}</span>
                   <span>Order name</span>
