@@ -21,6 +21,7 @@ export type DraftOrder = {
 };
 
 export type GoodsDraft = {
+  id: string;
   search: string;
   selectedItem: GoodsCatalogItem | null;
   quantity: string;
@@ -40,7 +41,7 @@ export function createDraftOrder(): DraftOrder {
 }
 
 export function createGoodsDraft(): GoodsDraft {
-  return { search: "", selectedItem: null, quantity: "1", unitPrice: "" };
+  return { id: `goods-draft-${Math.random().toString(36).slice(2, 10)}`, search: "", selectedItem: null, quantity: "1", unitPrice: "" };
 }
 
 export function createDemoItems(): OrderItem[] {
