@@ -37,6 +37,7 @@ export const navItems: readonly NavItem[] = [
 
 export const roleNavSections: Record<AppRole, readonly SectionKey[]> = {
   employee: ["distribution", "dispose"],
+  higherUpApprover: ["order"],
   inventoryHead: ["order", "receive", "storage"],
   finance: ["order"],
   itAdmin: ["storage", "broken", "dispose"],

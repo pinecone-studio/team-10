@@ -5,6 +5,7 @@ import type { SectionKey } from "../_lib/navigation";
 import { OrderWorkspace } from "./OrderWorkspace";
 import { EmployeeAssetsSection } from "./role/EmployeeAssetsSection";
 import { FinanceApprovalSection } from "./role/FinanceApprovalSection";
+import { HigherUpApprovalSection } from "./role/HigherUpApprovalSection";
 import { HRDistributionSection } from "./role/HRDistributionSection";
 import { InventoryReceiveSection } from "./role/InventoryReceiveSection";
 import { InventoryStorageSection } from "./role/InventoryStorageSection";
@@ -12,6 +13,7 @@ import { PlaceholderSection } from "./role/PlaceholderSection";
 
 export function RoleWorkspace({ role, roleLabel, section }: { role: AppRole; roleLabel: string; section: SectionKey }) {
   if (section === "order" && (role === "systemAdmin" || role === "inventoryHead")) return <OrderWorkspace role={role} roleLabel={roleLabel} />;
+  if (role === "higherUpApprover" && section === "order") return <HigherUpApprovalSection />;
   if (role === "finance" && section === "order") return <FinanceApprovalSection />;
   if (role === "inventoryHead" && section === "receive") return <InventoryReceiveSection />;
   if (role === "inventoryHead" && section === "storage") return <InventoryStorageSection />;

@@ -8,6 +8,7 @@ export function OrderConfirmDialog(props: {
   requestNumber: string;
   itemCount: number;
   totalAmount: number;
+  approvalTargetLabel: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -23,6 +24,7 @@ export function OrderConfirmDialog(props: {
         <div className="mt-[14px] rounded-[10px] bg-[#f6f6f7] px-[12px] py-[12px] text-[12px] text-[#5e5e5e]">
           <p>Request number: <span className="font-semibold text-[#171717]">{props.requestNumber}</span></p>
           <p className="mt-[4px]">Items: <span className="font-semibold text-[#171717]">{props.itemCount}</span></p>
+          <p className="mt-[4px]">Permission request: <span className="font-semibold text-[#171717]">{props.approvalTargetLabel}</span></p>
           <p className="mt-[4px]">Total amount: <span className="font-semibold text-[#171717]">{formatCurrency(props.totalAmount)}</span></p>
         </div>
         <div className="mt-[18px] flex justify-end gap-[10px]"><ActionButton variant="light" onClick={props.onCancel}>Cancel</ActionButton><ActionButton variant="green" onClick={props.onConfirm}>Yes, submit order</ActionButton></div>

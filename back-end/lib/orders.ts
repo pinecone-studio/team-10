@@ -1,25 +1,28 @@
 import { asc, eq } from "drizzle-orm";
 import {
+  approvalQueueValues,
   orders,
   orderStatusValues,
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
 import {
+  resolveDepartmentId,
   parseIntegerId,
   resolveOfficeId,
-  resolveOrderProcessId,
   resolveUserId,
 } from "./reference-resolvers.ts";
 
 type OrderStatus = (typeof orderStatusValues)[number];
+type ApprovalQueue = (typeof approvalQueueValues)[number];
 
 type OrderRow = {
   id: number;
   userId: number;
   officeId: number;
-  orderProcessId: number;
+  departmentId: number | null;
   whyOrdered: string;
   status: OrderStatus;
+  approvalTarget: ApprovalQueue;
   expectedArrivalAt: string | null;
   totalCost: number | null;
 };
@@ -28,9 +31,10 @@ export type OrderRecord = {
   id: string;
   userId: string;
   officeId: string;
-  orderProcessId: string;
+  departmentId: string | null;
   whyOrdered: string;
   status: OrderStatus;
+  approvalTarget: ApprovalQueue;
   expectedArrivalAt: string | null;
   totalCost: number | null;
 };
@@ -38,9 +42,10 @@ export type OrderRecord = {
 export type CreateOrderInput = {
   userId?: string | null;
   officeId?: string | null;
-  orderProcessId?: string | null;
+  departmentId?: string | null;
   whyOrdered: string;
   status: string;
+  approvalTarget?: string | null;
   expectedArrivalAt?: string | null;
   totalCost?: number | null;
 };
@@ -48,9 +53,10 @@ export type CreateOrderInput = {
 export type UpdateOrderInput = {
   userId?: string | null;
   officeId?: string | null;
-  orderProcessId?: string | null;
+  departmentId?: string | null;
   whyOrdered?: string | null;
   status?: string | null;
+  approvalTarget?: string | null;
   expectedArrivalAt?: string | null;
   totalCost?: number | null;
 };
@@ -59,9 +65,10 @@ const orderSelection = {
   id: orders.id,
   userId: orders.userId,
   officeId: orders.officeId,
-  orderProcessId: orders.orderProcessId,
+  departmentId: orders.departmentId,
   whyOrdered: orders.whyOrdered,
   status: orders.status,
+  approvalTarget: orders.approvalTarget,
   expectedArrivalAt: orders.expectedArrivalAt,
   totalCost: orders.totalCost,
 };
@@ -71,9 +78,10 @@ function mapOrder(row: OrderRow): OrderRecord {
     id: String(row.id),
     userId: String(row.userId),
     officeId: String(row.officeId),
-    orderProcessId: String(row.orderProcessId),
+    departmentId: row.departmentId === null ? null : String(row.departmentId),
     whyOrdered: row.whyOrdered,
     status: row.status,
+    approvalTarget: row.approvalTarget,
     expectedArrivalAt: row.expectedArrivalAt,
     totalCost: row.totalCost,
   };
@@ -85,6 +93,20 @@ function parseOrderStatus(status: string): OrderStatus {
   }
 
   return status as OrderStatus;
+}
+
+function parseApprovalTarget(approvalTarget?: string | null): ApprovalQueue {
+  if (!approvalTarget) {
+    return "anyHigherUps";
+  }
+
+  if (!approvalQueueValues.includes(approvalTarget as ApprovalQueue)) {
+    throw new Error(
+      `Approval target must be one of: ${approvalQueueValues.join(", ")}.`,
+    );
+  }
+
+  return approvalTarget as ApprovalQueue;
 }
 
 export async function listOrders(db: AppDb): Promise<OrderRecord[]> {
@@ -118,16 +140,20 @@ export async function createOrder(
 ): Promise<OrderRecord> {
   const userId = await resolveUserId(db, input.userId, currentUserId);
   const officeId = await resolveOfficeId(db, input.officeId);
-  const orderProcessId = await resolveOrderProcessId(db, input.orderProcessId);
+  const departmentId =
+    input.departmentId === undefined || input.departmentId === null
+      ? null
+      : await resolveDepartmentId(db, input.departmentId);
 
   const [row] = await db
     .insert(orders)
     .values({
       userId,
       officeId,
-      orderProcessId,
+      departmentId,
       whyOrdered: input.whyOrdered,
       status: parseOrderStatus(input.status),
+      approvalTarget: parseApprovalTarget(input.approvalTarget),
       expectedArrivalAt: input.expectedArrivalAt ?? null,
       totalCost: input.totalCost ?? null,
     })
@@ -153,11 +179,11 @@ export async function updateOrder(
     updates.officeId = await resolveOfficeId(db, input.officeId);
   }
 
-  if (input.orderProcessId !== undefined && input.orderProcessId !== null) {
-    updates.orderProcessId = await resolveOrderProcessId(
-      db,
-      input.orderProcessId,
-    );
+  if (input.departmentId !== undefined) {
+    updates.departmentId =
+      input.departmentId === null
+        ? null
+        : await resolveDepartmentId(db, input.departmentId);
   }
 
   if (input.whyOrdered !== undefined && input.whyOrdered !== null) {
@@ -166,6 +192,10 @@ export async function updateOrder(
 
   if (input.status !== undefined && input.status !== null) {
     updates.status = parseOrderStatus(input.status);
+  }
+
+  if (input.approvalTarget !== undefined) {
+    updates.approvalTarget = parseApprovalTarget(input.approvalTarget);
   }
 
   if (input.expectedArrivalAt !== undefined) {

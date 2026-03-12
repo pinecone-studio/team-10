@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { createOrder, goodsCatalog, useOrdersStore } from "../../_lib/order-store";
+import { createOrder, getApprovalTargetLabel, goodsCatalog, useOrdersStore } from "../../_lib/order-store";
 import type { AppRole } from "../../_lib/roles";
 import { WorkspaceShell } from "../shared/WorkspacePrimitives";
 import { OrderConfirmDialog } from "./OrderConfirmDialog";
@@ -35,9 +35,9 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
 
   const filteredOrders = useMemo(() => {
     if (selectedFilter === "all") return orders;
-    if (selectedFilter === "completed") return orders.filter((order) => order.status !== "pending_finance" && order.status !== "rejected_finance");
-    if (selectedFilter === "cancelled") return orders.filter((order) => order.status === "rejected_finance");
-    return orders.filter((order) => order.status === "pending_finance");
+    if (selectedFilter === "completed") return orders.filter((order) => order.status === "approved_finance" || order.status === "received_inventory" || order.status === "assigned_hr");
+    if (selectedFilter === "cancelled") return orders.filter((order) => order.status === "rejected_higher_up" || order.status === "rejected_finance");
+    return orders.filter((order) => order.status === "pending_higher_up" || order.status === "pending_finance");
   }, [orders, selectedFilter]);
 
   function resetDraft() {
@@ -85,7 +85,7 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
       {stage === "history" ? <OrderHistoryView orders={filteredOrders} selectedFilter={selectedFilter} onFilterChange={setSelectedFilter} onOpenCreate={openCreateOrder} onOpenDetail={(orderId) => { setSelectedOrderId(orderId); setStage("detail"); }} /> : null}
       {stage === "create" ? <OrderCreateView draftOrder={draftOrder} goodsDrafts={goodsDrafts} draftItems={draftItems} canAddItems={canAddItems} canSubmitDraft={canSubmitDraft} summaryTotal={summaryTotal} onFillDemo={() => { setDraftOrder({ ...createDraftOrder(), requester: "Bat-Erdene", deliveryDate: getOffsetDateInputValue(3) }); setDraftItems(createDemoItems()); setGoodsDrafts([createGoodsDraft()]); }} onOrderChange={(key, value) => setDraftOrder((current) => ({ ...current, [key]: value }))} onGoodsChange={(draftId, value) => updateGoodsDraft(draftId, (current) => ({ ...current, search: value, selectedItem: findClosestCatalogItem(value), unitPrice: findClosestCatalogItem(value)?.defaultPrice?.toString() ?? current.unitPrice }))} onQuantityChange={(draftId, value) => updateGoodsDraft(draftId, (current) => ({ ...current, quantity: value }))} onUnitPriceChange={(draftId, value) => updateGoodsDraft(draftId, (current) => ({ ...current, unitPrice: value }))} onSelectSuggestion={(draftId, itemId) => { const item = goodsCatalog.find((entry) => entry.id === itemId); if (!item) return; updateGoodsDraft(draftId, (current) => ({ ...current, search: item.name, selectedItem: item, quantity: current.quantity || "1", unitPrice: `${item.defaultPrice}` })); }} onAddItem={addDraftItem} onAddDraftRow={() => setGoodsDrafts((current) => [...current, createGoodsDraft()])} onRemoveDraftRow={(draftId) => setGoodsDrafts((current) => current.length > 1 ? current.filter((draft) => draft.id !== draftId) : current)} onRemoveItem={(index) => setDraftItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} onSubmit={() => setConfirmSubmitOpen(true)} /> : null}
       {stage === "detail" && selectedOrder ? <OrderDetailView order={selectedOrder} onBack={() => setStage(canViewHistory ? "history" : "create")} onCreateNote={() => {}} /> : null}
-      <OrderConfirmDialog isOpen={confirmSubmitOpen} requestNumber={draftOrder.requestNumber} itemCount={draftItems.length} totalAmount={summaryTotal} onCancel={() => setConfirmSubmitOpen(false)} onConfirm={submitOrder} />
+      <OrderConfirmDialog isOpen={confirmSubmitOpen} requestNumber={draftOrder.requestNumber} itemCount={draftItems.length} totalAmount={summaryTotal} approvalTargetLabel={getApprovalTargetLabel(draftOrder.approvalTarget)} onCancel={() => setConfirmSubmitOpen(false)} onConfirm={submitOrder} />
     </WorkspaceShell>
   );
 }

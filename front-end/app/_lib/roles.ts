@@ -5,6 +5,11 @@ export const roleOptions = [
     description: "Asset request and personal dashboard",
   },
   {
+    value: "higherUpApprover",
+    label: "Any Higher-ups",
+    description: "Simulated higher-up approval before Finance review",
+  },
+  {
     value: "inventoryHead",
     label: "Inventory Head",
     description: "Storage, distribution, and approval flow",

@@ -2,9 +2,11 @@ Project assetManagementSystem {
   database_type: "SQLite"
   Note: '''
   Asset Management System schema draft for dbdiagram.io.
-  Uses camelCase naming, enums for fixed status/value sets, and only physical assets.
-  Storage is not connected to offices. Orders do not connect to storage directly.
-  Items become assets after receiving, and assets then move into storage.
+  This DBML mirrors the current SQLite schema as closely as DBML allows.
+  SQL-only CHECK constraints that DBML cannot model directly are documented in table or column notes.
+  Default seeded departments in SQL:
+  IT Office, Finance Office, Human Resources, Operations, Procurement, Administration,
+  Facilities, Legal, Sales, Marketing, Customer Service, Logistics, Engineering, Executive Office.
   '''
 }
 
@@ -17,10 +19,55 @@ Enum roleEnum {
   systemAdmin
 }
 
-Enum orderStatusEnum {
+Enum positionEnum {
+  staff
+  ceo
+  generalManager
+  cfo
+  coo
+  cto
+  departmentHead
+  departmentManager
+  manager
+  custom
+}
+
+Enum approvalScopeEnum {
+  company
+  office
+  department
+}
+
+Enum approvalQueueEnum {
+  anyHigherUps
+  finance
+}
+
+Enum approvalStepStatusEnum {
   pending
   approved
   rejected
+  cancelled
+}
+
+Enum catalogStatusEnum {
+  draft
+  active
+  archived
+}
+
+Enum catalogSourceEnum {
+  system
+  promoted
+  manual
+}
+
+Enum orderStatusEnum {
+  pendingHigherUpApproval
+  rejectedByHigherUp
+  pendingFinanceApproval
+  rejectedByFinance
+  financeApproved
   ordered
   partiallyReceived
   received
@@ -95,84 +142,275 @@ Enum disposalStatusEnum {
   cancelled
 }
 
+Table offices {
+  id integer [pk, increment]
+  officeName text [not null, unique]
+  location text [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    officeName [name: 'idx_offices_office_name']
+  }
+}
+
+Table departments {
+  id integer [pk, increment]
+  departmentName text [not null, unique, note: 'SQL seed data inserts 14 default departments.']
+  description text
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    departmentName [name: 'idx_departments_name']
+  }
+}
+
 Table users {
   id integer [pk, increment]
   clerkUserId text [unique, note: 'Optional external auth ID']
   email text [not null, unique]
   fullName text [not null]
   role roleEnum [not null]
+  position positionEnum [not null, default: 'staff']
+  departmentId integer
   passwordHash text [not null]
-  isActive boolean [not null, default: true]
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  isActive boolean [not null, default: true, note: 'SQLite stores this as INTEGER with CHECK (is_active IN (0, 1)).']
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    email [name: 'idx_users_email']
+    clerkUserId [name: 'idx_users_clerk_user_id']
+    role [name: 'idx_users_role']
+    position [name: 'idx_users_position']
+    departmentId [name: 'idx_users_department_id']
+  }
 }
 
-Table offices {
+Table orderApprovers {
   id integer [pk, increment]
-  officeName text [not null, unique]
-  location text [not null]
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
-}
+  userId integer [not null]
+  approvalQueue approvalQueueEnum [not null]
+  approvalScope approvalScopeEnum [not null]
+  officeId integer
+  departmentId integer
+  approvalLimit real [note: 'CHECK (approval_limit IS NULL OR approval_limit >= 0)']
+  note text
+  isActive boolean [not null, default: true, note: 'SQLite stores this as INTEGER with CHECK (is_active IN (0, 1)).']
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
 
-Table orderProcesses {
-  id integer [pk, increment]
-  processName text [not null, unique]
-  description text
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  Note: 'SQL CHECK: company scope requires officeId and departmentId null; office scope requires officeId not null and departmentId null; department scope requires departmentId not null.'
+
+  Indexes {
+    userId [name: 'idx_order_approvers_user_id']
+    approvalQueue [name: 'idx_order_approvers_queue']
+    approvalScope [name: 'idx_order_approvers_scope']
+    officeId [name: 'idx_order_approvers_office_id']
+    departmentId [name: 'idx_order_approvers_department_id']
+    isActive [name: 'idx_order_approvers_is_active']
+    (userId, approvalQueue, approvalScope, `IFNULL(officeId, -1)`, `IFNULL(departmentId, -1)`) [unique, name: 'idx_order_approvers_unique_scope']
+  }
 }
 
 Table orders {
   id integer [pk, increment]
   user integer [not null]
   officeId integer [not null]
-  orderProcessId integer [not null, note: 'thh zuvhun one process']
+  departmentId integer
   whyOrdered text [not null]
   status orderStatusEnum [not null]
+  approvalTarget approvalQueueEnum [not null, default: 'anyHigherUps']
   expectedArrivalAt timestamp
-  totalCost real
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  totalCost real [note: 'CHECK (total_cost >= 0)']
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    user [name: 'idx_orders_user']
+    officeId [name: 'idx_orders_office_id']
+    departmentId [name: 'idx_orders_department_id']
+    status [name: 'idx_orders_status']
+    approvalTarget [name: 'idx_orders_approval_target']
+    expectedArrivalAt [name: 'idx_orders_expected_arrival_at']
+  }
+}
+
+Table orderApprovalSteps {
+  id integer [pk, increment]
+  orderId integer [not null]
+  stepOrder integer [not null, note: 'CHECK (step_order > 0)']
+  approvalQueue approvalQueueEnum [not null]
+  status approvalStepStatusEnum [not null]
+  actedByUserId integer
+  actedAt timestamp
+  note text
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (orderId, stepOrder) [unique, name: 'order_approval_steps_order_id_step_order_unique']
+    orderId [name: 'idx_order_approval_steps_order_id']
+    approvalQueue [name: 'idx_order_approval_steps_queue']
+    status [name: 'idx_order_approval_steps_status']
+    actedByUserId [name: 'idx_order_approval_steps_acted_by_user_id']
+  }
+}
+
+Table catalogCategories {
+  id integer [pk, increment]
+  displayName text [not null]
+  normalizedName text [not null, unique]
+  status catalogStatusEnum [not null, default: 'draft']
+  source catalogSourceEnum [not null, default: 'manual']
+  createdByUserId integer
+  approvedByUserId integer
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    status [name: 'idx_catalog_categories_status']
+    source [name: 'idx_catalog_categories_source']
+  }
+}
+
+Table catalogCategoryAliases {
+  id integer [pk, increment]
+  categoryId integer [not null]
+  aliasName text [not null]
+  normalizedAlias text [not null, unique]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (categoryId, aliasName) [unique, name: 'catalog_category_aliases_category_id_alias_name_unique']
+    categoryId [name: 'idx_catalog_category_aliases_category_id']
+  }
+}
+
+Table catalogItemTypes {
+  id integer [pk, increment]
+  categoryId integer [not null]
+  displayName text [not null]
+  normalizedName text [not null]
+  status catalogStatusEnum [not null, default: 'draft']
+  source catalogSourceEnum [not null, default: 'manual']
+  createdByUserId integer
+  approvedByUserId integer
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (categoryId, normalizedName) [unique, name: 'catalog_item_types_category_id_normalized_name_unique']
+    status [name: 'idx_catalog_item_types_status']
+    source [name: 'idx_catalog_item_types_source']
+  }
+}
+
+Table catalogTypeAliases {
+  id integer [pk, increment]
+  itemTypeId integer [not null]
+  aliasName text [not null]
+  normalizedAlias text [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (itemTypeId, aliasName) [unique, name: 'catalog_type_aliases_item_type_id_alias_name_unique']
+    (itemTypeId, normalizedAlias) [unique, name: 'catalog_type_aliases_item_type_id_normalized_alias_unique']
+    itemTypeId [name: 'idx_catalog_type_aliases_item_type_id']
+  }
+}
+
+Table catalogAttributeDefinitions {
+  id integer [pk, increment]
+  itemTypeId integer [not null]
+  displayName text [not null]
+  normalizedName text [not null]
+  status catalogStatusEnum [not null, default: 'draft']
+  source catalogSourceEnum [not null, default: 'manual']
+  createdByUserId integer
+  approvedByUserId integer
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (itemTypeId, normalizedName) [unique, name: 'catalog_attribute_definitions_item_type_id_normalized_name_unique']
+    status [name: 'idx_catalog_attribute_definitions_status']
+    source [name: 'idx_catalog_attribute_definitions_source']
+  }
+}
+
+Table catalogAttributeAliases {
+  id integer [pk, increment]
+  attributeDefinitionId integer [not null]
+  aliasName text [not null]
+  normalizedAlias text [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (attributeDefinitionId, aliasName) [unique, name: 'catalog_attribute_aliases_attribute_definition_id_alias_name_unique']
+    (attributeDefinitionId, normalizedAlias) [unique, name: 'catalog_attribute_aliases_attribute_definition_id_normalized_alias_unique']
+    attributeDefinitionId [name: 'idx_catalog_attribute_aliases_attribute_definition_id']
+  }
 }
 
 Table orderItems {
   id integer [pk, increment]
   orderId integer [not null]
   itemName text [not null]
-  category text [not null, note: 'Example: laptop, monitor, keyboard']
-  quantity integer [not null]
-  unitCost real [not null]
+  category text [not null]
+  itemType text [not null]
+  catalogCategoryId integer
+  catalogItemTypeId integer
+  quantity integer [not null, note: 'CHECK (quantity > 0)']
+  unitCost real [not null, note: 'CHECK (unit_cost >= 0)']
   fromWhere text [not null]
   additionalNotes text
   eta timestamp
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    orderId [name: 'idx_order_items_order_id']
+    category [name: 'idx_order_items_category']
+    itemType [name: 'idx_order_items_item_type']
+    catalogCategoryId [name: 'idx_order_items_catalog_category_id']
+    catalogItemTypeId [name: 'idx_order_items_catalog_item_type_id']
+  }
 }
 
 Table orderItemImages {
   id integer [pk, increment]
   orderItemId integer [not null]
-  imageUrl text [not null, note: 'Public URL, storage key, or relative file path']
-  sortOrder integer [not null, default: 0]
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  imageUrl text [not null]
+  sortOrder integer [not null, default: 0, note: 'CHECK (sort_order >= 0)']
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
 
   Indexes {
-    (orderItemId, imageUrl) [unique]
+    (orderItemId, imageUrl) [unique, name: 'order_item_images_order_item_id_image_url_unique']
+    orderItemId [name: 'idx_order_item_images_order_item_id']
+    sortOrder [name: 'idx_order_item_images_sort_order']
   }
 }
 
 Table orderItemAttributes {
   id integer [pk, increment]
   orderItemId integer [not null]
+  catalogAttributeDefinitionId integer
   attributeName text [not null]
   attributeValue text [not null]
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
 
   Indexes {
-    (orderItemId, attributeName) [unique]
+    (orderItemId, attributeName) [unique, name: 'order_item_attributes_order_item_id_attribute_name_unique']
+    orderItemId [name: 'idx_order_item_attributes_order_item_id']
+    catalogAttributeDefinitionId [name: 'idx_order_item_attributes_catalog_attribute_definition_id']
+    (attributeName, attributeValue) [name: 'idx_order_item_attributes_name_value']
   }
 }
 
@@ -182,21 +420,34 @@ Table receives {
   receivedByUserId integer [not null]
   officeId integer [not null]
   status receiveStatusEnum [not null]
-  receivedAt timestamp [not null]
+  receivedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
   note text
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    orderId [name: 'idx_receives_order_id']
+    receivedByUserId [name: 'idx_receives_received_by_user_id']
+    officeId [name: 'idx_receives_office_id']
+    status [name: 'idx_receives_status']
+  }
 }
 
 Table receiveItems {
   id integer [pk, increment]
   receiveId integer [not null]
   orderItemId integer [not null]
-  quantityReceived integer [not null]
+  quantityReceived integer [not null, note: 'CHECK (quantity_received > 0)']
   conditionStatus conditionStatusEnum [not null]
   note text
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    receiveId [name: 'idx_receive_items_receive_id']
+    orderItemId [name: 'idx_receive_items_order_item_id']
+    conditionStatus [name: 'idx_receive_items_condition_status']
+  }
 }
 
 Table storage {
@@ -204,35 +455,51 @@ Table storage {
   storageName text [not null, unique]
   storageType storageTypeEnum [not null]
   description text
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
 }
 
 Table assets {
   id integer [pk, increment]
   receiveItemId integer [not null]
-  assetCode text [not null, unique, note: 'System-generated format: [CATEGORY]-[YEAR]-[SEQUENCE], e.g. MAC-2026-001']
+  assetCode text [not null, unique]
   qrCode text [not null, unique]
   assetName text [not null]
   category text [not null]
+  itemType text [not null]
+  catalogItemTypeId integer
   serialNumber text
   conditionStatus conditionStatusEnum [not null]
   assetStatus assetStatusEnum [not null]
   currentStorageId integer
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    receiveItemId [name: 'idx_assets_receive_item_id']
+    currentStorageId [name: 'idx_assets_current_storage_id']
+    assetStatus [name: 'idx_assets_asset_status']
+    category [name: 'idx_assets_category']
+    itemType [name: 'idx_assets_item_type']
+    catalogItemTypeId [name: 'idx_assets_catalog_item_type_id']
+    serialNumber [name: 'idx_assets_serial_number']
+  }
 }
 
 Table assetAttributes {
   id integer [pk, increment]
   assetId integer [not null]
+  catalogAttributeDefinitionId integer
   attributeName text [not null]
   attributeValue text [not null]
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
 
   Indexes {
-    (assetId, attributeName) [unique]
+    (assetId, attributeName) [unique, name: 'asset_attributes_asset_id_attribute_name_unique']
+    assetId [name: 'idx_asset_attributes_asset_id']
+    catalogAttributeDefinitionId [name: 'idx_asset_attributes_catalog_attribute_definition_id']
+    (attributeName, attributeValue) [name: 'idx_asset_attributes_name_value']
   }
 }
 
@@ -240,27 +507,39 @@ Table assetAssignmentRequests {
   id integer [pk, increment]
   assetId integer [not null]
   employeeId integer [not null]
-  employeeScannedAt timestamp [not null]
+  employeeScannedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
   reviewedByUserId integer
   reviewedAt timestamp
   reviewNote text
   status assignmentRequestStatusEnum [not null]
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    assetId [name: 'idx_asset_assignment_requests_asset_id']
+    employeeId [name: 'idx_asset_assignment_requests_employee_id']
+    status [name: 'idx_asset_assignment_requests_status']
+  }
 }
 
 Table assetDistributions {
   id integer [pk, increment]
-  assignmentRequestId integer [unique, note: 'One approved request should create at most one distribution']
+  assignmentRequestId integer [unique]
   assetId integer [not null]
   employeeId integer [not null]
   distributedByUserId integer [not null]
-  distributedAt timestamp [not null]
+  distributedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
   status distributionStatusEnum [not null]
   returnedAt timestamp
   note text
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    assetId [name: 'idx_asset_distributions_asset_id']
+    employeeId [name: 'idx_asset_distributions_employee_id']
+    status [name: 'idx_asset_distributions_status']
+  }
 }
 
 Table assetDisposals {
@@ -271,34 +550,103 @@ Table assetDisposals {
   disposedByUserId integer
   status disposalStatusEnum [not null]
   disposalReason text [not null]
-  disposalMethod disposalMethodEnum
+  disposalMethod disposalMethodEnum [note: 'SQLite also allows NULL via CHECK (disposal_method IS NULL OR disposal_method IN (...)).']
   disposedAt timestamp
   note text
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    assetId [name: 'idx_asset_disposals_asset_id']
+    status [name: 'idx_asset_disposals_status']
+  }
 }
+
+Table auditLogs {
+  id integer [pk, increment]
+  actorUserId integer
+  action text [not null]
+  entityType text [not null]
+  entityId text
+  payloadJson text
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    actorUserId [name: 'idx_audit_logs_actor_user_id']
+    (entityType, entityId) [name: 'idx_audit_logs_entity']
+  }
+}
+
+Table notifications {
+  id integer [pk, increment]
+  userId integer [not null]
+  type text [not null]
+  title text [not null]
+  message text [not null]
+  entityType text [not null]
+  entityId text
+  isRead boolean [not null, default: false, note: 'SQLite stores this as INTEGER with CHECK (is_read IN (0, 1)).']
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  readAt timestamp
+
+  Indexes {
+    userId [name: 'idx_notifications_user_id']
+    isRead [name: 'idx_notifications_is_read']
+  }
+}
+
+Ref: users.departmentId > departments.id [delete: set null]
+
+Ref: orderApprovers.userId > users.id [delete: cascade]
+Ref: orderApprovers.officeId > offices.id [delete: cascade]
+Ref: orderApprovers.departmentId > departments.id [delete: cascade]
 
 Ref: orders.user > users.id
 Ref: orders.officeId > offices.id
-Ref: orders.orderProcessId > orderProcesses.id
+Ref: orders.departmentId > departments.id [delete: set null]
 
-Ref: orderItems.orderId > orders.id
-Ref: orderItemImages.orderItemId > orderItems.id
-Ref: orderItemAttributes.orderItemId > orderItems.id
+Ref: orderApprovalSteps.orderId > orders.id [delete: cascade]
+Ref: orderApprovalSteps.actedByUserId > users.id
+
+Ref: catalogCategories.createdByUserId > users.id [delete: set null]
+Ref: catalogCategories.approvedByUserId > users.id [delete: set null]
+
+Ref: catalogCategoryAliases.categoryId > catalogCategories.id [delete: cascade]
+
+Ref: catalogItemTypes.categoryId > catalogCategories.id [delete: cascade]
+Ref: catalogItemTypes.createdByUserId > users.id [delete: set null]
+Ref: catalogItemTypes.approvedByUserId > users.id [delete: set null]
+
+Ref: catalogTypeAliases.itemTypeId > catalogItemTypes.id [delete: cascade]
+
+Ref: catalogAttributeDefinitions.itemTypeId > catalogItemTypes.id [delete: cascade]
+Ref: catalogAttributeDefinitions.createdByUserId > users.id [delete: set null]
+Ref: catalogAttributeDefinitions.approvedByUserId > users.id [delete: set null]
+
+Ref: catalogAttributeAliases.attributeDefinitionId > catalogAttributeDefinitions.id [delete: cascade]
+
+Ref: orderItems.orderId > orders.id [delete: cascade]
+Ref: orderItems.catalogCategoryId > catalogCategories.id [delete: set null]
+Ref: orderItems.catalogItemTypeId > catalogItemTypes.id [delete: set null]
+Ref: orderItemImages.orderItemId > orderItems.id [delete: cascade]
+Ref: orderItemAttributes.orderItemId > orderItems.id [delete: cascade]
+Ref: orderItemAttributes.catalogAttributeDefinitionId > catalogAttributeDefinitions.id [delete: set null]
 
 Ref: receives.orderId > orders.id
 Ref: receives.receivedByUserId > users.id
 Ref: receives.officeId > offices.id
 
-Ref: receiveItems.receiveId > receives.id
+Ref: receiveItems.receiveId > receives.id [delete: cascade]
 Ref: receiveItems.orderItemId > orderItems.id
 
-Ref: assets.receiveItemId > receiveItems.id
-Ref: assets.currentStorageId > storage.id
+Ref: assets.receiveItemId > receiveItems.id [delete: cascade]
+Ref: assets.catalogItemTypeId > catalogItemTypes.id [delete: set null]
+Ref: assets.currentStorageId > storage.id [delete: set null]
 
-Ref: assetAttributes.assetId > assets.id
+Ref: assetAttributes.assetId > assets.id [delete: cascade]
+Ref: assetAttributes.catalogAttributeDefinitionId > catalogAttributeDefinitions.id [delete: set null]
 
-Ref: assetAssignmentRequests.assetId > assets.id
+Ref: assetAssignmentRequests.assetId > assets.id [delete: cascade]
 Ref: assetAssignmentRequests.employeeId > users.id
 Ref: assetAssignmentRequests.reviewedByUserId > users.id
 
@@ -311,3 +659,7 @@ Ref: assetDisposals.assetId > assets.id
 Ref: assetDisposals.requestedByUserId > users.id
 Ref: assetDisposals.approvedByUserId > users.id
 Ref: assetDisposals.disposedByUserId > users.id
+
+Ref: auditLogs.actorUserId > users.id
+
+Ref: notifications.userId > users.id [delete: cascade]

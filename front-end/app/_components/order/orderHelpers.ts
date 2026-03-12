@@ -3,6 +3,7 @@
 import {
   formatDisplayDate,
   generateRequestNumber,
+  getApprovalTargetLabel,
   getTodayDateInputValue,
   goodsCatalog,
   type GoodsCatalogItem,
@@ -10,7 +11,7 @@ import {
   type OrderStatus,
   type StoredOrder,
 } from "../../_lib/order-store";
-import type { DepartmentOption } from "../../_lib/order-types";
+import type { ApprovalTarget, DepartmentOption } from "../../_lib/order-types";
 
 export type DraftOrder = {
   requestNumber: string;
@@ -18,6 +19,7 @@ export type DraftOrder = {
   department: DepartmentOption;
   requester: string;
   deliveryDate: string;
+  approvalTarget: ApprovalTarget;
 };
 
 export type GoodsDraft = {
@@ -37,6 +39,7 @@ export function createDraftOrder(): DraftOrder {
     department: "IT Office",
     requester: "",
     deliveryDate: getTodayDateInputValue(),
+    approvalTarget: "any_higher_ups",
   };
 }
 
@@ -67,6 +70,8 @@ export function findClosestCatalogItem(query: string) {
 }
 
 export function getOrderPresentation(status: OrderStatus) {
+  if (status === "pending_higher_up") return { type: "Higher-up review", status: "Waiting for Any Higher-ups", tone: "border-[#d8a45d] text-[#9a5f17]" };
+  if (status === "rejected_higher_up") return { type: "Higher-up review", status: "Rejected by higher-up", tone: "border-[#e2b6a1] text-[#9a5d5d]" };
   if (status === "pending_finance") return { type: "Finance review", status: "Waiting for finance", tone: "border-[#ffb06f] text-[#ff6b00]" };
   if (status === "rejected_finance") return { type: "Finance review", status: "Rejected by finance", tone: "border-[#ff8e5c] text-[#ff6b00]" };
   if (status === "received_inventory") return { type: "Inventory receive", status: "Received & stored", tone: "border-[#59b56d] text-[#149b63]" };
@@ -81,16 +86,37 @@ export function getOrderSummaryName(order: StoredOrder) {
 }
 
 export function getOrderSummaryMeta(order: StoredOrder) {
-  return `${order.department} · ${order.requester || "Requester"}`;
+  return `${order.department} - ${order.requester || "Requester"}`;
 }
 
 export function buildFeedEvents(order: StoredOrder): FeedEvent[] {
   const events: FeedEvent[] = [
     { date: formatDisplayDate(order.createdAt.slice(0, 10)), actor: order.requester, message: "created a new order." },
-    { date: formatDisplayDate(order.createdAt.slice(0, 10)), actor: order.requester, message: "submitted the order for approval." },
+    {
+      date: formatDisplayDate(order.createdAt.slice(0, 10)),
+      actor: order.requester,
+      message: `submitted the order to ${getApprovalTargetLabel(order.approvalTarget)}.`,
+    },
   ];
-  if (order.status !== "pending_finance") {
-    events.unshift({ date: formatDisplayDate(order.updatedAt.slice(0, 10)), actor: "Finance", message: order.status === "rejected_finance" ? "rejected the order request." : "approved the order request.", featured: true });
+  if (order.higherUpReviewedAt) {
+    events.unshift({
+      date: formatDisplayDate(order.higherUpReviewedAt.slice(0, 10)),
+      actor: order.higherUpReviewer ?? "Any Higher-ups",
+      message: order.status === "rejected_higher_up"
+        ? "rejected the permission request."
+        : "approved the request and forwarded it to Finance.",
+      featured: true,
+    });
+  }
+  if (order.financeReviewedAt) {
+    events.unshift({
+      date: formatDisplayDate(order.financeReviewedAt.slice(0, 10)),
+      actor: order.financeReviewer ?? "Finance",
+      message: order.status === "rejected_finance"
+        ? "rejected the order request."
+        : "approved the budget and purchase request.",
+      featured: true,
+    });
   }
   if (order.receivedAt) events.unshift({ date: formatDisplayDate(order.receivedAt.slice(0, 10)), actor: "Inventory Head", message: "received and stored the purchased goods.", featured: true });
   if (order.assignedAt) events.unshift({ date: formatDisplayDate(order.assignedAt.slice(0, 10)), actor: "HR Manager", message: `assigned the goods to ${order.assignedTo}.`, featured: true });
@@ -100,7 +126,9 @@ export function buildFeedEvents(order: StoredOrder): FeedEvent[] {
 export function getProgressLabels(status: OrderStatus) {
   return [
     "Create an order",
+    status === "rejected_higher_up" ? "Higher-up rejected" : status === "pending_higher_up" ? "Higher-up review" : "Higher-up approved",
     status === "rejected_finance" ? "Finance rejected" : status === "pending_finance" ? "Finance review" : "Finance approved",
-    status === "assigned_hr" ? "Assigned" : status === "received_inventory" ? "Received & stored" : "Inventory receive",
+    status === "assigned_hr" || status === "received_inventory" ? "Received & stored" : "Inventory receive",
+    status === "assigned_hr" ? "Assigned" : "Distribution",
   ];
 }

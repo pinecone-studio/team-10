@@ -3,9 +3,10 @@ export const OrderTypeDefs = `
     id: ID!
     userId: ID!
     officeId: ID!
-    orderProcessId: ID!
+    departmentId: ID
     whyOrdered: String!
     status: String!
+    approvalTarget: String!
     expectedArrivalAt: String
     totalCost: Float
   }
@@ -19,9 +20,10 @@ export const OrderTypeDefs = `
     createOrder(
       userId: ID
       officeId: ID
-      orderProcessId: ID
+      departmentId: ID
       whyOrdered: String!
       status: String!
+      approvalTarget: String
       expectedArrivalAt: String
       totalCost: Float
     ): Order!
@@ -29,9 +31,10 @@ export const OrderTypeDefs = `
       id: ID!
       userId: ID
       officeId: ID
-      orderProcessId: ID
+      departmentId: ID
       whyOrdered: String
       status: String
+      approvalTarget: String
       expectedArrivalAt: String
       totalCost: Float
     ): Order

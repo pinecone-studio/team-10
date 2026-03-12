@@ -8,19 +8,60 @@ DROP TABLE IF EXISTS assets;
 DROP TABLE IF EXISTS storage;
 DROP TABLE IF EXISTS receive_items;
 DROP TABLE IF EXISTS receives;
+DROP TABLE IF EXISTS order_approval_steps;
 DROP TABLE IF EXISTS order_item_images;
 DROP TABLE IF EXISTS order_item_attributes;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS catalog_attribute_aliases;
+DROP TABLE IF EXISTS catalog_type_aliases;
+DROP TABLE IF EXISTS catalog_category_aliases;
+DROP TABLE IF EXISTS catalog_attribute_definitions;
+DROP TABLE IF EXISTS catalog_item_types;
+DROP TABLE IF EXISTS catalog_categories;
+DROP TABLE IF EXISTS order_approvers;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS audit_logs;
 DROP TABLE IF EXISTS order_status_history;
 DROP TABLE IF EXISTS inventory_assets;
 DROP TABLE IF EXISTS asset_types;
 DROP TABLE IF EXISTS order_processes;
+DROP TABLE IF EXISTS departments;
 DROP TABLE IF EXISTS offices;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS todos;
+
+CREATE TABLE IF NOT EXISTS offices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  office_name TEXT NOT NULL UNIQUE,
+  location TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS departments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  department_name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT OR IGNORE INTO departments (department_name, description) VALUES
+  ('IT Office', 'Seeded default department'),
+  ('Finance Office', 'Seeded default department'),
+  ('Human Resources', 'Seeded default department'),
+  ('Operations', 'Seeded default department'),
+  ('Procurement', 'Seeded default department'),
+  ('Administration', 'Seeded default department'),
+  ('Facilities', 'Seeded default department'),
+  ('Legal', 'Seeded default department'),
+  ('Sales', 'Seeded default department'),
+  ('Marketing', 'Seeded default department'),
+  ('Customer Service', 'Seeded default department'),
+  ('Logistics', 'Seeded default department'),
+  ('Engineering', 'Seeded default department'),
+  ('Executive Office', 'Seeded default department');
 
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,44 +78,84 @@ CREATE TABLE IF NOT EXISTS users (
       'systemAdmin'
     )
   ),
+  position TEXT NOT NULL DEFAULT 'staff' CHECK (
+    position IN (
+      'staff',
+      'ceo',
+      'generalManager',
+      'cfo',
+      'coo',
+      'cto',
+      'departmentHead',
+      'departmentManager',
+      'manager',
+      'custom'
+    )
+  ),
+  department_id INTEGER,
   password_hash TEXT NOT NULL,
   is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
 );
 
-CREATE TABLE IF NOT EXISTS offices (
+CREATE TABLE IF NOT EXISTS order_approvers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  office_name TEXT NOT NULL UNIQUE,
-  location TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
+  approval_queue TEXT NOT NULL CHECK (
+    approval_queue IN (
+      'anyHigherUps',
+      'finance'
+    )
+  ),
+  approval_scope TEXT NOT NULL CHECK (
+    approval_scope IN (
+      'company',
+      'office',
+      'department'
+    )
+  ),
+  office_id INTEGER,
+  department_id INTEGER,
+  approval_limit REAL CHECK (approval_limit IS NULL OR approval_limit >= 0),
+  note TEXT,
+  is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS order_processes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  process_name TEXT NOT NULL UNIQUE,
-  description TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE,
+  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
+  CHECK (
+    (approval_scope = 'company' AND office_id IS NULL AND department_id IS NULL)
+    OR (approval_scope = 'office' AND office_id IS NOT NULL AND department_id IS NULL)
+    OR (approval_scope = 'department' AND department_id IS NOT NULL)
+  )
 );
 
 CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user INTEGER NOT NULL,
   office_id INTEGER NOT NULL,
-  -- thh zuvhun one process
-  order_process_id INTEGER NOT NULL,
+  department_id INTEGER,
   why_ordered TEXT NOT NULL,
   status TEXT NOT NULL CHECK (
     status IN (
-      'pending',
-      'approved',
-      'rejected',
+      'pendingHigherUpApproval',
+      'rejectedByHigherUp',
+      'pendingFinanceApproval',
+      'rejectedByFinance',
+      'financeApproved',
       'ordered',
       'partiallyReceived',
       'received',
       'closed'
+    )
+  ),
+  approval_target TEXT NOT NULL DEFAULT 'anyHigherUps' CHECK (
+    approval_target IN (
+      'anyHigherUps',
+      'finance'
     )
   ),
   expected_arrival_at TEXT,
@@ -83,7 +164,154 @@ CREATE TABLE IF NOT EXISTS orders (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user) REFERENCES users(id),
   FOREIGN KEY (office_id) REFERENCES offices(id),
-  FOREIGN KEY (order_process_id) REFERENCES order_processes(id)
+  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS order_approval_steps (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL,
+  step_order INTEGER NOT NULL CHECK (step_order > 0),
+  approval_queue TEXT NOT NULL CHECK (
+    approval_queue IN (
+      'anyHigherUps',
+      'finance'
+    )
+  ),
+  status TEXT NOT NULL CHECK (
+    status IN (
+      'pending',
+      'approved',
+      'rejected',
+      'cancelled'
+    )
+  ),
+  acted_by_user_id INTEGER,
+  acted_at TEXT,
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY (acted_by_user_id) REFERENCES users(id),
+  UNIQUE (order_id, step_order)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  display_name TEXT NOT NULL,
+  normalized_name TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (
+    status IN (
+      'draft',
+      'active',
+      'archived'
+    )
+  ),
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (
+    source IN (
+      'system',
+      'promoted',
+      'manual'
+    )
+  ),
+  created_by_user_id INTEGER,
+  approved_by_user_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS catalog_category_aliases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER NOT NULL,
+  alias_name TEXT NOT NULL,
+  normalized_alias TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_id) REFERENCES catalog_categories(id) ON DELETE CASCADE,
+  UNIQUE (category_id, alias_name)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_item_types (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER NOT NULL,
+  display_name TEXT NOT NULL,
+  normalized_name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (
+    status IN (
+      'draft',
+      'active',
+      'archived'
+    )
+  ),
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (
+    source IN (
+      'system',
+      'promoted',
+      'manual'
+    )
+  ),
+  created_by_user_id INTEGER,
+  approved_by_user_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_id) REFERENCES catalog_categories(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE (category_id, normalized_name)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_type_aliases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_type_id INTEGER NOT NULL,
+  alias_name TEXT NOT NULL,
+  normalized_alias TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (item_type_id) REFERENCES catalog_item_types(id) ON DELETE CASCADE,
+  UNIQUE (item_type_id, alias_name),
+  UNIQUE (item_type_id, normalized_alias)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_attribute_definitions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_type_id INTEGER NOT NULL,
+  display_name TEXT NOT NULL,
+  normalized_name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (
+    status IN (
+      'draft',
+      'active',
+      'archived'
+    )
+  ),
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (
+    source IN (
+      'system',
+      'promoted',
+      'manual'
+    )
+  ),
+  created_by_user_id INTEGER,
+  approved_by_user_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (item_type_id) REFERENCES catalog_item_types(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE (item_type_id, normalized_name)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_attribute_aliases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  attribute_definition_id INTEGER NOT NULL,
+  alias_name TEXT NOT NULL,
+  normalized_alias TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (attribute_definition_id) REFERENCES catalog_attribute_definitions(id) ON DELETE CASCADE,
+  UNIQUE (attribute_definition_id, alias_name),
+  UNIQUE (attribute_definition_id, normalized_alias)
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -91,6 +319,9 @@ CREATE TABLE IF NOT EXISTS order_items (
   order_id INTEGER NOT NULL,
   item_name TEXT NOT NULL,
   category TEXT NOT NULL,
+  item_type TEXT NOT NULL,
+  catalog_category_id INTEGER,
+  catalog_item_type_id INTEGER,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   unit_cost REAL NOT NULL CHECK (unit_cost >= 0),
   from_where TEXT NOT NULL,
@@ -98,7 +329,9 @@ CREATE TABLE IF NOT EXISTS order_items (
   eta TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY (catalog_category_id) REFERENCES catalog_categories(id) ON DELETE SET NULL,
+  FOREIGN KEY (catalog_item_type_id) REFERENCES catalog_item_types(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS order_item_images (
@@ -115,11 +348,13 @@ CREATE TABLE IF NOT EXISTS order_item_images (
 CREATE TABLE IF NOT EXISTS order_item_attributes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   order_item_id INTEGER NOT NULL,
+  catalog_attribute_definition_id INTEGER,
   attribute_name TEXT NOT NULL,
   attribute_value TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE,
+  FOREIGN KEY (catalog_attribute_definition_id) REFERENCES catalog_attribute_definitions(id) ON DELETE SET NULL,
   UNIQUE (order_item_id, attribute_name)
 );
 
@@ -192,6 +427,8 @@ CREATE TABLE IF NOT EXISTS assets (
   qr_code TEXT NOT NULL UNIQUE,
   asset_name TEXT NOT NULL,
   category TEXT NOT NULL,
+  item_type TEXT NOT NULL,
+  catalog_item_type_id INTEGER,
   serial_number TEXT,
   condition_status TEXT NOT NULL CHECK (
     condition_status IN (
@@ -221,17 +458,20 @@ CREATE TABLE IF NOT EXISTS assets (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (receive_item_id) REFERENCES receive_items(id) ON DELETE CASCADE,
+  FOREIGN KEY (catalog_item_type_id) REFERENCES catalog_item_types(id) ON DELETE SET NULL,
   FOREIGN KEY (current_storage_id) REFERENCES storage(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS asset_attributes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   asset_id INTEGER NOT NULL,
+  catalog_attribute_definition_id INTEGER,
   attribute_name TEXT NOT NULL,
   attribute_value TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+  FOREIGN KEY (catalog_attribute_definition_id) REFERENCES catalog_attribute_definitions(id) ON DELETE SET NULL,
   UNIQUE (asset_id, attribute_name)
 );
 
@@ -346,22 +586,66 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_clerk_user_id ON users(clerk_user_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_position ON users(position);
+CREATE INDEX IF NOT EXISTS idx_users_department_id ON users(department_id);
+
 CREATE INDEX IF NOT EXISTS idx_offices_office_name ON offices(office_name);
-CREATE INDEX IF NOT EXISTS idx_order_processes_process_name ON order_processes(process_name);
+CREATE INDEX IF NOT EXISTS idx_departments_name ON departments(department_name);
+
+CREATE INDEX IF NOT EXISTS idx_order_approvers_user_id ON order_approvers(user_id);
+CREATE INDEX IF NOT EXISTS idx_order_approvers_queue ON order_approvers(approval_queue);
+CREATE INDEX IF NOT EXISTS idx_order_approvers_scope ON order_approvers(approval_scope);
+CREATE INDEX IF NOT EXISTS idx_order_approvers_office_id ON order_approvers(office_id);
+CREATE INDEX IF NOT EXISTS idx_order_approvers_department_id ON order_approvers(department_id);
+CREATE INDEX IF NOT EXISTS idx_order_approvers_is_active ON order_approvers(is_active);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_order_approvers_unique_scope
+  ON order_approvers(
+    user_id,
+    approval_queue,
+    approval_scope,
+    IFNULL(office_id, -1),
+    IFNULL(department_id, -1)
+  );
 
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user);
 CREATE INDEX IF NOT EXISTS idx_orders_office_id ON orders(office_id);
-CREATE INDEX IF NOT EXISTS idx_orders_order_process_id ON orders(order_process_id);
+CREATE INDEX IF NOT EXISTS idx_orders_department_id ON orders(department_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_approval_target ON orders(approval_target);
 CREATE INDEX IF NOT EXISTS idx_orders_expected_arrival_at ON orders(expected_arrival_at);
+
+CREATE INDEX IF NOT EXISTS idx_order_approval_steps_order_id ON order_approval_steps(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_approval_steps_queue ON order_approval_steps(approval_queue);
+CREATE INDEX IF NOT EXISTS idx_order_approval_steps_status ON order_approval_steps(status);
+CREATE INDEX IF NOT EXISTS idx_order_approval_steps_acted_by_user_id ON order_approval_steps(acted_by_user_id);
+
+CREATE INDEX IF NOT EXISTS idx_catalog_categories_status ON catalog_categories(status);
+CREATE INDEX IF NOT EXISTS idx_catalog_categories_source ON catalog_categories(source);
+CREATE INDEX IF NOT EXISTS idx_catalog_category_aliases_category_id ON catalog_category_aliases(category_id);
+
+CREATE INDEX IF NOT EXISTS idx_catalog_item_types_status ON catalog_item_types(status);
+CREATE INDEX IF NOT EXISTS idx_catalog_item_types_source ON catalog_item_types(source);
+CREATE INDEX IF NOT EXISTS idx_catalog_type_aliases_item_type_id ON catalog_type_aliases(item_type_id);
+
+CREATE INDEX IF NOT EXISTS idx_catalog_attribute_definitions_status ON catalog_attribute_definitions(status);
+CREATE INDEX IF NOT EXISTS idx_catalog_attribute_definitions_source ON catalog_attribute_definitions(source);
+CREATE INDEX IF NOT EXISTS idx_catalog_attribute_aliases_attribute_definition_id
+  ON catalog_attribute_aliases(attribute_definition_id);
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_category ON order_items(category);
+CREATE INDEX IF NOT EXISTS idx_order_items_item_type ON order_items(item_type);
+CREATE INDEX IF NOT EXISTS idx_order_items_catalog_category_id ON order_items(catalog_category_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_catalog_item_type_id ON order_items(catalog_item_type_id);
+
 CREATE INDEX IF NOT EXISTS idx_order_item_images_order_item_id ON order_item_images(order_item_id);
 CREATE INDEX IF NOT EXISTS idx_order_item_images_sort_order ON order_item_images(sort_order);
 
 CREATE INDEX IF NOT EXISTS idx_order_item_attributes_order_item_id ON order_item_attributes(order_item_id);
-CREATE INDEX IF NOT EXISTS idx_order_item_attributes_name_value ON order_item_attributes(attribute_name, attribute_value);
+CREATE INDEX IF NOT EXISTS idx_order_item_attributes_catalog_attribute_definition_id
+  ON order_item_attributes(catalog_attribute_definition_id);
+CREATE INDEX IF NOT EXISTS idx_order_item_attributes_name_value
+  ON order_item_attributes(attribute_name, attribute_value);
 
 CREATE INDEX IF NOT EXISTS idx_receives_order_id ON receives(order_id);
 CREATE INDEX IF NOT EXISTS idx_receives_received_by_user_id ON receives(received_by_user_id);
@@ -376,10 +660,15 @@ CREATE INDEX IF NOT EXISTS idx_assets_receive_item_id ON assets(receive_item_id)
 CREATE INDEX IF NOT EXISTS idx_assets_current_storage_id ON assets(current_storage_id);
 CREATE INDEX IF NOT EXISTS idx_assets_asset_status ON assets(asset_status);
 CREATE INDEX IF NOT EXISTS idx_assets_category ON assets(category);
+CREATE INDEX IF NOT EXISTS idx_assets_item_type ON assets(item_type);
+CREATE INDEX IF NOT EXISTS idx_assets_catalog_item_type_id ON assets(catalog_item_type_id);
 CREATE INDEX IF NOT EXISTS idx_assets_serial_number ON assets(serial_number);
 
 CREATE INDEX IF NOT EXISTS idx_asset_attributes_asset_id ON asset_attributes(asset_id);
-CREATE INDEX IF NOT EXISTS idx_asset_attributes_name_value ON asset_attributes(attribute_name, attribute_value);
+CREATE INDEX IF NOT EXISTS idx_asset_attributes_catalog_attribute_definition_id
+  ON asset_attributes(catalog_attribute_definition_id);
+CREATE INDEX IF NOT EXISTS idx_asset_attributes_name_value
+  ON asset_attributes(attribute_name, attribute_value);
 
 CREATE INDEX IF NOT EXISTS idx_asset_assignment_requests_asset_id ON asset_assignment_requests(asset_id);
 CREATE INDEX IF NOT EXISTS idx_asset_assignment_requests_employee_id ON asset_assignment_requests(employee_id);

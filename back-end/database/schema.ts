@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  check,
   index,
   integer,
   real,
@@ -17,10 +18,55 @@ export const roleValues = [
   "systemAdmin",
 ] as const;
 
-export const orderStatusValues = [
+export const positionValues = [
+  "staff",
+  "ceo",
+  "generalManager",
+  "cfo",
+  "coo",
+  "cto",
+  "departmentHead",
+  "departmentManager",
+  "manager",
+  "custom",
+] as const;
+
+export const approvalScopeValues = [
+  "company",
+  "office",
+  "department",
+] as const;
+
+export const approvalQueueValues = [
+  "anyHigherUps",
+  "finance",
+] as const;
+
+export const approvalStepStatusValues = [
   "pending",
   "approved",
   "rejected",
+  "cancelled",
+] as const;
+
+export const catalogStatusValues = [
+  "draft",
+  "active",
+  "archived",
+] as const;
+
+export const catalogSourceValues = [
+  "system",
+  "promoted",
+  "manual",
+] as const;
+
+export const orderStatusValues = [
+  "pendingHigherUpApproval",
+  "rejectedByHigherUp",
+  "pendingFinanceApproval",
+  "rejectedByFinance",
+  "financeApproved",
   "ordered",
   "partiallyReceived",
   "received",
@@ -110,12 +156,18 @@ export const users = sqliteTable(
     email: text("email").notNull().unique(),
     fullName: text("full_name").notNull(),
     role: text("role", { enum: roleValues }).notNull(),
+    position: text("position", { enum: positionValues }).notNull().default("staff"),
+    departmentId: integer("department_id").references(() => departments.id, {
+      onDelete: "set null",
+    }),
     passwordHash: text("password_hash").notNull(),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
     ...timestamps(),
   },
   (table) => [
     index("idx_users_role").on(table.role),
+    index("idx_users_position").on(table.position),
+    index("idx_users_department_id").on(table.departmentId),
   ],
 );
 
@@ -126,12 +178,63 @@ export const offices = sqliteTable("offices", {
   ...timestamps(),
 });
 
-export const orderProcesses = sqliteTable("order_processes", {
-  id: idColumn(),
-  processName: text("process_name").notNull().unique(),
-  description: text("description"),
-  ...timestamps(),
-});
+export const departments = sqliteTable(
+  "departments",
+  {
+    id: idColumn(),
+    departmentName: text("department_name").notNull().unique(),
+    description: text("description"),
+    ...timestamps(),
+  },
+  (table) => [
+    index("idx_departments_name").on(table.departmentName),
+  ],
+);
+
+export const orderApprovers = sqliteTable(
+  "order_approvers",
+  {
+    id: idColumn(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    approvalQueue: text("approval_queue", { enum: approvalQueueValues }).notNull(),
+    approvalScope: text("approval_scope", { enum: approvalScopeValues }).notNull(),
+    officeId: integer("office_id").references(() => offices.id, {
+      onDelete: "cascade",
+    }),
+    departmentId: integer("department_id").references(() => departments.id, {
+      onDelete: "cascade",
+    }),
+    approvalLimit: real("approval_limit"),
+    note: text("note"),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    ...timestamps(),
+  },
+  (table) => [
+    check(
+      "order_approvers_scope_check",
+      sql`(
+        (${table.approvalScope} = 'company' AND ${table.officeId} IS NULL AND ${table.departmentId} IS NULL)
+        OR (${table.approvalScope} = 'office' AND ${table.officeId} IS NOT NULL AND ${table.departmentId} IS NULL)
+        OR (${table.approvalScope} = 'department' AND ${table.departmentId} IS NOT NULL)
+      )`,
+    ),
+    index("idx_order_approvers_user_id").on(table.userId),
+    index("idx_order_approvers_queue").on(table.approvalQueue),
+    index("idx_order_approvers_scope").on(table.approvalScope),
+    index("idx_order_approvers_office_id").on(table.officeId),
+    index("idx_order_approvers_department_id").on(table.departmentId),
+    index("idx_order_approvers_is_active").on(table.isActive),
+    uniqueIndex("idx_order_approvers_unique_scope").on(
+      table.userId,
+      table.approvalQueue,
+      table.approvalScope,
+      sql`ifnull(${table.officeId}, -1)`,
+      sql`ifnull(${table.departmentId}, -1)`,
+    ),
+  ],
+);
 
 export const orders = sqliteTable(
   "orders",
@@ -143,11 +246,14 @@ export const orders = sqliteTable(
     officeId: integer("office_id")
       .notNull()
       .references(() => offices.id),
-    orderProcessId: integer("order_process_id")
-      .notNull()
-      .references(() => orderProcesses.id),
+    departmentId: integer("department_id").references(() => departments.id, {
+      onDelete: "set null",
+    }),
     whyOrdered: text("why_ordered").notNull(),
     status: text("status", { enum: orderStatusValues }).notNull(),
+    approvalTarget: text("approval_target", { enum: approvalQueueValues })
+      .notNull()
+      .default("anyHigherUps"),
     expectedArrivalAt: text("expected_arrival_at"),
     totalCost: real("total_cost"),
     ...timestamps(),
@@ -155,9 +261,184 @@ export const orders = sqliteTable(
   (table) => [
     index("idx_orders_user").on(table.userId),
     index("idx_orders_office_id").on(table.officeId),
-    index("idx_orders_order_process_id").on(table.orderProcessId),
+    index("idx_orders_department_id").on(table.departmentId),
     index("idx_orders_status").on(table.status),
+    index("idx_orders_approval_target").on(table.approvalTarget),
     index("idx_orders_expected_arrival_at").on(table.expectedArrivalAt),
+  ],
+);
+
+export const orderApprovalSteps = sqliteTable(
+  "order_approval_steps",
+  {
+    id: idColumn(),
+    orderId: integer("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    stepOrder: integer("step_order").notNull(),
+    approvalQueue: text("approval_queue", { enum: approvalQueueValues }).notNull(),
+    status: text("status", { enum: approvalStepStatusValues }).notNull(),
+    actedByUserId: integer("acted_by_user_id").references(() => users.id),
+    actedAt: text("acted_at"),
+    note: text("note"),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("order_approval_steps_order_id_step_order_unique").on(
+      table.orderId,
+      table.stepOrder,
+    ),
+    index("idx_order_approval_steps_order_id").on(table.orderId),
+    index("idx_order_approval_steps_queue").on(table.approvalQueue),
+    index("idx_order_approval_steps_status").on(table.status),
+    index("idx_order_approval_steps_acted_by_user_id").on(table.actedByUserId),
+  ],
+);
+
+export const catalogCategories = sqliteTable(
+  "catalog_categories",
+  {
+    id: idColumn(),
+    displayName: text("display_name").notNull(),
+    normalizedName: text("normalized_name").notNull().unique(),
+    status: text("status", { enum: catalogStatusValues }).notNull().default("draft"),
+    source: text("source", { enum: catalogSourceValues }).notNull().default("manual"),
+    createdByUserId: integer("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    approvedByUserId: integer("approved_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    ...timestamps(),
+  },
+  (table) => [
+    index("idx_catalog_categories_status").on(table.status),
+    index("idx_catalog_categories_source").on(table.source),
+  ],
+);
+
+export const catalogCategoryAliases = sqliteTable(
+  "catalog_category_aliases",
+  {
+    id: idColumn(),
+    categoryId: integer("category_id")
+      .notNull()
+      .references(() => catalogCategories.id, { onDelete: "cascade" }),
+    aliasName: text("alias_name").notNull(),
+    normalizedAlias: text("normalized_alias").notNull().unique(),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("catalog_category_aliases_category_id_alias_name_unique").on(
+      table.categoryId,
+      table.aliasName,
+    ),
+    index("idx_catalog_category_aliases_category_id").on(table.categoryId),
+  ],
+);
+
+export const catalogItemTypes = sqliteTable(
+  "catalog_item_types",
+  {
+    id: idColumn(),
+    categoryId: integer("category_id")
+      .notNull()
+      .references(() => catalogCategories.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    status: text("status", { enum: catalogStatusValues }).notNull().default("draft"),
+    source: text("source", { enum: catalogSourceValues }).notNull().default("manual"),
+    createdByUserId: integer("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    approvedByUserId: integer("approved_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("catalog_item_types_category_id_normalized_name_unique").on(
+      table.categoryId,
+      table.normalizedName,
+    ),
+    index("idx_catalog_item_types_status").on(table.status),
+    index("idx_catalog_item_types_source").on(table.source),
+  ],
+);
+
+export const catalogTypeAliases = sqliteTable(
+  "catalog_type_aliases",
+  {
+    id: idColumn(),
+    itemTypeId: integer("item_type_id")
+      .notNull()
+      .references(() => catalogItemTypes.id, { onDelete: "cascade" }),
+    aliasName: text("alias_name").notNull(),
+    normalizedAlias: text("normalized_alias").notNull(),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("catalog_type_aliases_item_type_id_alias_name_unique").on(
+      table.itemTypeId,
+      table.aliasName,
+    ),
+    uniqueIndex("catalog_type_aliases_item_type_id_normalized_alias_unique").on(
+      table.itemTypeId,
+      table.normalizedAlias,
+    ),
+    index("idx_catalog_type_aliases_item_type_id").on(table.itemTypeId),
+  ],
+);
+
+export const catalogAttributeDefinitions = sqliteTable(
+  "catalog_attribute_definitions",
+  {
+    id: idColumn(),
+    itemTypeId: integer("item_type_id")
+      .notNull()
+      .references(() => catalogItemTypes.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    status: text("status", { enum: catalogStatusValues }).notNull().default("draft"),
+    source: text("source", { enum: catalogSourceValues }).notNull().default("manual"),
+    createdByUserId: integer("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    approvedByUserId: integer("approved_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex(
+      "catalog_attribute_definitions_item_type_id_normalized_name_unique",
+    ).on(table.itemTypeId, table.normalizedName),
+    index("idx_catalog_attribute_definitions_status").on(table.status),
+    index("idx_catalog_attribute_definitions_source").on(table.source),
+  ],
+);
+
+export const catalogAttributeAliases = sqliteTable(
+  "catalog_attribute_aliases",
+  {
+    id: idColumn(),
+    attributeDefinitionId: integer("attribute_definition_id")
+      .notNull()
+      .references(() => catalogAttributeDefinitions.id, { onDelete: "cascade" }),
+    aliasName: text("alias_name").notNull(),
+    normalizedAlias: text("normalized_alias").notNull(),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex(
+      "catalog_attribute_aliases_attribute_definition_id_alias_name_unique",
+    ).on(table.attributeDefinitionId, table.aliasName),
+    uniqueIndex(
+      "catalog_attribute_aliases_attribute_definition_id_normalized_alias_unique",
+    ).on(table.attributeDefinitionId, table.normalizedAlias),
+    index("idx_catalog_attribute_aliases_attribute_definition_id").on(
+      table.attributeDefinitionId,
+    ),
   ],
 );
 
@@ -170,6 +451,15 @@ export const orderItems = sqliteTable(
       .references(() => orders.id, { onDelete: "cascade" }),
     itemName: text("item_name").notNull(),
     category: text("category").notNull(),
+    itemType: text("item_type").notNull(),
+    catalogCategoryId: integer("catalog_category_id").references(
+      () => catalogCategories.id,
+      { onDelete: "set null" },
+    ),
+    catalogItemTypeId: integer("catalog_item_type_id").references(
+      () => catalogItemTypes.id,
+      { onDelete: "set null" },
+    ),
     quantity: integer("quantity").notNull(),
     unitCost: real("unit_cost").notNull(),
     fromWhere: text("from_where").notNull(),
@@ -180,6 +470,9 @@ export const orderItems = sqliteTable(
   (table) => [
     index("idx_order_items_order_id").on(table.orderId),
     index("idx_order_items_category").on(table.category),
+    index("idx_order_items_item_type").on(table.itemType),
+    index("idx_order_items_catalog_category_id").on(table.catalogCategoryId),
+    index("idx_order_items_catalog_item_type_id").on(table.catalogItemTypeId),
   ],
 );
 
@@ -211,6 +504,10 @@ export const orderItemAttributes = sqliteTable(
     orderItemId: integer("order_item_id")
       .notNull()
       .references(() => orderItems.id, { onDelete: "cascade" }),
+    catalogAttributeDefinitionId: integer("catalog_attribute_definition_id").references(
+      () => catalogAttributeDefinitions.id,
+      { onDelete: "set null" },
+    ),
     attributeName: text("attribute_name").notNull(),
     attributeValue: text("attribute_value").notNull(),
     ...timestamps(),
@@ -221,6 +518,9 @@ export const orderItemAttributes = sqliteTable(
       table.attributeName,
     ),
     index("idx_order_item_attributes_order_item_id").on(table.orderItemId),
+    index("idx_order_item_attributes_catalog_attribute_definition_id").on(
+      table.catalogAttributeDefinitionId,
+    ),
     index("idx_order_item_attributes_name_value").on(
       table.attributeName,
       table.attributeValue,
@@ -297,6 +597,11 @@ export const assets = sqliteTable(
     qrCode: text("qr_code").notNull().unique(),
     assetName: text("asset_name").notNull(),
     category: text("category").notNull(),
+    itemType: text("item_type").notNull(),
+    catalogItemTypeId: integer("catalog_item_type_id").references(
+      () => catalogItemTypes.id,
+      { onDelete: "set null" },
+    ),
     serialNumber: text("serial_number"),
     conditionStatus: text("condition_status", {
       enum: conditionStatusValues,
@@ -312,6 +617,8 @@ export const assets = sqliteTable(
     index("idx_assets_current_storage_id").on(table.currentStorageId),
     index("idx_assets_asset_status").on(table.assetStatus),
     index("idx_assets_category").on(table.category),
+    index("idx_assets_item_type").on(table.itemType),
+    index("idx_assets_catalog_item_type_id").on(table.catalogItemTypeId),
     index("idx_assets_serial_number").on(table.serialNumber),
   ],
 );
@@ -323,6 +630,10 @@ export const assetAttributes = sqliteTable(
     assetId: integer("asset_id")
       .notNull()
       .references(() => assets.id, { onDelete: "cascade" }),
+    catalogAttributeDefinitionId: integer("catalog_attribute_definition_id").references(
+      () => catalogAttributeDefinitions.id,
+      { onDelete: "set null" },
+    ),
     attributeName: text("attribute_name").notNull(),
     attributeValue: text("attribute_value").notNull(),
     ...timestamps(),
@@ -333,6 +644,9 @@ export const assetAttributes = sqliteTable(
       table.attributeName,
     ),
     index("idx_asset_attributes_asset_id").on(table.assetId),
+    index("idx_asset_attributes_catalog_attribute_definition_id").on(
+      table.catalogAttributeDefinitionId,
+    ),
     index("idx_asset_attributes_name_value").on(
       table.attributeName,
       table.attributeValue,
