@@ -1,17 +1,18 @@
 type Mutation {
-  createOrder(expectedArrivalAt: String, officeId: ID, orderProcessId: ID, status: String!, totalCost: Float, userId: ID, whyOrdered: String!): Order!
+  createOrder(approvalTarget: String, departmentId: ID, expectedArrivalAt: String, officeId: ID, status: String!, totalCost: Float, userId: ID, whyOrdered: String!): Order!
   createReceive(note: String, officeId: ID, orderId: ID, receivedAt: String, receivedByUserId: ID, status: String!): Receive!
   deleteOrder(id: ID!): Boolean!
   deleteReceive(id: ID!): Boolean!
-  updateOrder(expectedArrivalAt: String, id: ID!, officeId: ID, orderProcessId: ID, status: String, totalCost: Float, userId: ID, whyOrdered: String): Order
+  updateOrder(approvalTarget: String, departmentId: ID, expectedArrivalAt: String, id: ID!, officeId: ID, status: String, totalCost: Float, userId: ID, whyOrdered: String): Order
   updateReceive(id: ID!, note: String, officeId: ID, orderId: ID, receivedAt: String, receivedByUserId: ID, status: String): Receive
 }
 
 type Order {
+  approvalTarget: String!
+  departmentId: ID
   expectedArrivalAt: String
   id: ID!
   officeId: ID!
-  orderProcessId: ID!
   status: String!
   totalCost: Float
   userId: ID!

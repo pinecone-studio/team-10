@@ -1,7 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import {
+  departments,
   offices,
-  orderProcesses,
   orders,
   users,
 } from "../database/schema.ts";
@@ -11,9 +11,10 @@ const orderSelection = {
   id: orders.id,
   userId: orders.userId,
   officeId: orders.officeId,
-  orderProcessId: orders.orderProcessId,
+  departmentId: orders.departmentId,
   whyOrdered: orders.whyOrdered,
   status: orders.status,
+  approvalTarget: orders.approvalTarget,
   expectedArrivalAt: orders.expectedArrivalAt,
   totalCost: orders.totalCost,
 };
@@ -52,6 +53,7 @@ export async function resolveUserId(
         email: `demo-user-${requestedUserId}@example.local`,
         fullName: `Demo User ${requestedUserId}`,
         role: "employee",
+        position: "staff",
         passwordHash: "demo-password",
         isActive: true,
       })
@@ -79,6 +81,7 @@ export async function resolveUserId(
         email: `demo-user-${requestedUserId}@example.local`,
         fullName: `Demo User ${requestedUserId}`,
         role: "employee",
+        position: "staff",
         passwordHash: "demo-password",
         isActive: true,
       })
@@ -117,6 +120,7 @@ export async function resolveUserId(
       email: demoEmail,
       fullName: "Demo User",
       role: "employee",
+      position: "staff",
       passwordHash: "demo-password",
       isActive: true,
     })
@@ -193,68 +197,68 @@ export async function resolveOfficeId(db: AppDb, providedOfficeId?: string | nul
   return createdOffice.id;
 }
 
-export async function resolveOrderProcessId(
+export async function resolveDepartmentId(
   db: AppDb,
-  providedOrderProcessId?: string | null,
+  providedDepartmentId?: string | null,
 ) {
-  if (providedOrderProcessId) {
-    const requestedOrderProcessId = parseIntegerId(
-      "orderProcessId",
-      providedOrderProcessId,
+  if (providedDepartmentId) {
+    const requestedDepartmentId = parseIntegerId(
+      "departmentId",
+      providedDepartmentId,
     );
-    const [existingOrderProcess] = await db
-      .select({ id: orderProcesses.id })
-      .from(orderProcesses)
-      .where(eq(orderProcesses.id, requestedOrderProcessId))
+    const [existingDepartment] = await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.id, requestedDepartmentId))
       .limit(1);
 
-    if (existingOrderProcess) {
-      return existingOrderProcess.id;
+    if (existingDepartment) {
+      return existingDepartment.id;
     }
 
     await db
-      .insert(orderProcesses)
+      .insert(departments)
       .values({
-        id: requestedOrderProcessId,
-        processName: `Demo Process ${requestedOrderProcessId}`,
+        id: requestedDepartmentId,
+        departmentName: `Demo Department ${requestedDepartmentId}`,
         description: "Auto-created for GraphQL demo",
       })
       .run();
 
-    return requestedOrderProcessId;
+    return requestedDepartmentId;
   }
 
-  const [orderProcess] = await db
-    .select({ id: orderProcesses.id })
-    .from(orderProcesses)
-    .orderBy(asc(orderProcesses.id))
+  const [department] = await db
+    .select({ id: departments.id })
+    .from(departments)
+    .orderBy(asc(departments.id))
     .limit(1);
 
-  if (orderProcess) {
-    return orderProcess.id;
+  if (department) {
+    return department.id;
   }
 
-  const processName = "Demo Order Process";
+  const departmentName = "Demo Department";
 
   await db
-    .insert(orderProcesses)
+    .insert(departments)
     .values({
-      processName,
+      departmentName,
       description: "Auto-created for GraphQL demo",
     })
     .run();
 
-  const [createdOrderProcess] = await db
-    .select({ id: orderProcesses.id })
-    .from(orderProcesses)
-    .where(eq(orderProcesses.processName, processName))
+  const [createdDepartment] = await db
+    .select({ id: departments.id })
+    .from(departments)
+    .where(eq(departments.departmentName, departmentName))
     .limit(1);
 
-  if (!createdOrderProcess) {
-    throw new Error("Failed to create a demo order process.");
+  if (!createdDepartment) {
+    throw new Error("Failed to create a demo department.");
   }
 
-  return createdOrderProcess.id;
+  return createdDepartment.id;
 }
 
 export async function resolveOrderId(
@@ -289,16 +293,16 @@ export async function resolveOrderId(
 
   const userId = await resolveUserId(db, undefined, currentUserId);
   const officeId = await resolveOfficeId(db);
-  const orderProcessId = await resolveOrderProcessId(db);
 
   const [createdOrder] = await db
     .insert(orders)
     .values({
       userId,
       officeId,
-      orderProcessId,
+      departmentId: null,
       whyOrdered: "Auto-created for receive demo",
       status: "ordered",
+      approvalTarget: "anyHigherUps",
       expectedArrivalAt: null,
       totalCost: null,
     })

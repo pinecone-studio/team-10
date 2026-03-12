@@ -29,9 +29,10 @@ export type Mutation = {
 
 
 export type MutationCreateOrderArgs = {
+  approvalTarget?: InputMaybe<Scalars['String']['input']>;
+  departmentId?: InputMaybe<Scalars['ID']['input']>;
   expectedArrivalAt?: InputMaybe<Scalars['String']['input']>;
   officeId?: InputMaybe<Scalars['ID']['input']>;
-  orderProcessId?: InputMaybe<Scalars['ID']['input']>;
   status: Scalars['String']['input'];
   totalCost?: InputMaybe<Scalars['Float']['input']>;
   userId?: InputMaybe<Scalars['ID']['input']>;
@@ -60,10 +61,11 @@ export type MutationDeleteReceiveArgs = {
 
 
 export type MutationUpdateOrderArgs = {
+  approvalTarget?: InputMaybe<Scalars['String']['input']>;
+  departmentId?: InputMaybe<Scalars['ID']['input']>;
   expectedArrivalAt?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
   officeId?: InputMaybe<Scalars['ID']['input']>;
-  orderProcessId?: InputMaybe<Scalars['ID']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
   totalCost?: InputMaybe<Scalars['Float']['input']>;
   userId?: InputMaybe<Scalars['ID']['input']>;
@@ -83,10 +85,11 @@ export type MutationUpdateReceiveArgs = {
 
 export type Order = {
   __typename?: 'Order';
+  approvalTarget: Scalars['String']['output'];
+  departmentId?: Maybe<Scalars['ID']['output']>;
   expectedArrivalAt?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   officeId: Scalars['ID']['output'];
-  orderProcessId: Scalars['ID']['output'];
   status: Scalars['String']['output'];
   totalCost?: Maybe<Scalars['Float']['output']>;
   userId: Scalars['ID']['output'];
@@ -225,10 +228,11 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
 };
 
 export type OrderResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Order'] = ResolversParentTypes['Order']> = {
+  approvalTarget?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  departmentId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
   expectedArrivalAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   officeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-  orderProcessId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   totalCost?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
   userId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;

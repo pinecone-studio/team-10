@@ -1,7 +1,7 @@
 "use client";
 
-import { departmentOptions, formatCurrency, goodsCatalog } from "../../_lib/order-store";
-import type { DepartmentOption, OrderItem } from "../../_lib/order-types";
+import { departmentOptions, formatCurrency, goodsCatalog, permissionRequestOptions } from "../../_lib/order-store";
+import type { ApprovalTarget, DepartmentOption, OrderItem } from "../../_lib/order-types";
 import { ActionButton } from "../shared/WorkspacePrimitives";
 import { InputField, SectionCard, SelectInput, TextInput } from "./OrderPrimitives";
 import type { DraftOrder, GoodsDraft } from "./orderHelpers";
@@ -36,7 +36,9 @@ export function OrderCreateView(props: {
           <InputField label="Department *"><SelectInput value={draftOrder.department} onChange={(event) => props.onOrderChange("department", event.target.value as DepartmentOption)}>{departmentOptions.map((option) => <option key={option} value={option}>{option}</option>)}</SelectInput></InputField>
           <InputField label="Requester *"><TextInput value={draftOrder.requester} onChange={(event) => props.onOrderChange("requester", event.target.value)} placeholder="Enter name" /></InputField>
           <InputField label="Delivery date *"><TextInput type="date" value={draftOrder.deliveryDate} onChange={(event) => props.onOrderChange("deliveryDate", event.target.value)} /></InputField>
+          <InputField label="Permission request *"><SelectInput value={draftOrder.approvalTarget} onChange={(event) => props.onOrderChange("approvalTarget", event.target.value as ApprovalTarget)}>{permissionRequestOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</SelectInput></InputField>
         </div>
+        <p className="mt-[10px] text-[11px] text-[#8fa0ba]">Orders go to Any Higher-ups first. After approval, they move to Finance automatically.</p>
       </SectionCard>
 
       <SectionCard title="Custom goods" icon={<span>+</span>} trailing={<span className="text-[11px] text-[#8fa0ba]">{draftItems.length} item</span>}>
@@ -77,7 +79,7 @@ export function OrderCreateView(props: {
 
       <div className="flex justify-between">
         <div className="rounded-[8px] bg-[#f1f1f2] px-[14px] py-[12px] text-[12px] font-semibold text-[#171717]">Total: {formatCurrency(summaryTotal)}</div>
-        <ActionButton onClick={props.onSubmit} disabled={!canSubmitDraft}>Submit for approval</ActionButton>
+        <ActionButton onClick={props.onSubmit} disabled={!canSubmitDraft}>Send to higher-up approval</ActionButton>
       </div>
     </>
   );

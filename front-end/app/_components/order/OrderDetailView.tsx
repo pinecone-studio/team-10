@@ -7,8 +7,16 @@ import { buildFeedEvents, getOrderPresentation, getProgressLabels } from "./orde
 
 function Stepper({ status }: { status: OrderStatus }) {
   const labels = getProgressLabels(status);
-  const activeIndex = status === "assigned_hr" ? 2 : status === "received_inventory" || status === "approved_finance" ? 1 : 0;
-  return <div className="rounded-[16px] border border-[#dbdbdb] bg-white px-[26px] py-[18px]"><div className="flex items-center justify-center gap-[18px]">{labels.map((label, index) => <div key={label} className="flex items-center gap-[18px]"><div className="flex flex-col items-center gap-[9px]"><div className={`flex h-[28px] w-[28px] items-center justify-center rounded-full border text-[12px] ${index <= activeIndex ? "border-black bg-black text-white" : "border-[#8f8f8f] bg-white text-[#8f8f8f]"}`}>{index < activeIndex ? "✓" : index + 1}</div><span className={`text-[10px] ${index === activeIndex ? "text-[#171717]" : "text-[#8f8f8f]"}`}>{label}</span></div>{index < labels.length - 1 ? <div className="h-px w-[68px] bg-[#dddddd]" /> : null}</div>)}</div></div>;
+  const activeIndex =
+    status === "assigned_hr"
+      ? 4
+      : status === "received_inventory" || status === "approved_finance"
+        ? 3
+        : status === "pending_finance" || status === "rejected_finance"
+          ? 2
+          : 1;
+
+  return <div className="rounded-[16px] border border-[#dbdbdb] bg-white px-[18px] py-[18px]"><div className="flex flex-wrap items-start justify-center gap-[14px]">{labels.map((label, index) => <div key={label} className="flex items-center gap-[14px]"><div className="flex flex-col items-center gap-[9px]"><div className={`flex h-[28px] w-[28px] items-center justify-center rounded-full border text-[12px] ${index <= activeIndex ? "border-black bg-black text-white" : "border-[#8f8f8f] bg-white text-[#8f8f8f]"}`}>{index < activeIndex ? "OK" : index + 1}</div><span className={`max-w-[84px] text-center text-[10px] ${index === activeIndex ? "text-[#171717]" : "text-[#8f8f8f]"}`}>{label}</span></div>{index < labels.length - 1 ? <div className="h-px w-[28px] bg-[#dddddd]" /> : null}</div>)}</div></div>;
 }
 
 export function OrderDetailView(props: {
