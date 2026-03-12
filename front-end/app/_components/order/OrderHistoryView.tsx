@@ -2,7 +2,17 @@
 
 import { formatCurrency, formatDisplayDate, type StoredOrder } from "../../_lib/order-store";
 import { TopBar } from "./OrderPrimitives";
-import { getOrderPresentation, getOrderSummaryMeta, getOrderSummaryName } from "./orderHelpers";
+import { getOrderPresentation } from "./orderHelpers";
+
+function VerticalDots() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className="h-[18px] w-[18px] text-[#6f6f6f]" aria-hidden="true">
+      <circle cx="8" cy="3.3" r="1.2" fill="currentColor" />
+      <circle cx="8" cy="8" r="1.2" fill="currentColor" />
+      <circle cx="8" cy="12.7" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
 
 export function OrderHistoryView(props: {
   orders: StoredOrder[];
@@ -20,26 +30,79 @@ export function OrderHistoryView(props: {
 
   return (
     <>
-      <TopBar actionLabel="Open order form" onAction={props.onOpenCreate} />
-      <div><h2 className="text-[16px] font-semibold text-[#171717]">Order history</h2></div>
-      <div className="flex items-center gap-[26px]">{filters.map(([key, label]) => <button key={key} type="button" onClick={() => props.onFilterChange(key)} className={`text-[12px] ${props.selectedFilter === key ? "font-semibold text-[#171717] underline underline-offset-[5px]" : "text-[#8b8b8b]"}`}>{label}</button>)}</div>
-      <section className="rounded-[16px] border border-[#dbdbdb] bg-white px-[12px] py-[12px] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-        <div className="grid grid-cols-[0.8fr_1.45fr_1fr_1.1fr_1fr_1fr_0.6fr] gap-[12px] rounded-[8px] bg-[#f1f1f2] px-[14px] py-[12px] text-[11px] text-[#8a8a8a]"><span>Id</span><span>Name</span><span>Created date</span><span>Type</span><span>Status</span><span>Total</span><span>Action</span></div>
-        <div className="mt-[12px] space-y-[10px]">
-          {props.orders.length > 0 ? props.orders.map((order) => {
-            const presentation = getOrderPresentation(order.status);
-            return (
-              <div key={order.id} className="grid grid-cols-[0.8fr_1.45fr_1fr_1.1fr_1fr_1fr_0.6fr] items-center gap-[12px] rounded-[12px] border border-[#ececec] px-[14px] py-[14px] text-[12px] transition-colors hover:bg-[#fcfcfc]">
-                <span className="font-medium text-[#171717]">#{order.requestNumber.slice(-3)}</span>
-                <div><p className="font-medium text-[#171717]">{getOrderSummaryName(order)}</p><p className="mt-[3px] text-[10px] text-[#8b8b8b]">{getOrderSummaryMeta(order)}</p></div>
-                <span>{formatDisplayDate(order.requestDate)}</span>
-                <span>{presentation.type}</span>
-                <span className={`inline-flex w-fit rounded-full border px-[8px] py-[2px] text-[10px] ${presentation.tone}`}>{presentation.status}</span>
-                <span>{formatCurrency(order.totalAmount)}</span>
-                <button type="button" onClick={() => props.onOpenDetail(order.id)} className="text-left text-[18px] leading-none text-[#7f8aa3]">...</button>
-              </div>
-            );
-          }) : <div className="rounded-[12px] border border-dashed border-[#dddddd] px-[16px] py-[24px] text-center text-[12px] text-[#8b8b8b]">No orders found for this filter.</div>}
+      <TopBar actionLabel="Create a new order" onAction={props.onOpenCreate} showNotification />
+      <h2 className="pt-[6px] text-[32px] font-semibold leading-[1.2] text-[#111111]">Order history</h2>
+
+      <div className="flex items-center justify-between pt-[6px]">
+        <div className="flex items-center gap-[40px]">
+          {filters.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => props.onFilterChange(key)}
+              className={`text-[20px] leading-none ${
+                props.selectedFilter === key ? "font-semibold text-[#111111] underline underline-offset-[6px]" : "text-[#767676]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-[14px]">
+          <input
+            type="date"
+            className="h-[40px] w-[137px] rounded-[6px] border border-[#d8d8dc] bg-[#efefef] px-[12px] text-[14px] text-[#7a7a7a]"
+            aria-label="From date"
+          />
+          <span className="text-[17px] text-[#383838]">To</span>
+          <input
+            type="date"
+            className="h-[40px] w-[137px] rounded-[6px] border border-[#d8d8dc] bg-[#efefef] px-[12px] text-[14px] text-[#7a7a7a]"
+            aria-label="To date"
+          />
+        </div>
+      </div>
+
+      <section className="pt-[8px]">
+        <div className="grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#dbdcdf] px-[16px] py-[18px] text-[15px] text-[#707070]">
+          <span>Id</span>
+          <span>Name</span>
+          <span>Created date</span>
+          <span>Type</span>
+          <span>Status</span>
+          <span>Total</span>
+          <span>Action</span>
+        </div>
+
+        <div className="mt-[14px] space-y-[8px]">
+          {props.orders.length > 0 ? (
+            props.orders.map((order) => {
+              const presentation = getOrderPresentation(order.status);
+              return (
+                <div
+                  key={order.id}
+                  className="grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] items-center gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#efefef] px-[16px] py-[17px] text-[15px] text-[#565656]"
+                >
+                  <span>#{order.requestNumber.slice(-4)}</span>
+                  <span>Order name</span>
+                  <span>{formatDisplayDate(order.requestDate)}</span>
+                  <span className={presentation.status.includes("Waiting") ? "text-[#ff7a00]" : presentation.status.includes("Rejected") ? "text-[#e05639]" : presentation.status.includes("Assigned") ? "text-[#1888d7]" : "text-[#058638]"}>{presentation.type.replace("review", "permission")}</span>
+                  <span className={`inline-flex w-fit rounded-[99px] border px-[8px] py-[1px] text-[13px] ${presentation.tone}`}>
+                    {presentation.status.includes("Waiting") ? "Waiting" : presentation.status.includes("Rejected") ? "Rejected" : presentation.status.includes("Assigned") ? "Assigned" : "Allowed"}
+                  </span>
+                  <span>{formatCurrency(order.totalAmount)}</span>
+                  <button type="button" onClick={() => props.onOpenDetail(order.id)} className="inline-flex items-center">
+                    <VerticalDots />
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <div className="rounded-[6px] border border-dashed border-[#cfcfd3] px-[16px] py-[28px] text-center text-[15px] text-[#7f7f7f]">
+              No orders found for this filter.
+            </div>
+          )}
         </div>
       </section>
     </>

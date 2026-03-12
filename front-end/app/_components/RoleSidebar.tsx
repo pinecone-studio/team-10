@@ -14,7 +14,7 @@ type RoleSidebarProps = {
 };
 
 function Icon({ kind, active }: { kind: NavIcon; active: boolean }) {
-  const common = active ? "h-[14px] w-[14px] shrink-0 text-white" : "h-[14px] w-[14px] shrink-0 text-[#b0b0b0]";
+  const common = active ? "h-[21px] w-[21px] shrink-0 text-white" : "h-[21px] w-[21px] shrink-0 text-[#b0b0b0]";
 
   if (kind === "home") {
     return (
@@ -79,28 +79,28 @@ export function RoleSidebar({ role, currentSection = "order" }: RoleSidebarProps
   );
 
   return (
-    <aside className="flex min-h-screen w-[244px] shrink-0 flex-col bg-[#010101] px-[20px] pt-[58px] pb-[36px] text-white">
-      <div className="flex items-start gap-[10px] border-b border-white/10 pb-[34px]">
-        <div className="mt-[2px] flex h-[29px] w-[29px] items-center justify-center rounded-[8px] bg-white text-black">
+    <aside className="flex min-h-screen w-[275px] shrink-0 flex-col border-r border-white/10 bg-[#020202] px-[12px] pt-[60px] pb-[28px] text-white">
+      <div className="mx-[12px] flex items-start gap-[12px] border-b border-white/10 pb-[20px]">
+        <div className="mt-[1px] flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-white text-black">
           <Image
             src="/file.svg"
             alt=""
-            width={16}
-            height={16}
-            className="h-[16px] w-[16px] shrink-0 brightness-0"
+            width={18}
+            height={18}
+            className="h-[18px] w-[18px] shrink-0 brightness-0"
           />
         </div>
         <div>
-          <h1 className="text-[14px] font-semibold leading-none tracking-tight text-[#f5f5f5]">
+          <h1 className="text-[27px] font-semibold leading-none tracking-tight text-[#f5f5f5]">
             AMS
           </h1>
-          <p className="mt-[6px] max-w-[108px] text-[10px] leading-[1.18] text-[#6d6d6d]">
+          <p className="mt-[4px] max-w-[106px] text-[11px] leading-[1.2] text-[#7d7d7d]">
             Asset Management System
           </p>
         </div>
       </div>
 
-      <nav className="mt-[16px] flex flex-1 flex-col gap-[6px]">
+      <nav className="mt-[14px] flex flex-1 flex-col gap-[4px]">
         {visibleItems.map((item) => {
           const href = getSectionHref(role, item.section);
           const isActive =
@@ -112,8 +112,8 @@ export function RoleSidebar({ role, currentSection = "order" }: RoleSidebarProps
             <Link
               key={item.label}
               href={href}
-              className={`flex h-[32px] items-center gap-[10px] overflow-hidden rounded-[7px] px-[10px] text-left text-[11px] font-medium tracking-[0.01em] transition ${
-                isActive ? "bg-[#1c2436] text-white" : "text-[#b0b0b0] hover:bg-white/5 hover:text-white"
+              className={`flex h-[42px] items-center gap-[12px] overflow-hidden rounded-[8px] px-[12px] text-left text-[17px] font-medium tracking-[0.01em] transition ${
+                isActive ? "bg-[#1f2738] text-white" : "text-[#c7c7c7] hover:bg-white/5 hover:text-white"
               }`}
             >
               <Icon kind={item.icon} active={isActive} />
@@ -123,14 +123,17 @@ export function RoleSidebar({ role, currentSection = "order" }: RoleSidebarProps
         })}
       </nav>
 
-      <div className="border-t border-white/10 pt-[20px]">
-        <div className="rounded-[10px] bg-[#0a0a0a] px-[12px] py-[12px]">
-          <p className="text-[10px] font-medium tracking-[0.18em] text-[#6d6d6d] uppercase">
-            Role
-          </p>
-          <p className="mt-[6px] truncate text-[12px] font-medium text-white">
-            {roleMeta?.label ?? "Select role"}
-          </p>
+      <div className="border-t border-white/10 pt-[12px]">
+        <div className="rounded-[8px] bg-[#0f131b] px-[14px] py-[12px]">
+          <div className="flex items-center gap-[10px]">
+            <div className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white text-[11px] font-semibold text-[#363636]">
+              BD
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-medium text-white">Batbayar Dorj</p>
+              <p className="text-[11px] text-[#8f8f8f]">{roleMeta?.label ?? "Admin"}</p>
+            </div>
+          </div>
           <div className="mt-[10px]">
             <RoleSwitcher initialRole={role} variant="dark" />
           </div>

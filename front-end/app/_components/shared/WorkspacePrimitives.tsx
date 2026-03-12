@@ -6,23 +6,35 @@ export function WorkspaceShell({
   title,
   subtitle,
   actions,
+  hideHeader = false,
+  contentAlignment = "center",
+  contentWidthClassName = "max-w-[1137px]",
+  contentPaddingClassName = "",
   children,
 }: {
   title: string;
   subtitle: string;
   actions?: ReactNode;
+  hideHeader?: boolean;
+  contentAlignment?: "center" | "left";
+  contentWidthClassName?: string;
+  contentPaddingClassName?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="flex-1 rounded-[28px] border border-slate-200/70 bg-[#f6f6f7] px-[26px] py-[24px]">
-      <div className="mx-auto flex h-full max-w-[760px] flex-col gap-[16px]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[17px] font-semibold text-[#171717]">{title}</h1>
-            <p className="mt-[2px] text-[11px] text-[#8c8c8c]">{subtitle}</p>
+    <div className="flex-1 bg-[#efefef] px-[20px] py-[32px]">
+      <div
+        className={`flex h-full w-full flex-col gap-[18px] ${contentAlignment === "left" ? "mr-auto ml-0" : "mx-auto"} ${contentWidthClassName} ${contentPaddingClassName}`}
+      >
+        {hideHeader ? null : (
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-[32px] font-semibold leading-[1.1] text-[#111111]">{title}</h1>
+              <p className="mt-[6px] text-[14px] text-[#737373]">{subtitle}</p>
+            </div>
+            {actions}
           </div>
-          {actions}
-        </div>
+        )}
         {children}
       </div>
     </div>
