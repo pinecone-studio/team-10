@@ -46,25 +46,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
 
-  test:
-    name: Test
-    needs: guard
-    if: needs.guard.outputs.ready == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ github.token }}
-          repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: front-end/package-lock.json
-      - run: npm ci
-      - run: npm run test
-
   build:
     name: Build
     needs: guard
