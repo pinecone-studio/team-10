@@ -4,25 +4,56 @@ import type { ChangeEvent, ReactNode } from "react";
 
 function SearchIcon() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" className="h-[16px] w-[16px] text-[#8f8f8f]" aria-hidden="true">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      className="h-[16px] w-[16px] text-[#8f8f8f]"
+      aria-hidden="true"
+    >
       <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.2" />
-      <path d="m10.5 10.5 3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <path
+        d="m10.5 10.5 3 3"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function PlusIcon() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" className="h-[16px] w-[16px]" aria-hidden="true">
-      <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      className="h-[16px] w-[16px]"
+      aria-hidden="true"
+    >
+      <path
+        d="M8 3v10M3 8h10"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function NotificationIcon() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" className="h-[16px] w-[16px] text-[#262626]" aria-hidden="true">
-      <path d="M8 2.5a3 3 0 0 0-3 3v2.2c0 .5-.2 1-.5 1.4L3.8 10h8.4l-.7-.9a2.3 2.3 0 0 1-.5-1.4V5.5a3 3 0 0 0-3-3Zm-1.5 8.5a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      className="h-[16px] w-[16px] text-[#262626]"
+      aria-hidden="true"
+    >
+      <path
+        d="M8 2.5a3 3 0 0 0-3 3v2.2c0 .5-.2 1-.5 1.4L3.8 10h8.4l-.7-.9a2.3 2.3 0 0 1-.5-1.4V5.5a3 3 0 0 0-3-3Zm-1.5 8.5a1.5 1.5 0 0 0 3 0"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -52,10 +83,16 @@ export function SectionCard({
   );
 }
 
-export function InputField({ label, children }: { label: string; children: ReactNode }) {
+export function InputField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
   return (
     <label className="flex flex-col gap-[6px]">
-      <span className="text-[14px] text-[#6f6f6f]">{label}</span>
+      <span className="text-[12px] text-[#6f6f6f]">{label}</span>
       {children}
     </label>
   );
@@ -83,7 +120,7 @@ export function TextInput({
       placeholder={placeholder}
       disabled={disabled}
       min={type === "number" ? 1 : undefined}
-      className="h-[36px] rounded-[6px] border border-[#d8d8dc] bg-[#f4f4f5] px-[10px] text-[13px] text-[#565656] outline-none placeholder:text-[#a0a0a0] disabled:text-[#9b9b9b]"
+      className="h-[36px] rounded-[6px] border border-[#d8d8dc] bg-[#f4f4f5] px-[10px] text-[12px] text-[#565656] outline-none placeholder:text-[#a0a0a0] disabled:text-[#9b9b9b]"
     />
   );
 }
@@ -101,7 +138,7 @@ export function SelectInput({
     <select
       value={value}
       onChange={onChange}
-      className="h-[36px] rounded-[6px] border border-[#d8d8dc] bg-[#f4f4f5] px-[10px] text-[13px] text-[#565656] outline-none"
+      className="h-[36px] rounded-[6px] border border-[#d8d8dc] bg-[#f4f4f5] px-[10px] text-[12px] text-[#565656] outline-none"
     >
       {children}
     </select>
