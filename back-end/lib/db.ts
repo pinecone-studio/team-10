@@ -26,11 +26,15 @@ function getRequiredEnvVar(name: RequiredEnvVar) {
 }
 
 export function createRuntimeDatabase() {
+  const apiToken =
+    process.env.CLOUDFLARE_D1_API_TOKEN ??
+    getRequiredEnvVar("CLOUDFLARE_API_TOKEN");
+
   return createDatabase(
     createHttpD1Database({
       accountId: getRequiredEnvVar("CLOUDFLARE_ACCOUNT_ID"),
       databaseId: getRequiredEnvVar("CLOUDFLARE_D1_DATABASE_ID"),
-      apiToken: getRequiredEnvVar("CLOUDFLARE_API_TOKEN"),
+      apiToken,
     }),
   );
 }
