@@ -7,7 +7,7 @@
     "build": "npm run codegen && next build",
     "cf:build": "opennextjs-cloudflare build",
     "cf:deploy": "opennextjs-cloudflare deploy",
-    "start": "next start",
+    "start": "npm run dev",
     "lint": "eslint .",
     "test": "node ./scripts/ci-smoke.mjs",
     "test:graphql": "node --experimental-strip-types tests/graphql.slice.test.ts",
