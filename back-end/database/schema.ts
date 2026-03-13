@@ -61,6 +61,12 @@ export const catalogSourceValues = [
   "manual",
 ] as const;
 
+export const currencyCodeValues = [
+  "USD",
+  "MNT",
+  "EUR",
+] as const;
+
 export const orderStatusValues = [
   "pendingHigherUpApproval",
   "rejectedByHigherUp",
@@ -78,6 +84,11 @@ export const receiveStatusValues = [
   "partiallyReceived",
   "received",
   "cancelled",
+] as const;
+
+export const receivedConditionValues = [
+  "complete",
+  "issue",
 ] as const;
 
 export const conditionStatusValues = [
@@ -240,6 +251,10 @@ export const orders = sqliteTable(
   "orders",
   {
     id: idColumn(),
+    orderName: text("order_name").notNull(),
+    requestNumber: text("request_number").unique(),
+    requestDate: text("request_date"),
+    requesterName: text("requester_name"),
     userId: integer("user")
       .notNull()
       .references(() => users.id),
@@ -256,15 +271,41 @@ export const orders = sqliteTable(
       .default("anyHigherUps"),
     expectedArrivalAt: text("expected_arrival_at"),
     totalCost: real("total_cost"),
+    currencyCode: text("currency_code", { enum: currencyCodeValues })
+      .notNull()
+      .default("MNT"),
+    requestedApproverId: text("requested_approver_id"),
+    requestedApproverName: text("requested_approver_name"),
+    requestedApproverRole: text("requested_approver_role"),
+    approvalMessage: text("approval_message"),
+    higherUpReviewer: text("higher_up_reviewer"),
+    higherUpReviewedAt: text("higher_up_reviewed_at"),
+    higherUpNote: text("higher_up_note"),
+    financeReviewer: text("finance_reviewer"),
+    financeReviewedAt: text("finance_reviewed_at"),
+    financeNote: text("finance_note"),
+    receivedAt: text("received_at"),
+    receivedCondition: text("received_condition", {
+      enum: receivedConditionValues,
+    }),
+    receivedNote: text("received_note"),
+    storageLocation: text("storage_location"),
+    serialNumbersJson: text("serial_numbers_json"),
+    assignedTo: text("assigned_to"),
+    assignedRole: text("assigned_role"),
+    assignedAt: text("assigned_at"),
     ...timestamps(),
   },
   (table) => [
+    index("idx_orders_order_name").on(table.orderName),
+    index("idx_orders_request_number").on(table.requestNumber),
     index("idx_orders_user").on(table.userId),
     index("idx_orders_office_id").on(table.officeId),
     index("idx_orders_department_id").on(table.departmentId),
     index("idx_orders_status").on(table.status),
     index("idx_orders_approval_target").on(table.approvalTarget),
     index("idx_orders_expected_arrival_at").on(table.expectedArrivalAt),
+    index("idx_orders_currency_code").on(table.currencyCode),
   ],
 );
 
@@ -366,6 +407,47 @@ export const catalogItemTypes = sqliteTable(
   ],
 );
 
+export const catalogProducts = sqliteTable(
+  "catalog_products",
+  {
+    id: idColumn(),
+    itemTypeId: integer("item_type_id")
+      .notNull()
+      .references(() => catalogItemTypes.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    productCode: text("product_code").notNull().unique(),
+    unit: text("unit").notNull().default("pcs"),
+    defaultCurrencyCode: text("default_currency_code", {
+      enum: currencyCodeValues,
+    }).notNull().default("MNT"),
+    defaultUnitCost: real("default_unit_cost"),
+    description: text("description"),
+    status: text("status", { enum: catalogStatusValues }).notNull().default("draft"),
+    source: text("source", { enum: catalogSourceValues }).notNull().default("manual"),
+    createdByUserId: integer("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    approvedByUserId: integer("approved_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("catalog_products_item_type_id_normalized_name_unique").on(
+      table.itemTypeId,
+      table.normalizedName,
+    ),
+    index("idx_catalog_products_item_type_id").on(table.itemTypeId),
+    index("idx_catalog_products_product_code").on(table.productCode),
+    index("idx_catalog_products_default_currency_code").on(
+      table.defaultCurrencyCode,
+    ),
+    index("idx_catalog_products_status").on(table.status),
+    index("idx_catalog_products_source").on(table.source),
+  ],
+);
+
 export const catalogTypeAliases = sqliteTable(
   "catalog_type_aliases",
   {
@@ -442,6 +524,63 @@ export const catalogAttributeAliases = sqliteTable(
   ],
 );
 
+export const catalogProductImages = sqliteTable(
+  "catalog_product_images",
+  {
+    id: idColumn(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => catalogProducts.id, { onDelete: "cascade" }),
+    imageUrl: text("image_url").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("catalog_product_images_product_id_image_url_unique").on(
+      table.productId,
+      table.imageUrl,
+    ),
+    index("idx_catalog_product_images_product_id").on(table.productId),
+    index("idx_catalog_product_images_sort_order").on(table.sortOrder),
+  ],
+);
+
+export const catalogProductAttributes = sqliteTable(
+  "catalog_product_attributes",
+  {
+    id: idColumn(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => catalogProducts.id, { onDelete: "cascade" }),
+    catalogAttributeDefinitionId: integer("catalog_attribute_definition_id").references(
+      () => catalogAttributeDefinitions.id,
+      { onDelete: "set null" },
+    ),
+    attributeName: text("attribute_name").notNull(),
+    attributeValue: text("attribute_value").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("catalog_product_attributes_product_id_attribute_name_unique").on(
+      table.productId,
+      table.attributeName,
+    ),
+    uniqueIndex(
+      "catalog_product_attributes_product_id_attribute_name_normalized_unique",
+    ).on(table.productId, sql`lower(${table.attributeName})`),
+    index("idx_catalog_product_attributes_product_id").on(table.productId),
+    index("idx_catalog_product_attributes_catalog_attribute_definition_id").on(
+      table.catalogAttributeDefinitionId,
+    ),
+    index("idx_catalog_product_attributes_sort_order").on(table.sortOrder),
+    index("idx_catalog_product_attributes_name_value").on(
+      table.attributeName,
+      table.attributeValue,
+    ),
+  ],
+);
+
 export const orderItems = sqliteTable(
   "order_items",
   {
@@ -450,8 +589,10 @@ export const orderItems = sqliteTable(
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
     itemName: text("item_name").notNull(),
+    itemCode: text("item_code").notNull(),
     category: text("category").notNull(),
     itemType: text("item_type").notNull(),
+    unit: text("unit").notNull().default("pcs"),
     catalogCategoryId: integer("catalog_category_id").references(
       () => catalogCategories.id,
       { onDelete: "set null" },
@@ -460,8 +601,15 @@ export const orderItems = sqliteTable(
       () => catalogItemTypes.id,
       { onDelete: "set null" },
     ),
+    catalogProductId: integer("catalog_product_id").references(
+      () => catalogProducts.id,
+      { onDelete: "set null" },
+    ),
     quantity: integer("quantity").notNull(),
     unitCost: real("unit_cost").notNull(),
+    currencyCode: text("currency_code", { enum: currencyCodeValues })
+      .notNull()
+      .default("MNT"),
     fromWhere: text("from_where").notNull(),
     additionalNotes: text("additional_notes"),
     eta: text("eta"),
@@ -469,10 +617,13 @@ export const orderItems = sqliteTable(
   },
   (table) => [
     index("idx_order_items_order_id").on(table.orderId),
+    index("idx_order_items_item_code").on(table.itemCode),
     index("idx_order_items_category").on(table.category),
     index("idx_order_items_item_type").on(table.itemType),
     index("idx_order_items_catalog_category_id").on(table.catalogCategoryId),
     index("idx_order_items_catalog_item_type_id").on(table.catalogItemTypeId),
+    index("idx_order_items_catalog_product_id").on(table.catalogProductId),
+    index("idx_order_items_currency_code").on(table.currencyCode),
   ],
 );
 
@@ -602,6 +753,10 @@ export const assets = sqliteTable(
       () => catalogItemTypes.id,
       { onDelete: "set null" },
     ),
+    catalogProductId: integer("catalog_product_id").references(
+      () => catalogProducts.id,
+      { onDelete: "set null" },
+    ),
     serialNumber: text("serial_number"),
     conditionStatus: text("condition_status", {
       enum: conditionStatusValues,
@@ -619,6 +774,7 @@ export const assets = sqliteTable(
     index("idx_assets_category").on(table.category),
     index("idx_assets_item_type").on(table.itemType),
     index("idx_assets_catalog_item_type_id").on(table.catalogItemTypeId),
+    index("idx_assets_catalog_product_id").on(table.catalogProductId),
     index("idx_assets_serial_number").on(table.serialNumber),
   ],
 );

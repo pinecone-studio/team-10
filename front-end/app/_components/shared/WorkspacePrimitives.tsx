@@ -69,7 +69,7 @@ export function ActionButton({
 }: {
   children: ReactNode;
   variant?: "dark" | "light" | "green" | "warning";
-  onClick?: () => void;
+  onClick?: () => void | Promise<void>;
   disabled?: boolean;
 }) {
   const className =
@@ -86,7 +86,7 @@ export function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex h-[34px] items-center justify-center rounded-[7px] px-[16px] text-[11px] font-medium ${className} disabled:cursor-not-allowed disabled:opacity-40`}
+      className={`inline-flex h-[34px] cursor-pointer items-center justify-center rounded-[7px] px-[16px] text-[11px] font-medium ${className} disabled:cursor-not-allowed disabled:opacity-40`}
     >
       {children}
     </button>

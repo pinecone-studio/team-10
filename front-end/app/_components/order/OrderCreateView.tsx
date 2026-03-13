@@ -12,7 +12,7 @@ import type { OrderCreateViewProps } from "./OrderCreateView.types";
 export function OrderCreateView(props: OrderCreateViewProps) {
   return (
     <>
-      <OrderCreateHeader />
+      <OrderCreateHeader onAction={props.onOpenHistory} />
       <OrderCreateProgressSection />
       <OrderCreateRequestSection
         draftOrder={props.draftOrder}
@@ -23,16 +23,19 @@ export function OrderCreateView(props: OrderCreateViewProps) {
         goodsDrafts={props.goodsDrafts}
         draftItems={props.draftItems}
         canAddItems={props.canAddItems}
-        onSelectSuggestion={props.onSelectSuggestion}
+        summaryTotal={props.summaryTotal}
+        onSelectCatalogProduct={props.onSelectCatalogProduct}
+        onCatalogProductUpdated={props.onCatalogProductUpdated}
         onQuantityChange={props.onQuantityChange}
-        onUnitPriceChange={props.onUnitPriceChange}
         onAddItem={props.onAddItem}
         onAddDraftRow={props.onAddDraftRow}
         onRemoveDraftRow={props.onRemoveDraftRow}
+        onUpdateItemQuantity={props.onUpdateItemQuantity}
         onRemoveItem={props.onRemoveItem}
       />
       <OrderCreateSubmitAction
         canSubmitDraft={props.canSubmitDraft}
+        missingSubmitFields={props.missingSubmitFields}
         onSubmit={props.onSubmit}
       />
     </>
