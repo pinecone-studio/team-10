@@ -15,7 +15,7 @@ export function RoleWorkspace({ role, roleLabel, section }: { role: AppRole; rol
   if (section === "order" && (role === "systemAdmin" || role === "inventoryHead")) return <OrderWorkspace role={role} roleLabel={roleLabel} />;
   if (role === "higherUpApprover" && section === "order") return <HigherUpApprovalSection />;
   if (role === "finance" && section === "order") return <FinanceApprovalSection />;
-  if (role === "inventoryHead" && section === "receive") return <InventoryReceiveSection />;
+  if ((role === "inventoryHead" || role === "systemAdmin") && section === "receive") return <InventoryReceiveSection />;
   if (role === "inventoryHead" && section === "storage") return <InventoryStorageSection />;
   if (role === "hrManager" && section === "distribution") return <HRDistributionSection />;
   if (role === "employee" && section === "distribution") return <EmployeeAssetsSection />;
