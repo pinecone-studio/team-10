@@ -165,21 +165,46 @@ export function OrderCreateSubmitIcon() {
 export function StepBadge({
   label,
   icon,
-  active = false,
+  state = "inactive",
 }: {
   label: string;
   icon: ReactNode;
-  active?: boolean;
+  state?: "inactive" | "active" | "complete";
 }) {
+  const isHighlighted = state !== "inactive";
+
   return (
     <div className="flex flex-col items-center gap-[12px] text-center">
       <div
-        className={`flex h-[56px] w-[56px] items-center justify-center rounded-full border-2 ${active ? "border-black bg-black text-white" : "border-[#8f8f8f] bg-transparent text-[#8f8f8f]"}`}
+        className={`flex h-[56px] w-[56px] items-center justify-center rounded-full border-2 ${
+          isHighlighted
+            ? "border-black bg-black text-white"
+            : "border-[#8f8f8f] bg-transparent text-[#8f8f8f]"
+        }`}
       >
-        {icon}
+        {state === "complete" ? (
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            className="h-[22px] w-[22px]"
+            aria-hidden="true"
+          >
+            <path
+              d="M3.5 8.5 6.5 11.5 12.5 4.5"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : (
+          icon
+        )}
       </div>
       <span
-        className={`text-[12px] leading-[1.25] ${active ? "text-[#111111]" : "text-[#7c7c7c]"}`}
+        className={`text-[12px] leading-[1.25] ${
+          isHighlighted ? "text-[#111111]" : "text-[#7c7c7c]"
+        }`}
       >
         {label}
       </span>

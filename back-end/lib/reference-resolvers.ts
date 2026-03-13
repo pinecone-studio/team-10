@@ -297,6 +297,7 @@ export async function resolveOrderId(
   const [createdOrder] = await db
     .insert(orders)
     .values({
+      orderName: "Demo receive order",
       userId,
       officeId,
       departmentId: null,

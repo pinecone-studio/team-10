@@ -17,14 +17,113 @@ export type Scalars = {
   Float: { input: number; output: number; }
 };
 
+export type CatalogAttributeInput = {
+  attributeName: Scalars['String']['input'];
+  attributeValue: Scalars['String']['input'];
+  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type CatalogCategory = {
+  __typename?: 'CatalogCategory';
+  createdAt: Scalars['String']['output'];
+  displayName: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  normalizedName: Scalars['String']['output'];
+  source: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
+};
+
+export type CatalogImageInput = {
+  imageUrl: Scalars['String']['input'];
+  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type CatalogItemType = {
+  __typename?: 'CatalogItemType';
+  categoryId: Scalars['ID']['output'];
+  createdAt: Scalars['String']['output'];
+  displayName: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  normalizedName: Scalars['String']['output'];
+  source: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
+};
+
+export type CatalogProduct = {
+  __typename?: 'CatalogProduct';
+  attributes: Array<CatalogProductAttribute>;
+  createdAt: Scalars['String']['output'];
+  defaultCurrencyCode: Scalars['String']['output'];
+  defaultUnitCost?: Maybe<Scalars['Float']['output']>;
+  description?: Maybe<Scalars['String']['output']>;
+  displayName: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  images: Array<CatalogProductImage>;
+  itemTypeId: Scalars['ID']['output'];
+  normalizedName: Scalars['String']['output'];
+  productCode: Scalars['String']['output'];
+  source: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+  unit: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
+};
+
+export type CatalogProductAttribute = {
+  __typename?: 'CatalogProductAttribute';
+  attributeName: Scalars['String']['output'];
+  attributeValue: Scalars['String']['output'];
+  catalogAttributeDefinitionId?: Maybe<Scalars['ID']['output']>;
+  createdAt: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  productId: Scalars['ID']['output'];
+  sortOrder: Scalars['Int']['output'];
+  updatedAt: Scalars['String']['output'];
+};
+
+export type CatalogProductImage = {
+  __typename?: 'CatalogProductImage';
+  createdAt: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  imageUrl: Scalars['String']['output'];
+  productId: Scalars['ID']['output'];
+  sortOrder: Scalars['Int']['output'];
+  updatedAt: Scalars['String']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
+  createCatalogCategory: CatalogCategory;
+  createCatalogProduct: CatalogProduct;
   createOrder: Order;
   createReceive: Receive;
   deleteOrder: Scalars['Boolean']['output'];
   deleteReceive: Scalars['Boolean']['output'];
+  updateCatalogProduct?: Maybe<CatalogProduct>;
   updateOrder?: Maybe<Order>;
   updateReceive?: Maybe<Receive>;
+};
+
+
+export type MutationCreateCatalogCategoryArgs = {
+  displayName: Scalars['String']['input'];
+};
+
+
+export type MutationCreateCatalogProductArgs = {
+  attributes?: InputMaybe<Array<CatalogAttributeInput>>;
+  categoryId?: InputMaybe<Scalars['ID']['input']>;
+  defaultCurrencyCode?: InputMaybe<Scalars['String']['input']>;
+  defaultUnitCost?: InputMaybe<Scalars['Float']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  displayName: Scalars['String']['input'];
+  images?: InputMaybe<Array<CatalogImageInput>>;
+  itemTypeId?: InputMaybe<Scalars['ID']['input']>;
+  itemTypeName?: InputMaybe<Scalars['String']['input']>;
+  productCode: Scalars['String']['input'];
+  status?: InputMaybe<Scalars['String']['input']>;
+  unit?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -33,6 +132,7 @@ export type MutationCreateOrderArgs = {
   departmentId?: InputMaybe<Scalars['ID']['input']>;
   expectedArrivalAt?: InputMaybe<Scalars['String']['input']>;
   officeId?: InputMaybe<Scalars['ID']['input']>;
+  orderName: Scalars['String']['input'];
   status: Scalars['String']['input'];
   totalCost?: InputMaybe<Scalars['Float']['input']>;
   userId?: InputMaybe<Scalars['ID']['input']>;
@@ -60,12 +160,30 @@ export type MutationDeleteReceiveArgs = {
 };
 
 
+export type MutationUpdateCatalogProductArgs = {
+  attributes?: InputMaybe<Array<CatalogAttributeInput>>;
+  categoryId?: InputMaybe<Scalars['ID']['input']>;
+  defaultCurrencyCode?: InputMaybe<Scalars['String']['input']>;
+  defaultUnitCost?: InputMaybe<Scalars['Float']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  displayName?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  images?: InputMaybe<Array<CatalogImageInput>>;
+  itemTypeId?: InputMaybe<Scalars['ID']['input']>;
+  itemTypeName?: InputMaybe<Scalars['String']['input']>;
+  productCode?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  unit?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type MutationUpdateOrderArgs = {
   approvalTarget?: InputMaybe<Scalars['String']['input']>;
   departmentId?: InputMaybe<Scalars['ID']['input']>;
   expectedArrivalAt?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
   officeId?: InputMaybe<Scalars['ID']['input']>;
+  orderName?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
   totalCost?: InputMaybe<Scalars['Float']['input']>;
   userId?: InputMaybe<Scalars['ID']['input']>;
@@ -90,6 +208,7 @@ export type Order = {
   expectedArrivalAt?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   officeId: Scalars['ID']['output'];
+  orderName: Scalars['String']['output'];
   status: Scalars['String']['output'];
   totalCost?: Maybe<Scalars['Float']['output']>;
   userId: Scalars['ID']['output'];
@@ -98,10 +217,31 @@ export type Order = {
 
 export type Query = {
   __typename?: 'Query';
+  catalogCategories: Array<CatalogCategory>;
+  catalogItemTypes: Array<CatalogItemType>;
+  catalogProduct?: Maybe<CatalogProduct>;
+  catalogProducts: Array<CatalogProduct>;
   order?: Maybe<Order>;
   orders: Array<Order>;
   receive?: Maybe<Receive>;
   receives: Array<Receive>;
+};
+
+
+export type QueryCatalogItemTypesArgs = {
+  categoryId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type QueryCatalogProductArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryCatalogProductsArgs = {
+  categoryId?: InputMaybe<Scalars['ID']['input']>;
+  itemTypeId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -197,8 +337,16 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = {
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
+  CatalogAttributeInput: CatalogAttributeInput;
+  CatalogCategory: ResolverTypeWrapper<CatalogCategory>;
+  CatalogImageInput: CatalogImageInput;
+  CatalogItemType: ResolverTypeWrapper<CatalogItemType>;
+  CatalogProduct: ResolverTypeWrapper<CatalogProduct>;
+  CatalogProductAttribute: ResolverTypeWrapper<CatalogProductAttribute>;
+  CatalogProductImage: ResolverTypeWrapper<CatalogProductImage>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
+  Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   Mutation: ResolverTypeWrapper<{}>;
   Order: ResolverTypeWrapper<Order>;
   Query: ResolverTypeWrapper<{}>;
@@ -209,8 +357,16 @@ export type ResolversTypes = {
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = {
   Boolean: Scalars['Boolean']['output'];
+  CatalogAttributeInput: CatalogAttributeInput;
+  CatalogCategory: CatalogCategory;
+  CatalogImageInput: CatalogImageInput;
+  CatalogItemType: CatalogItemType;
+  CatalogProduct: CatalogProduct;
+  CatalogProductAttribute: CatalogProductAttribute;
+  CatalogProductImage: CatalogProductImage;
   Float: Scalars['Float']['output'];
   ID: Scalars['ID']['output'];
+  Int: Scalars['Int']['output'];
   Mutation: {};
   Order: Order;
   Query: {};
@@ -218,11 +374,78 @@ export type ResolversParentTypes = {
   String: Scalars['String']['output'];
 };
 
+export type CatalogCategoryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CatalogCategory'] = ResolversParentTypes['CatalogCategory']> = {
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  displayName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  normalizedName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  source?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type CatalogItemTypeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CatalogItemType'] = ResolversParentTypes['CatalogItemType']> = {
+  categoryId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  displayName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  normalizedName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  source?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type CatalogProductResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CatalogProduct'] = ResolversParentTypes['CatalogProduct']> = {
+  attributes?: Resolver<Array<ResolversTypes['CatalogProductAttribute']>, ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  defaultCurrencyCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  defaultUnitCost?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
+  description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  displayName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  images?: Resolver<Array<ResolversTypes['CatalogProductImage']>, ParentType, ContextType>;
+  itemTypeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  normalizedName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  productCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  source?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  unit?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type CatalogProductAttributeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CatalogProductAttribute'] = ResolversParentTypes['CatalogProductAttribute']> = {
+  attributeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  attributeValue?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  catalogAttributeDefinitionId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  productId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  sortOrder?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type CatalogProductImageResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CatalogProductImage'] = ResolversParentTypes['CatalogProductImage']> = {
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  imageUrl?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  productId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  sortOrder?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
-  createOrder?: Resolver<ResolversTypes['Order'], ParentType, ContextType, RequireFields<MutationCreateOrderArgs, 'status' | 'whyOrdered'>>;
+  createCatalogCategory?: Resolver<ResolversTypes['CatalogCategory'], ParentType, ContextType, RequireFields<MutationCreateCatalogCategoryArgs, 'displayName'>>;
+  createCatalogProduct?: Resolver<ResolversTypes['CatalogProduct'], ParentType, ContextType, RequireFields<MutationCreateCatalogProductArgs, 'displayName' | 'productCode'>>;
+  createOrder?: Resolver<ResolversTypes['Order'], ParentType, ContextType, RequireFields<MutationCreateOrderArgs, 'orderName' | 'status' | 'whyOrdered'>>;
   createReceive?: Resolver<ResolversTypes['Receive'], ParentType, ContextType, RequireFields<MutationCreateReceiveArgs, 'status'>>;
   deleteOrder?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteOrderArgs, 'id'>>;
   deleteReceive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteReceiveArgs, 'id'>>;
+  updateCatalogProduct?: Resolver<Maybe<ResolversTypes['CatalogProduct']>, ParentType, ContextType, RequireFields<MutationUpdateCatalogProductArgs, 'id'>>;
   updateOrder?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<MutationUpdateOrderArgs, 'id'>>;
   updateReceive?: Resolver<Maybe<ResolversTypes['Receive']>, ParentType, ContextType, RequireFields<MutationUpdateReceiveArgs, 'id'>>;
 };
@@ -233,6 +456,7 @@ export type OrderResolvers<ContextType = GraphQLContext, ParentType extends Reso
   expectedArrivalAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   officeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  orderName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   totalCost?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
   userId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
@@ -241,6 +465,10 @@ export type OrderResolvers<ContextType = GraphQLContext, ParentType extends Reso
 };
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
+  catalogCategories?: Resolver<Array<ResolversTypes['CatalogCategory']>, ParentType, ContextType>;
+  catalogItemTypes?: Resolver<Array<ResolversTypes['CatalogItemType']>, ParentType, ContextType, Partial<QueryCatalogItemTypesArgs>>;
+  catalogProduct?: Resolver<Maybe<ResolversTypes['CatalogProduct']>, ParentType, ContextType, RequireFields<QueryCatalogProductArgs, 'id'>>;
+  catalogProducts?: Resolver<Array<ResolversTypes['CatalogProduct']>, ParentType, ContextType, Partial<QueryCatalogProductsArgs>>;
   order?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<QueryOrderArgs, 'id'>>;
   orders?: Resolver<Array<ResolversTypes['Order']>, ParentType, ContextType>;
   receive?: Resolver<Maybe<ResolversTypes['Receive']>, ParentType, ContextType, RequireFields<QueryReceiveArgs, 'id'>>;
@@ -259,6 +487,11 @@ export type ReceiveResolvers<ContextType = GraphQLContext, ParentType extends Re
 };
 
 export type Resolvers<ContextType = GraphQLContext> = {
+  CatalogCategory?: CatalogCategoryResolvers<ContextType>;
+  CatalogItemType?: CatalogItemTypeResolvers<ContextType>;
+  CatalogProduct?: CatalogProductResolvers<ContextType>;
+  CatalogProductAttribute?: CatalogProductAttributeResolvers<ContextType>;
+  CatalogProductImage?: CatalogProductImageResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   Order?: OrderResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;

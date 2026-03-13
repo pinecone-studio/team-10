@@ -62,6 +62,12 @@ Enum catalogSourceEnum {
   manual
 }
 
+Enum currencyCodeEnum {
+  USD
+  MNT
+  EUR
+}
+
 Enum orderStatusEnum {
   pendingHigherUpApproval
   rejectedByHigherUp
@@ -79,6 +85,11 @@ Enum receiveStatusEnum {
   partiallyReceived
   received
   cancelled
+}
+
+Enum receivedConditionEnum {
+  complete
+  issue
 }
 
 Enum conditionStatusEnum {
@@ -216,6 +227,10 @@ Table orderApprovers {
 
 Table orders {
   id integer [pk, increment]
+  orderName text [not null]
+  requestNumber text [unique, note: 'Generated request number shown in the order workspace, e.g. REQ-20260313-001.']
+  requestDate timestamp
+  requesterName text
   user integer [not null]
   officeId integer [not null]
   departmentId integer
@@ -224,16 +239,38 @@ Table orders {
   approvalTarget approvalQueueEnum [not null, default: 'anyHigherUps']
   expectedArrivalAt timestamp
   totalCost real [note: 'CHECK (total_cost >= 0)']
+  currencyCode currencyCodeEnum [not null, default: 'MNT']
+  requestedApproverId text [note: 'UI-selected approvee identifier from the permission request step.']
+  requestedApproverName text
+  requestedApproverRole text
+  approvalMessage text
+  higherUpReviewer text
+  higherUpReviewedAt timestamp
+  higherUpNote text
+  financeReviewer text
+  financeReviewedAt timestamp
+  financeNote text
+  receivedAt timestamp
+  receivedCondition receivedConditionEnum
+  receivedNote text
+  storageLocation text
+  serialNumbersJson text [note: 'JSON array of serialized item numbers captured during receiving.']
+  assignedTo text
+  assignedRole text
+  assignedAt timestamp
   createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
   updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
 
   Indexes {
+    orderName [name: 'idx_orders_order_name']
+    requestNumber [name: 'idx_orders_request_number']
     user [name: 'idx_orders_user']
     officeId [name: 'idx_orders_office_id']
     departmentId [name: 'idx_orders_department_id']
     status [name: 'idx_orders_status']
     approvalTarget [name: 'idx_orders_approval_target']
     expectedArrivalAt [name: 'idx_orders_expected_arrival_at']
+    currencyCode [name: 'idx_orders_currency_code']
   }
 }
 
@@ -308,6 +345,33 @@ Table catalogItemTypes {
   }
 }
 
+Table catalogProducts {
+  id integer [pk, increment]
+  itemTypeId integer [not null]
+  displayName text [not null]
+  normalizedName text [not null]
+  productCode text [not null, unique]
+  unit text [not null, default: 'pcs']
+  defaultCurrencyCode currencyCodeEnum [not null, default: 'MNT']
+  defaultUnitCost real [note: 'CHECK (default_unit_cost IS NULL OR default_unit_cost >= 0)']
+  description text
+  status catalogStatusEnum [not null, default: 'draft']
+  source catalogSourceEnum [not null, default: 'manual']
+  createdByUserId integer
+  approvedByUserId integer
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (itemTypeId, normalizedName) [unique, name: 'catalog_products_item_type_id_normalized_name_unique']
+    itemTypeId [name: 'idx_catalog_products_item_type_id']
+    productCode [name: 'idx_catalog_products_product_code']
+    defaultCurrencyCode [name: 'idx_catalog_products_default_currency_code']
+    status [name: 'idx_catalog_products_status']
+    source [name: 'idx_catalog_products_source']
+  }
+}
+
 Table catalogTypeAliases {
   id integer [pk, increment]
   itemTypeId integer [not null]
@@ -357,16 +421,54 @@ Table catalogAttributeAliases {
   }
 }
 
+Table catalogProductImages {
+  id integer [pk, increment]
+  productId integer [not null]
+  imageUrl text [not null]
+  sortOrder integer [not null, default: 0, note: 'CHECK (sort_order >= 0)']
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (productId, imageUrl) [unique, name: 'catalog_product_images_product_id_image_url_unique']
+    productId [name: 'idx_catalog_product_images_product_id']
+    sortOrder [name: 'idx_catalog_product_images_sort_order']
+  }
+}
+
+Table catalogProductAttributes {
+  id integer [pk, increment]
+  productId integer [not null]
+  catalogAttributeDefinitionId integer
+  attributeName text [not null, note: 'SQL also enforces unique LOWER(attribute_name) per product to block duplicate custom attributes with different casing.']
+  attributeValue text [not null]
+  sortOrder integer [not null, default: 0, note: 'CHECK (sort_order >= 0)']
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (productId, attributeName) [unique, name: 'catalog_product_attributes_product_id_attribute_name_unique']
+    productId [name: 'idx_catalog_product_attributes_product_id']
+    catalogAttributeDefinitionId [name: 'idx_catalog_product_attributes_catalog_attribute_definition_id']
+    sortOrder [name: 'idx_catalog_product_attributes_sort_order']
+    (attributeName, attributeValue) [name: 'idx_catalog_product_attributes_name_value']
+  }
+}
+
 Table orderItems {
   id integer [pk, increment]
   orderId integer [not null]
   itemName text [not null]
+  itemCode text [not null]
   category text [not null]
   itemType text [not null]
+  unit text [not null, default: 'pcs']
   catalogCategoryId integer
   catalogItemTypeId integer
+  catalogProductId integer
   quantity integer [not null, note: 'CHECK (quantity > 0)']
   unitCost real [not null, note: 'CHECK (unit_cost >= 0)']
+  currencyCode currencyCodeEnum [not null, default: 'MNT']
   fromWhere text [not null]
   additionalNotes text
   eta timestamp
@@ -375,10 +477,13 @@ Table orderItems {
 
   Indexes {
     orderId [name: 'idx_order_items_order_id']
+    itemCode [name: 'idx_order_items_item_code']
     category [name: 'idx_order_items_category']
     itemType [name: 'idx_order_items_item_type']
     catalogCategoryId [name: 'idx_order_items_catalog_category_id']
     catalogItemTypeId [name: 'idx_order_items_catalog_item_type_id']
+    catalogProductId [name: 'idx_order_items_catalog_product_id']
+    currencyCode [name: 'idx_order_items_currency_code']
   }
 }
 
@@ -468,6 +573,7 @@ Table assets {
   category text [not null]
   itemType text [not null]
   catalogItemTypeId integer
+  catalogProductId integer
   serialNumber text
   conditionStatus conditionStatusEnum [not null]
   assetStatus assetStatusEnum [not null]
@@ -482,6 +588,7 @@ Table assets {
     category [name: 'idx_assets_category']
     itemType [name: 'idx_assets_item_type']
     catalogItemTypeId [name: 'idx_assets_catalog_item_type_id']
+    catalogProductId [name: 'idx_assets_catalog_product_id']
     serialNumber [name: 'idx_assets_serial_number']
   }
 }
@@ -617,6 +724,10 @@ Ref: catalogItemTypes.categoryId > catalogCategories.id [delete: cascade]
 Ref: catalogItemTypes.createdByUserId > users.id [delete: set null]
 Ref: catalogItemTypes.approvedByUserId > users.id [delete: set null]
 
+Ref: catalogProducts.itemTypeId > catalogItemTypes.id [delete: cascade]
+Ref: catalogProducts.createdByUserId > users.id [delete: set null]
+Ref: catalogProducts.approvedByUserId > users.id [delete: set null]
+
 Ref: catalogTypeAliases.itemTypeId > catalogItemTypes.id [delete: cascade]
 
 Ref: catalogAttributeDefinitions.itemTypeId > catalogItemTypes.id [delete: cascade]
@@ -625,9 +736,14 @@ Ref: catalogAttributeDefinitions.approvedByUserId > users.id [delete: set null]
 
 Ref: catalogAttributeAliases.attributeDefinitionId > catalogAttributeDefinitions.id [delete: cascade]
 
+Ref: catalogProductImages.productId > catalogProducts.id [delete: cascade]
+Ref: catalogProductAttributes.productId > catalogProducts.id [delete: cascade]
+Ref: catalogProductAttributes.catalogAttributeDefinitionId > catalogAttributeDefinitions.id [delete: set null]
+
 Ref: orderItems.orderId > orders.id [delete: cascade]
 Ref: orderItems.catalogCategoryId > catalogCategories.id [delete: set null]
 Ref: orderItems.catalogItemTypeId > catalogItemTypes.id [delete: set null]
+Ref: orderItems.catalogProductId > catalogProducts.id [delete: set null]
 Ref: orderItemImages.orderItemId > orderItems.id [delete: cascade]
 Ref: orderItemAttributes.orderItemId > orderItems.id [delete: cascade]
 Ref: orderItemAttributes.catalogAttributeDefinitionId > catalogAttributeDefinitions.id [delete: set null]
@@ -641,6 +757,7 @@ Ref: receiveItems.orderItemId > orderItems.id
 
 Ref: assets.receiveItemId > receiveItems.id [delete: cascade]
 Ref: assets.catalogItemTypeId > catalogItemTypes.id [delete: set null]
+Ref: assets.catalogProductId > catalogProducts.id [delete: set null]
 Ref: assets.currentStorageId > storage.id [delete: set null]
 
 Ref: assetAttributes.assetId > assets.id [delete: cascade]

@@ -1,6 +1,7 @@
 export const OrderTypeDefs = `
   type Order {
     id: ID!
+    orderName: String!
     userId: ID!
     officeId: ID!
     departmentId: ID
@@ -18,6 +19,7 @@ export const OrderTypeDefs = `
 
   type Mutation {
     createOrder(
+      orderName: String!
       userId: ID
       officeId: ID
       departmentId: ID
@@ -29,6 +31,7 @@ export const OrderTypeDefs = `
     ): Order!
     updateOrder(
       id: ID!
+      orderName: String
       userId: ID
       officeId: ID
       departmentId: ID

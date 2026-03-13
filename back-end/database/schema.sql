@@ -13,6 +13,9 @@ DROP TABLE IF EXISTS order_item_images;
 DROP TABLE IF EXISTS order_item_attributes;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS catalog_product_attributes;
+DROP TABLE IF EXISTS catalog_product_images;
+DROP TABLE IF EXISTS catalog_products;
 DROP TABLE IF EXISTS catalog_attribute_aliases;
 DROP TABLE IF EXISTS catalog_type_aliases;
 DROP TABLE IF EXISTS catalog_category_aliases;
@@ -135,6 +138,10 @@ CREATE TABLE IF NOT EXISTS order_approvers (
 
 CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_name TEXT NOT NULL,
+  request_number TEXT UNIQUE,
+  request_date TEXT,
+  requester_name TEXT,
   user INTEGER NOT NULL,
   office_id INTEGER NOT NULL,
   department_id INTEGER,
@@ -160,6 +167,36 @@ CREATE TABLE IF NOT EXISTS orders (
   ),
   expected_arrival_at TEXT,
   total_cost REAL CHECK (total_cost >= 0),
+  currency_code TEXT NOT NULL DEFAULT 'MNT' CHECK (
+    currency_code IN (
+      'USD',
+      'MNT',
+      'EUR'
+    )
+  ),
+  requested_approver_id TEXT,
+  requested_approver_name TEXT,
+  requested_approver_role TEXT,
+  approval_message TEXT,
+  higher_up_reviewer TEXT,
+  higher_up_reviewed_at TEXT,
+  higher_up_note TEXT,
+  finance_reviewer TEXT,
+  finance_reviewed_at TEXT,
+  finance_note TEXT,
+  received_at TEXT,
+  received_condition TEXT CHECK (
+    received_condition IS NULL OR received_condition IN (
+      'complete',
+      'issue'
+    )
+  ),
+  received_note TEXT,
+  storage_location TEXT,
+  serial_numbers_json TEXT,
+  assigned_to TEXT,
+  assigned_role TEXT,
+  assigned_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user) REFERENCES users(id),
@@ -261,6 +298,42 @@ CREATE TABLE IF NOT EXISTS catalog_item_types (
   UNIQUE (category_id, normalized_name)
 );
 
+CREATE TABLE IF NOT EXISTS catalog_products (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_type_id INTEGER NOT NULL,
+  display_name TEXT NOT NULL,
+  normalized_name TEXT NOT NULL,
+  product_code TEXT NOT NULL UNIQUE,
+  unit TEXT NOT NULL DEFAULT 'pcs',
+  default_currency_code TEXT NOT NULL DEFAULT 'MNT' CHECK (
+    default_currency_code IN ('USD', 'MNT', 'EUR')
+  ),
+  default_unit_cost REAL CHECK (default_unit_cost IS NULL OR default_unit_cost >= 0),
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (
+    status IN (
+      'draft',
+      'active',
+      'archived'
+    )
+  ),
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (
+    source IN (
+      'system',
+      'promoted',
+      'manual'
+    )
+  ),
+  created_by_user_id INTEGER,
+  approved_by_user_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (item_type_id) REFERENCES catalog_item_types(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE (item_type_id, normalized_name)
+);
+
 CREATE TABLE IF NOT EXISTS catalog_type_aliases (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   item_type_id INTEGER NOT NULL,
@@ -314,16 +387,51 @@ CREATE TABLE IF NOT EXISTS catalog_attribute_aliases (
   UNIQUE (attribute_definition_id, normalized_alias)
 );
 
+CREATE TABLE IF NOT EXISTS catalog_product_images (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id INTEGER NOT NULL,
+  image_url TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (product_id) REFERENCES catalog_products(id) ON DELETE CASCADE,
+  UNIQUE (product_id, image_url)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_product_attributes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id INTEGER NOT NULL,
+  catalog_attribute_definition_id INTEGER,
+  attribute_name TEXT NOT NULL,
+  attribute_value TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (product_id) REFERENCES catalog_products(id) ON DELETE CASCADE,
+  FOREIGN KEY (catalog_attribute_definition_id) REFERENCES catalog_attribute_definitions(id) ON DELETE SET NULL,
+  UNIQUE (product_id, attribute_name)
+);
+
 CREATE TABLE IF NOT EXISTS order_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   order_id INTEGER NOT NULL,
   item_name TEXT NOT NULL,
+  item_code TEXT NOT NULL,
   category TEXT NOT NULL,
   item_type TEXT NOT NULL,
+  unit TEXT NOT NULL DEFAULT 'pcs',
   catalog_category_id INTEGER,
   catalog_item_type_id INTEGER,
+  catalog_product_id INTEGER,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   unit_cost REAL NOT NULL CHECK (unit_cost >= 0),
+  currency_code TEXT NOT NULL DEFAULT 'MNT' CHECK (
+    currency_code IN (
+      'USD',
+      'MNT',
+      'EUR'
+    )
+  ),
   from_where TEXT NOT NULL,
   additional_notes TEXT,
   eta TEXT,
@@ -331,7 +439,8 @@ CREATE TABLE IF NOT EXISTS order_items (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
   FOREIGN KEY (catalog_category_id) REFERENCES catalog_categories(id) ON DELETE SET NULL,
-  FOREIGN KEY (catalog_item_type_id) REFERENCES catalog_item_types(id) ON DELETE SET NULL
+  FOREIGN KEY (catalog_item_type_id) REFERENCES catalog_item_types(id) ON DELETE SET NULL,
+  FOREIGN KEY (catalog_product_id) REFERENCES catalog_products(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS order_item_images (
@@ -429,6 +538,7 @@ CREATE TABLE IF NOT EXISTS assets (
   category TEXT NOT NULL,
   item_type TEXT NOT NULL,
   catalog_item_type_id INTEGER,
+  catalog_product_id INTEGER,
   serial_number TEXT,
   condition_status TEXT NOT NULL CHECK (
     condition_status IN (
@@ -459,6 +569,7 @@ CREATE TABLE IF NOT EXISTS assets (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (receive_item_id) REFERENCES receive_items(id) ON DELETE CASCADE,
   FOREIGN KEY (catalog_item_type_id) REFERENCES catalog_item_types(id) ON DELETE SET NULL,
+  FOREIGN KEY (catalog_product_id) REFERENCES catalog_products(id) ON DELETE SET NULL,
   FOREIGN KEY (current_storage_id) REFERENCES storage(id) ON DELETE SET NULL
 );
 
@@ -605,14 +716,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_order_approvers_unique_scope
     approval_scope,
     IFNULL(office_id, -1),
     IFNULL(department_id, -1)
-  );
+);
 
+CREATE INDEX IF NOT EXISTS idx_orders_order_name ON orders(order_name);
+CREATE INDEX IF NOT EXISTS idx_orders_request_number ON orders(request_number);
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user);
 CREATE INDEX IF NOT EXISTS idx_orders_office_id ON orders(office_id);
 CREATE INDEX IF NOT EXISTS idx_orders_department_id ON orders(department_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_approval_target ON orders(approval_target);
 CREATE INDEX IF NOT EXISTS idx_orders_expected_arrival_at ON orders(expected_arrival_at);
+CREATE INDEX IF NOT EXISTS idx_orders_currency_code ON orders(currency_code);
 
 CREATE INDEX IF NOT EXISTS idx_order_approval_steps_order_id ON order_approval_steps(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_approval_steps_queue ON order_approval_steps(approval_queue);
@@ -625,18 +739,37 @@ CREATE INDEX IF NOT EXISTS idx_catalog_category_aliases_category_id ON catalog_c
 
 CREATE INDEX IF NOT EXISTS idx_catalog_item_types_status ON catalog_item_types(status);
 CREATE INDEX IF NOT EXISTS idx_catalog_item_types_source ON catalog_item_types(source);
+CREATE INDEX IF NOT EXISTS idx_catalog_products_item_type_id ON catalog_products(item_type_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_products_product_code ON catalog_products(product_code);
+CREATE INDEX IF NOT EXISTS idx_catalog_products_default_currency_code ON catalog_products(default_currency_code);
+CREATE INDEX IF NOT EXISTS idx_catalog_products_status ON catalog_products(status);
+CREATE INDEX IF NOT EXISTS idx_catalog_products_source ON catalog_products(source);
 CREATE INDEX IF NOT EXISTS idx_catalog_type_aliases_item_type_id ON catalog_type_aliases(item_type_id);
 
 CREATE INDEX IF NOT EXISTS idx_catalog_attribute_definitions_status ON catalog_attribute_definitions(status);
 CREATE INDEX IF NOT EXISTS idx_catalog_attribute_definitions_source ON catalog_attribute_definitions(source);
 CREATE INDEX IF NOT EXISTS idx_catalog_attribute_aliases_attribute_definition_id
   ON catalog_attribute_aliases(attribute_definition_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_product_images_product_id ON catalog_product_images(product_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_product_images_sort_order ON catalog_product_images(sort_order);
+CREATE UNIQUE INDEX IF NOT EXISTS catalog_product_attributes_product_id_attribute_name_normalized_unique
+  ON catalog_product_attributes(product_id, lower(attribute_name));
+CREATE INDEX IF NOT EXISTS idx_catalog_product_attributes_product_id ON catalog_product_attributes(product_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_product_attributes_catalog_attribute_definition_id
+  ON catalog_product_attributes(catalog_attribute_definition_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_product_attributes_sort_order
+  ON catalog_product_attributes(sort_order);
+CREATE INDEX IF NOT EXISTS idx_catalog_product_attributes_name_value
+  ON catalog_product_attributes(attribute_name, attribute_value);
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_item_code ON order_items(item_code);
 CREATE INDEX IF NOT EXISTS idx_order_items_category ON order_items(category);
 CREATE INDEX IF NOT EXISTS idx_order_items_item_type ON order_items(item_type);
 CREATE INDEX IF NOT EXISTS idx_order_items_catalog_category_id ON order_items(catalog_category_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_catalog_item_type_id ON order_items(catalog_item_type_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_catalog_product_id ON order_items(catalog_product_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_currency_code ON order_items(currency_code);
 
 CREATE INDEX IF NOT EXISTS idx_order_item_images_order_item_id ON order_item_images(order_item_id);
 CREATE INDEX IF NOT EXISTS idx_order_item_images_sort_order ON order_item_images(sort_order);
@@ -662,6 +795,7 @@ CREATE INDEX IF NOT EXISTS idx_assets_asset_status ON assets(asset_status);
 CREATE INDEX IF NOT EXISTS idx_assets_category ON assets(category);
 CREATE INDEX IF NOT EXISTS idx_assets_item_type ON assets(item_type);
 CREATE INDEX IF NOT EXISTS idx_assets_catalog_item_type_id ON assets(catalog_item_type_id);
+CREATE INDEX IF NOT EXISTS idx_assets_catalog_product_id ON assets(catalog_product_id);
 CREATE INDEX IF NOT EXISTS idx_assets_serial_number ON assets(serial_number);
 
 CREATE INDEX IF NOT EXISTS idx_asset_attributes_asset_id ON asset_attributes(asset_id);

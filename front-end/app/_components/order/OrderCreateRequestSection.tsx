@@ -27,6 +27,13 @@ export function OrderCreateRequestSection({
         </ActionButton>
       </div>
       <div className="grid grid-cols-3  gap-[14px] pt-[12px]">
+        <InputField label="Order name *">
+          <TextInput
+            value={draftOrder.orderName}
+            onChange={(event) => onOrderChange("orderName", event.target.value)}
+            placeholder="Enter order name"
+          />
+        </InputField>
         <InputField label="Request number">
           <TextInput value={draftOrder.requestNumber} disabled />
         </InputField>

@@ -1,6 +1,11 @@
 "use client";
 
-import type { ChangeEvent, ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
 
 function SearchIcon() {
   return (
@@ -120,7 +125,7 @@ export function TextInput({
       placeholder={placeholder}
       disabled={disabled}
       min={type === "number" ? 1 : undefined}
-      className="h-[36px] rounded-[6px] border border-[#d8d8dc] bg-[#f4f4f5] px-[10px] text-[12px] text-[#565656] outline-none placeholder:text-[#a0a0a0] disabled:text-[#9b9b9b]"
+      className="h-[36px] rounded-[6px] border border-[#d8d8dc] bg-[#f4f4f5] px-[10px] text-[12px] text-[#565656] outline-none placeholder:text-[#a0a0a0] disabled:cursor-not-allowed disabled:text-[#9b9b9b]"
     />
   );
 }
@@ -129,16 +134,19 @@ export function SelectInput({
   value,
   onChange,
   children,
+  disabled = false,
 }: {
   value: string;
   onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   children: ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <select
       value={value}
       onChange={onChange}
-      className="h-[36px] rounded-[6px] border border-[#d8d8dc] bg-[#f4f4f5] px-[10px] text-[12px] text-[#565656] outline-none"
+      disabled={disabled}
+      className="h-[36px] cursor-pointer rounded-[6px] border border-[#d8d8dc] bg-[#f4f4f5] px-[10px] text-[12px] text-[#565656] outline-none disabled:cursor-not-allowed disabled:text-[#9b9b9b]"
     >
       {children}
     </select>
@@ -149,11 +157,40 @@ export function TopBar({
   actionLabel,
   onAction,
   showNotification = false,
+  notificationCount = 0,
+  isNotificationOpen = false,
+  onNotificationToggle,
+  onNotificationClose,
+  notificationPanel,
 }: {
   actionLabel: string;
   onAction: () => void;
   showNotification?: boolean;
+  notificationCount?: number;
+  isNotificationOpen?: boolean;
+  onNotificationToggle?: () => void;
+  onNotificationClose?: () => void;
+  notificationPanel?: ReactNode;
 }) {
+  const notificationRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isNotificationOpen || !onNotificationClose) return;
+    const handleClose = onNotificationClose;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node)
+      ) {
+        handleClose();
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [isNotificationOpen, onNotificationClose]);
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex h-[36px] w-[207px] items-center gap-[7px] rounded-[6px] border border-[#d8d8dc] bg-[#efefef] px-[10px] text-[14px] text-[#8a8a8a]">
@@ -164,19 +201,32 @@ export function TopBar({
         <button
           type="button"
           onClick={onAction}
-          className="inline-flex h-[36px] items-center justify-center gap-[6px] rounded-[6px] border border-[#d8d8dc] bg-[#e9e9eb] px-[18px] text-[14px] leading-none text-[#111111]"
+          className="inline-flex h-[36px] cursor-pointer items-center justify-center gap-[6px] rounded-[6px] border border-[#d8d8dc] bg-[#e9e9eb] px-[18px] text-[14px] leading-none text-[#111111]"
         >
           {actionLabel.includes("additional") ? <PlusIcon /> : null}
           <span className="text-[14px]">{actionLabel}</span>
         </button>
         {showNotification ? (
-          <button
-            type="button"
-            className="inline-flex h-[36px] w-[44px] items-center justify-center rounded-[6px] border border-[#d8d8dc] bg-[#e9e9eb]"
-            aria-label="Notifications"
-          >
-            <NotificationIcon />
-          </button>
+          <div className="relative" ref={notificationRef}>
+            <button
+              type="button"
+              onClick={onNotificationToggle}
+              className="inline-flex h-[36px] w-[44px] cursor-pointer items-center justify-center rounded-[6px] border border-[#d8d8dc] bg-[#e9e9eb]"
+              aria-label="Notifications"
+            >
+              <NotificationIcon />
+              {notificationCount > 0 ? (
+                <span className="absolute right-[-4px] top-[-4px] inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#149b63] px-[5px] text-[10px] font-semibold text-white">
+                  {notificationCount}
+                </span>
+              ) : null}
+            </button>
+            {isNotificationOpen && notificationPanel ? (
+              <div className="absolute right-0 top-[44px] z-20 w-[320px]">
+                {notificationPanel}
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </div>

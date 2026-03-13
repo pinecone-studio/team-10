@@ -1,5 +1,6 @@
 import { mergeTypeDefs } from "@graphql-tools/merge";
+import { CatalogTypeDefs } from "./catalog.ts";
 import { OrderTypeDefs } from "./order.ts";
 import { ReceiveTypeDefs } from "./receive.ts";
 
-export const typeDefs = mergeTypeDefs([OrderTypeDefs, ReceiveTypeDefs]);
+export const typeDefs = mergeTypeDefs([CatalogTypeDefs, OrderTypeDefs, ReceiveTypeDefs]);

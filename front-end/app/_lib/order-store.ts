@@ -1,7 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { goodsCatalog, departmentOptions } from "./order-catalog";
+import { departmentOptions } from "./order-catalog";
+import { pushFinanceApprovedNotification } from "./notification-store";
 import { formatCurrency, formatDisplayDate, getTodayDateInputValue } from "./order-format";
 import type {
   ApprovalTarget,
@@ -45,8 +46,14 @@ function migrateLegacyStatus(status: string | undefined): OrderStatus {
 }
 
 function normalizeOrder(order: Partial<StoredOrder>): StoredOrder {
+  const normalizedOrderName =
+    order.orderName && order.orderName.trim() !== "Order name"
+      ? order.orderName
+      : "";
+
   return {
     id: order.id ?? "",
+    orderName: normalizedOrderName,
     requestNumber: order.requestNumber ?? "",
     requestDate: order.requestDate ?? getTodayDateInputValue(),
     department: order.department ?? departmentOptions[0]!,
@@ -55,6 +62,7 @@ function normalizeOrder(order: Partial<StoredOrder>): StoredOrder {
     approvalTarget: order.approvalTarget ?? "any_higher_ups",
     items: Array.isArray(order.items) ? order.items : [],
     totalAmount: typeof order.totalAmount === "number" ? order.totalAmount : 0,
+    currencyCode: order.currencyCode ?? order.items?.[0]?.currencyCode ?? "MNT",
     status: migrateLegacyStatus(order.status),
     higherUpReviewer: order.higherUpReviewer ?? null,
     higherUpReviewedAt: order.higherUpReviewedAt ?? null,
@@ -133,19 +141,49 @@ export function useOrdersStore() {
   return useSyncExternalStore(subscribe, readOrdersSnapshot, () => EMPTY_ORDERS);
 }
 
-export function generateRequestNumber() {
-  const dateValue = getTodayDateInputValue().replaceAll("-", "");
-  const todaysOrders = readOrdersSnapshot().filter((order) =>
-    order.requestNumber.startsWith(`REQ-${dateValue}`),
+function getTodayRequestPrefix() {
+  return `REQ-${getTodayDateInputValue().replaceAll("-", "")}`;
+}
+
+function getNextRequestSequence(orders: StoredOrder[], prefix: string) {
+  return (
+    orders.reduce((highestSequence, order) => {
+      const matchedSequence = new RegExp(`^${prefix}-(\\d+)$`).exec(
+        order.requestNumber,
+      );
+      if (!matchedSequence) return highestSequence;
+
+      const sequence = Number(matchedSequence[1]);
+      if (!Number.isInteger(sequence)) return highestSequence;
+
+      return Math.max(highestSequence, sequence);
+    }, 0) + 1
   );
-  return `REQ-${dateValue}-${`${todaysOrders.length + 1}`.padStart(3, "0")}`;
+}
+
+function createNextRequestNumber(orders: StoredOrder[]) {
+  const prefix = getTodayRequestPrefix();
+  const nextSequence = getNextRequestSequence(orders, prefix);
+  return `${prefix}-${`${nextSequence}`.padStart(3, "0")}`;
+}
+
+export function generateRequestNumber() {
+  return createNextRequestNumber(readOrdersSnapshot());
 }
 
 export function createOrder(input: CreateOrderInput) {
   const nowIso = new Date().toISOString();
+  const existingOrders = readOrdersSnapshot();
+  const trimmedRequestNumber = input.requestNumber.trim().toUpperCase();
+  const requestNumber =
+    trimmedRequestNumber.length > 0 &&
+    !existingOrders.some((order) => order.requestNumber === trimmedRequestNumber)
+      ? trimmedRequestNumber
+      : createNextRequestNumber(existingOrders);
   const nextOrder: StoredOrder = {
-    id: `${input.requestNumber}-${nowIso}`,
-    requestNumber: input.requestNumber,
+    id: `${requestNumber}-${nowIso}`,
+    orderName: input.orderName.trim(),
+    requestNumber,
     requestDate: input.requestDate,
     department: input.department,
     requester: input.requester,
@@ -153,6 +191,7 @@ export function createOrder(input: CreateOrderInput) {
     approvalTarget: input.approvalTarget,
     items: input.items,
     totalAmount: input.items.reduce((sum, item) => sum + item.totalPrice, 0),
+    currencyCode: input.currencyCode,
     status: "pending_higher_up",
     higherUpReviewer: null,
     higherUpReviewedAt: null,
@@ -171,7 +210,7 @@ export function createOrder(input: CreateOrderInput) {
     createdAt: nowIso,
     updatedAt: nowIso,
   };
-  writeOrdersSnapshot([nextOrder, ...readOrdersSnapshot()]);
+  writeOrdersSnapshot([nextOrder, ...existingOrders]);
   return nextOrder;
 }
 
@@ -202,6 +241,8 @@ export function reviewFinanceOrder(input: {
   approved: boolean;
 }) {
   const reviewedAt = new Date().toISOString();
+  const existingOrder = readOrdersSnapshot().find((order) => order.id === input.orderId);
+
   updateOrders((orders) =>
     orders.map((order) =>
       order.id === input.orderId
@@ -213,6 +254,14 @@ export function reviewFinanceOrder(input: {
         : order,
     ),
   );
+
+  if (input.approved && existingOrder) {
+    pushFinanceApprovedNotification({
+      orderId: existingOrder.id,
+      title: "Finance approved your order",
+      message: `${existingOrder.orderName} has been approved by Finance.`,
+    });
+  }
 }
 
 export function receiveInventoryOrder(input: ReceiveOrderInput) {
@@ -245,5 +294,5 @@ export function assignOrderToPerson(input: AssignOrderInput) {
   );
 }
 
-export { departmentOptions, formatCurrency, formatDisplayDate, getTodayDateInputValue, goodsCatalog };
+export { departmentOptions, formatCurrency, formatDisplayDate, getTodayDateInputValue };
 export type { GoodsCatalogItem, OrderItem, OrderStatus, StoredOrder };

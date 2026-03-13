@@ -1,16 +1,178 @@
+input CatalogAttributeInput {
+  attributeName: String!
+  attributeValue: String!
+  sortOrder: Int
+}
+
+type CatalogCategory {
+  createdAt: String!
+  displayName: String!
+  id: ID!
+  normalizedName: String!
+  source: String!
+  status: String!
+  updatedAt: String!
+}
+
+input CatalogImageInput {
+  imageUrl: String!
+  sortOrder: Int
+}
+
+type CatalogItemType {
+  categoryId: ID!
+  createdAt: String!
+  displayName: String!
+  id: ID!
+  normalizedName: String!
+  source: String!
+  status: String!
+  updatedAt: String!
+}
+
+type CatalogProduct {
+  attributes: [CatalogProductAttribute!]!
+  createdAt: String!
+  defaultCurrencyCode: String!
+  defaultUnitCost: Float
+  description: String
+  displayName: String!
+  id: ID!
+  images: [CatalogProductImage!]!
+  itemTypeId: ID!
+  normalizedName: String!
+  productCode: String!
+  source: String!
+  status: String!
+  unit: String!
+  updatedAt: String!
+}
+
+type CatalogProductAttribute {
+  attributeName: String!
+  attributeValue: String!
+  catalogAttributeDefinitionId: ID
+  createdAt: String!
+  id: ID!
+  productId: ID!
+  sortOrder: Int!
+  updatedAt: String!
+}
+
+type CatalogProductImage {
+  createdAt: String!
+  id: ID!
+  imageUrl: String!
+  productId: ID!
+  sortOrder: Int!
+  updatedAt: String!
+}
+
 type Mutation {
-  createTodo(title: String!): Todo!
-  deleteTodo(id: ID!): Boolean!
-  updateTodo(completed: Boolean, id: ID!, title: String): Todo
+  createCatalogCategory(displayName: String!): CatalogCategory!
+  createCatalogProduct(
+    attributes: [CatalogAttributeInput!]
+    categoryId: ID
+    defaultCurrencyCode: String
+    defaultUnitCost: Float
+    description: String
+    displayName: String!
+    images: [CatalogImageInput!]
+    itemTypeId: ID
+    itemTypeName: String
+    productCode: String!
+    status: String
+    unit: String
+  ): CatalogProduct!
+  createOrder(
+    approvalTarget: String
+    departmentId: ID
+    expectedArrivalAt: String
+    officeId: ID
+    orderName: String!
+    status: String!
+    totalCost: Float
+    userId: ID
+    whyOrdered: String!
+  ): Order!
+  createReceive(
+    note: String
+    officeId: ID
+    orderId: ID
+    receivedAt: String
+    receivedByUserId: ID
+    status: String!
+  ): Receive!
+  deleteOrder(id: ID!): Boolean!
+  deleteReceive(id: ID!): Boolean!
+  updateCatalogProduct(
+    attributes: [CatalogAttributeInput!]
+    categoryId: ID
+    defaultCurrencyCode: String
+    defaultUnitCost: Float
+    description: String
+    displayName: String
+    id: ID!
+    images: [CatalogImageInput!]
+    itemTypeId: ID
+    itemTypeName: String
+    productCode: String
+    status: String
+    unit: String
+  ): CatalogProduct
+  updateOrder(
+    approvalTarget: String
+    departmentId: ID
+    expectedArrivalAt: String
+    id: ID!
+    officeId: ID
+    orderName: String
+    status: String
+    totalCost: Float
+    userId: ID
+    whyOrdered: String
+  ): Order
+  updateReceive(
+    id: ID!
+    note: String
+    officeId: ID
+    orderId: ID
+    receivedAt: String
+    receivedByUserId: ID
+    status: String
+  ): Receive
+}
+
+type Order {
+  approvalTarget: String!
+  departmentId: ID
+  expectedArrivalAt: String
+  id: ID!
+  officeId: ID!
+  orderName: String!
+  status: String!
+  totalCost: Float
+  userId: ID!
+  whyOrdered: String!
 }
 
 type Query {
-  todo(id: ID!): Todo
-  todos: [Todo!]!
+  catalogCategories: [CatalogCategory!]!
+  catalogItemTypes(categoryId: ID): [CatalogItemType!]!
+  catalogProduct(id: ID!): CatalogProduct
+  catalogProducts(categoryId: ID, itemTypeId: ID, status: String): [CatalogProduct!]!
+  order(id: ID!): Order
+  orders: [Order!]!
+  receive(id: ID!): Receive
+  receives: [Receive!]!
 }
 
-type Todo {
-  completed: Boolean!
+type Receive {
   id: ID!
-  title: String!
+  note: String
+  officeId: ID!
+  orderId: ID!
+  receivedAt: String!
+  receivedByUserId: ID!
+  status: String!
 }

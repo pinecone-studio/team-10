@@ -6,7 +6,11 @@ import {
   type StoredOrder,
 } from "../../_lib/order-store";
 import { TopBar } from "./OrderPrimitives";
-import { buildFeedEvents, getOrderPresentation } from "./orderHelpers";
+import {
+  buildFeedEvents,
+  getOrderPresentation,
+  getOrderSummaryName,
+} from "./orderHelpers";
 
 function VerticalDots() {
   return (
@@ -53,7 +57,7 @@ export function OrderDetailView(props: {
         </div>
         <div className="mt-[14px] grid grid-cols-[0.8fr_1.2fr_1fr_1fr_1fr_1fr_0.7fr] items-center gap-[12px] rounded-[6px] border border-[#d7d7da] bg-[#efefef] px-[16px] py-[17px] text-[14px] text-[#565656]">
           <span>#{props.order.requestNumber.slice(-4)}</span>
-          <span>Order name</span>
+          <span>{getOrderSummaryName(props.order)}</span>
           <span>{formatDisplayDate(props.order.requestDate)}</span>
           <span
             className={
@@ -79,7 +83,7 @@ export function OrderDetailView(props: {
                   ? "Assigned"
                   : "Allowed"}
           </span>
-          <span>{formatCurrency(props.order.totalAmount)}</span>
+          <span>{formatCurrency(props.order.totalAmount, props.order.currencyCode)}</span>
           <span>
             <VerticalDots />
           </span>
@@ -134,14 +138,14 @@ export function OrderDetailView(props: {
                 <span>{item.code}</span>
                 <span>{item.quantity}</span>
                 <span>{item.unit}</span>
-                <span>{formatCurrency(item.unitPrice)}</span>
-                <span>{formatCurrency(item.totalPrice)}</span>
+                <span>{formatCurrency(item.unitPrice, item.currencyCode)}</span>
+                <span>{formatCurrency(item.totalPrice, item.currencyCode)}</span>
               </div>
             ))}
           </div>
           <div className="mt-[8px] flex items-center justify-between rounded-[6px] bg-[#dbdcdf] px-[12px] py-[10px] text-[15px] font-semibold text-[#161616]">
             <span>Total:</span>
-            <span>{formatCurrency(props.order.totalAmount)}</span>
+            <span>{formatCurrency(props.order.totalAmount, props.order.currencyCode)}</span>
           </div>
         </div>
       </section>
@@ -150,7 +154,7 @@ export function OrderDetailView(props: {
         <button
           type="button"
           onClick={props.onBack}
-          className="inline-flex h-[41px] items-center justify-center rounded-[6px] border border-[#d2d2d5] bg-[#ececef] px-[24px] text-[15px] text-[#161616]"
+          className="inline-flex h-[41px] cursor-pointer items-center justify-center rounded-[6px] border border-[#d2d2d5] bg-[#ececef] px-[24px] text-[15px] text-[#161616]"
         >
           Back
         </button>

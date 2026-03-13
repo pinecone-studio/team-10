@@ -7,12 +7,44 @@ export type DepartmentOption =
   | "Operations"
   | "Procurement";
 
+export type CurrencyCode = "USD" | "MNT" | "EUR";
+
+export type CatalogProductStatus = "draft" | "active" | "archived";
+
+export type CatalogCategory = {
+  id: string;
+  name: string;
+  description: string;
+};
+
+export type CatalogItemType = {
+  id: string;
+  categoryId: string;
+  name: string;
+  description: string;
+};
+
+export type CatalogProductAttribute = {
+  id: string;
+  name: string;
+  value: string;
+};
+
 export type GoodsCatalogItem = {
   id: string;
   name: string;
   code: string;
   unit: string;
+  categoryId: string;
+  itemTypeId: string;
   defaultPrice: number;
+  currencyCode: CurrencyCode;
+  description: string;
+  imageUrl: string | null;
+  status: CatalogProductStatus;
+  attributes: CatalogProductAttribute[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type OrderItem = {
@@ -23,6 +55,7 @@ export type OrderItem = {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  currencyCode: CurrencyCode;
 };
 
 export type OrderStatus =
@@ -40,6 +73,7 @@ export type ReceivedCondition = "complete" | "issue";
 
 export type StoredOrder = {
   id: string;
+  orderName: string;
   requestNumber: string;
   requestDate: string;
   department: DepartmentOption;
@@ -48,6 +82,7 @@ export type StoredOrder = {
   approvalTarget: ApprovalTarget;
   items: OrderItem[];
   totalAmount: number;
+  currencyCode: CurrencyCode;
   status: OrderStatus;
   higherUpReviewer: string | null;
   higherUpReviewedAt: string | null;
@@ -68,6 +103,7 @@ export type StoredOrder = {
 };
 
 export type CreateOrderInput = {
+  orderName: string;
   requestNumber: string;
   requestDate: string;
   department: DepartmentOption;
@@ -75,6 +111,7 @@ export type CreateOrderInput = {
   deliveryDate: string;
   approvalTarget: ApprovalTarget;
   items: OrderItem[];
+  currencyCode: CurrencyCode;
 };
 
 export type ReceiveOrderInput = {
@@ -90,4 +127,10 @@ export type AssignOrderInput = {
   orderId: string;
   assignedTo: string;
   assignedRole: string;
+};
+
+export type CatalogSnapshot = {
+  categories: CatalogCategory[];
+  itemTypes: CatalogItemType[];
+  products: GoodsCatalogItem[];
 };

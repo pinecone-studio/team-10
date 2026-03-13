@@ -1,7 +1,30 @@
 "use client";
 
-export function formatCurrency(value: number) {
-  return `${new Intl.NumberFormat("en-US").format(value)}T`;
+import type { CurrencyCode } from "./order-types";
+
+export const currencyOptions: Array<{
+  code: CurrencyCode;
+  label: string;
+  symbol: string;
+}> = [
+  { code: "USD", label: "US Dollar", symbol: "$" },
+  { code: "MNT", label: "MN Tugrug", symbol: "\u20AE" },
+  { code: "EUR", label: "Euro", symbol: "\u20AC" },
+];
+
+export function getCurrencySymbol(currencyCode: CurrencyCode) {
+  return (
+    currencyOptions.find((option) => option.code === currencyCode)?.symbol ??
+    "\u20AE"
+  );
+}
+
+export function formatCurrency(
+  value: number,
+  currencyCode: CurrencyCode = "MNT",
+) {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  return `${getCurrencySymbol(currencyCode)}${new Intl.NumberFormat("en-US").format(safeValue)}`;
 }
 
 export function getTodayDateInputValue() {

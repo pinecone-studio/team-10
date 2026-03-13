@@ -1,16 +1,28 @@
 "use client";
 
-import { formatCurrency, formatDisplayDate, useOrdersStore } from "../../_lib/order-store";
-import { Card, EmptyState, Stat, WorkspaceShell } from "../shared/WorkspacePrimitives";
+import {
+  formatCurrency,
+  formatDisplayDate,
+  useOrdersStore,
+} from "../../_lib/order-store";
+import {
+  Card,
+  EmptyState,
+  Stat,
+  WorkspaceShell,
+} from "../shared/WorkspacePrimitives";
 
 export function InventoryStorageSection() {
   const orders = useOrdersStore();
   const storedOrders = orders.filter(
     (order) => order.status === "received_inventory" || order.status === "assigned_hr",
   );
-  const readyForHr = storedOrders.filter((order) => order.status === "received_inventory");
+  const readyForHr = storedOrders.filter(
+    (order) => order.status === "received_inventory",
+  );
   const totalAssets = storedOrders.reduce(
-    (sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
+    (sum, order) =>
+      sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
     0,
   );
 
@@ -32,13 +44,19 @@ export function InventoryStorageSection() {
         <div className="space-y-[8px]">
           {readyForHr.length > 0 ? (
             readyForHr.map((order) => (
-              <div key={order.id} className="rounded-[10px] border border-[#ececec] px-[12px] py-[12px] text-[12px]">
+              <div
+                key={order.id}
+                className="rounded-[10px] border border-[#ececec] px-[12px] py-[12px] text-[12px]"
+              >
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold text-[#171717]">{order.requestNumber}</p>
+                  <p className="font-semibold text-[#171717]">
+                    {order.requestNumber}
+                  </p>
                   <span>{order.storageLocation}</span>
                 </div>
                 <p className="mt-[4px] text-[#8a8a8a]">
-                  {order.serialNumbers.length} serial registered · waiting for HR Manager
+                  {order.serialNumbers.length} serial registered - waiting for HR
+                  Manager
                 </p>
               </div>
             ))
@@ -54,13 +72,19 @@ export function InventoryStorageSection() {
         <div className="space-y-[10px]">
           {storedOrders.length > 0 ? (
             storedOrders.map((order) => (
-              <div key={order.id} className="rounded-[10px] border border-[#ececec] px-[14px] py-[12px] text-[12px]">
+              <div
+                key={order.id}
+                className="rounded-[10px] border border-[#ececec] px-[14px] py-[12px] text-[12px]"
+              >
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold text-[#171717]">{order.requestNumber}</p>
+                  <p className="font-semibold text-[#171717]">
+                    {order.requestNumber}
+                  </p>
                   <span>{order.storageLocation || "Storage pending"}</span>
                 </div>
                 <p className="mt-[4px] text-[#8a8a8a]">
-                  {formatDisplayDate(order.receivedAt ?? order.requestDate)} · {formatCurrency(order.totalAmount)}
+                  {formatDisplayDate(order.receivedAt ?? order.requestDate)} -{" "}
+                  {formatCurrency(order.totalAmount, order.currencyCode)}
                 </p>
               </div>
             ))

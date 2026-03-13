@@ -1,3 +1,6 @@
+export * from "./catalog/createCatalogCategory.ts";
+export * from "./catalog/createCatalogProduct.ts";
+export * from "./catalog/updateCatalogProduct.ts";
 export * from "./order/createOrder.ts";
 export * from "./order/updateOrder.ts";
 export * from "./order/deleteOrder.ts";
