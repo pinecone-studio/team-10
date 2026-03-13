@@ -38,11 +38,16 @@ Update [`wrangler.toml`](./wrangler.toml):
 
 ### 2) Add runtime secret (only if needed by this backend)
 
-This backend currently uses `CLOUDFLARE_API_TOKEN` at runtime in `lib/db.ts`.
+This backend uses a Cloudflare API token at runtime for D1 HTTP access in `lib/db.ts`.
+Prefer a dedicated runtime secret such as `CLOUDFLARE_D1_API_TOKEN` so Wrangler deploy auth can use a separate token.
 
 ```bash
-npx wrangler secret put CLOUDFLARE_API_TOKEN
+npx wrangler secret put CLOUDFLARE_D1_API_TOKEN
 ```
+
+Backward compatibility:
+- Runtime code still falls back to `CLOUDFLARE_API_TOKEN` if `CLOUDFLARE_D1_API_TOKEN` is not set.
+- For local/CI deploys, `CLOUDFLARE_API_TOKEN` should be a token with Workers deploy permissions for the target account.
 
 ### 3) Deploy
 
