@@ -1,7 +1,7 @@
 "use client";
 
 import { gql } from "@apollo/client/core";
-import { apolloClient } from "./apollo-client";
+import { apolloClient } from "@/app/providers/apolloClient";
 import type {
   CatalogProductAttribute,
   CatalogProductStatus,

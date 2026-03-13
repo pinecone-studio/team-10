@@ -1,6 +1,12 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import {
+  fetchNotificationsRequest,
+  markAllNotificationsAsReadRequest,
+  markNotificationAsReadRequest,
+  type NotificationDto,
+} from "@/app/(dashboard)/_graphql/notifications/notification-api";
 
 export type OrderNotification = {
   id: string;
@@ -10,17 +16,18 @@ export type OrderNotification = {
   message: string;
   isRead: boolean;
   createdAt: string;
+  readAt: string | null;
 };
 
-const STORAGE_KEY = "ams-front-end-notifications-v1";
-const CHANGE_EVENT = "ams-front-end-notifications-change";
 const EMPTY_NOTIFICATIONS: OrderNotification[] = [];
 
 let cachedNotifications = EMPTY_NOTIFICATIONS;
-let cachedRaw: string | null = null;
+let activeLoadPromise: Promise<OrderNotification[]> | null = null;
+let hasLoadedNotifications = false;
+const subscribers = new Set<() => void>();
 
-function canUseStorage() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+function emitChange() {
+  subscribers.forEach((subscriber) => subscriber());
 }
 
 function normalizeNotification(
@@ -34,62 +41,73 @@ function normalizeNotification(
     message: notification.message ?? "",
     isRead: notification.isRead ?? false,
     createdAt: notification.createdAt ?? new Date().toISOString(),
+    readAt: notification.readAt ?? null,
   };
 }
 
-function parseNotifications(rawValue: string | null) {
-  if (!rawValue) return EMPTY_NOTIFICATIONS;
-
-  try {
-    const parsed = JSON.parse(rawValue) as Partial<OrderNotification>[];
-    return Array.isArray(parsed)
-      ? parsed.map((notification) => normalizeNotification(notification))
-      : EMPTY_NOTIFICATIONS;
-  } catch {
-    return EMPTY_NOTIFICATIONS;
-  }
+function mapNotification(notification: NotificationDto): OrderNotification {
+  return normalizeNotification({
+    id: notification.id,
+    type: "financeApproved",
+    orderId: notification.orderId,
+    title: notification.title,
+    message: notification.message,
+    isRead: notification.isRead,
+    createdAt: notification.createdAt,
+    readAt: notification.readAt,
+  });
 }
 
 function readNotificationsSnapshot() {
-  if (!canUseStorage()) return EMPTY_NOTIFICATIONS;
-
-  const rawValue = window.localStorage.getItem(STORAGE_KEY);
-  if (rawValue === cachedRaw) return cachedNotifications;
-
-  cachedRaw = rawValue;
-  cachedNotifications = parseNotifications(rawValue);
   return cachedNotifications;
 }
 
 function writeNotificationsSnapshot(notifications: OrderNotification[]) {
-  if (!canUseStorage()) return;
-
-  const rawValue = JSON.stringify(notifications);
-  cachedRaw = rawValue;
-  cachedNotifications = notifications;
-  window.localStorage.setItem(STORAGE_KEY, rawValue);
-  window.dispatchEvent(new Event(CHANGE_EVENT));
+  cachedNotifications = [...notifications]
+    .map((notification) => normalizeNotification(notification))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  hasLoadedNotifications = true;
+  emitChange();
 }
 
-function updateNotifications(
-  updater: (notifications: OrderNotification[]) => OrderNotification[],
-) {
-  writeNotificationsSnapshot(updater(readNotificationsSnapshot()));
+export async function refreshNotificationsStore() {
+  if (activeLoadPromise) {
+    return activeLoadPromise;
+  }
+
+  activeLoadPromise = fetchNotificationsRequest()
+    .then((notifications) => {
+      writeNotificationsSnapshot(notifications.map(mapNotification));
+      return cachedNotifications;
+    })
+    .finally(() => {
+      activeLoadPromise = null;
+    });
+
+  return activeLoadPromise;
+}
+
+function ensureNotificationsLoaded() {
+  if (hasLoadedNotifications || activeLoadPromise) return;
+
+  void refreshNotificationsStore().catch((error) => {
+    console.error("Failed to load notifications.", error);
+  });
+}
+
+function upsertNotification(notification: OrderNotification) {
+  writeNotificationsSnapshot([
+    normalizeNotification(notification),
+    ...cachedNotifications.filter((entry) => entry.id !== notification.id),
+  ]);
 }
 
 function subscribe(callback: () => void) {
-  if (!canUseStorage()) return () => {};
-
-  const handleStorage = (event: StorageEvent) => {
-    if (!event.key || event.key === STORAGE_KEY) callback();
-  };
-
-  window.addEventListener("storage", handleStorage);
-  window.addEventListener(CHANGE_EVENT, callback);
+  subscribers.add(callback);
+  ensureNotificationsLoaded();
 
   return () => {
-    window.removeEventListener("storage", handleStorage);
-    window.removeEventListener(CHANGE_EVENT, callback);
+    subscribers.delete(callback);
   };
 }
 
@@ -101,49 +119,22 @@ export function useNotificationsStore() {
   );
 }
 
-export function pushFinanceApprovedNotification(input: {
-  orderId: string;
-  title: string;
-  message: string;
-}) {
-  updateNotifications((notifications) => {
-    const existingNotification = notifications.find(
-      (notification) =>
-        notification.type === "financeApproved" &&
-        notification.orderId === input.orderId,
-    );
+export async function markNotificationAsRead(notificationId: string) {
+  const nextNotification = await markNotificationAsReadRequest(notificationId);
+  if (!nextNotification) return;
 
-    if (existingNotification) return notifications;
-
-    const nextNotification: OrderNotification = {
-      id: `notification-${Math.random().toString(36).slice(2, 10)}`,
-      type: "financeApproved",
-      orderId: input.orderId,
-      title: input.title,
-      message: input.message,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    };
-
-    return [nextNotification, ...notifications];
-  });
+  upsertNotification(mapNotification(nextNotification));
 }
 
-export function markNotificationAsRead(notificationId: string) {
-  updateNotifications((notifications) =>
-    notifications.map((notification) =>
-      notification.id === notificationId
-        ? { ...notification, isRead: true }
-        : notification,
-    ),
-  );
-}
+export async function markAllNotificationsAsRead() {
+  const didMarkAll = await markAllNotificationsAsReadRequest();
+  if (!didMarkAll) return;
 
-export function markAllNotificationsAsRead() {
-  updateNotifications((notifications) =>
-    notifications.map((notification) => ({
+  writeNotificationsSnapshot(
+    cachedNotifications.map((notification) => ({
       ...notification,
       isRead: true,
+      readAt: new Date().toISOString(),
     })),
   );
 }

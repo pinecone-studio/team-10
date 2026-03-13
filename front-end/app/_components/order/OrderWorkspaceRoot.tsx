@@ -20,6 +20,7 @@ import {
   createDraftOrder,
   createGoodsDraft,
   getDefaultHigherUpApproverId,
+  getHigherUpApproverById,
   getOffsetDateInputValue,
 } from "./orderHelpers";
 
@@ -195,8 +196,11 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
     setStage("submit");
   }
 
-  function submitOrder() {
-    const nextOrder = createOrder({
+  async function submitOrder() {
+    const selectedApprover = getHigherUpApproverById(
+      draftOrder.requestedApproverId,
+    );
+    const nextOrder = await createOrder({
       orderName: draftOrder.orderName.trim(),
       requestNumber: draftOrder.requestNumber,
       requestDate: draftOrder.requestDate,
@@ -206,6 +210,10 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
       approvalTarget: draftOrder.approvalTarget,
       items: draftItems,
       currencyCode: draftItems[0]?.currencyCode ?? "MNT",
+      requestedApproverId: draftOrder.requestedApproverId,
+      requestedApproverName: selectedApprover?.fullName ?? null,
+      requestedApproverRole: selectedApprover?.positionLabel ?? null,
+      approvalMessage: permissionMessage,
     });
 
     setSelectedOrderId(nextOrder.id);

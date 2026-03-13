@@ -8,7 +8,7 @@ import {
   fetchCatalogSnapshot,
   updateCatalogProductRequest,
   type CatalogApiProductInput,
-} from "@/lib/catalog-api";
+} from "@/app/(dashboard)/_graphql/catalog/catalog-api";
 import {
   catalogCategoriesSeed,
   catalogItemTypesSeed,

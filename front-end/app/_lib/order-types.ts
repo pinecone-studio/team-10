@@ -1,11 +1,6 @@
 "use client";
 
-export type DepartmentOption =
-  | "IT Office"
-  | "Finance Office"
-  | "Human Resources"
-  | "Operations"
-  | "Procurement";
+export type DepartmentOption = string;
 
 export type CurrencyCode = "USD" | "MNT" | "EUR";
 
@@ -67,7 +62,7 @@ export type OrderStatus =
   | "received_inventory"
   | "assigned_hr";
 
-export type ApprovalTarget = "any_higher_ups";
+export type ApprovalTarget = "any_higher_ups" | "finance";
 
 export type ReceivedCondition = "complete" | "issue";
 
@@ -84,6 +79,10 @@ export type StoredOrder = {
   totalAmount: number;
   currencyCode: CurrencyCode;
   status: OrderStatus;
+  requestedApproverId: string | null;
+  requestedApproverName: string | null;
+  requestedApproverRole: string | null;
+  approvalMessage: string;
   higherUpReviewer: string | null;
   higherUpReviewedAt: string | null;
   higherUpNote: string;
@@ -98,6 +97,12 @@ export type StoredOrder = {
   assignedTo: string | null;
   assignedRole: string | null;
   assignedAt: string | null;
+  userId: string;
+  officeId: string;
+  departmentId: string | null;
+  whyOrdered: string;
+  expectedArrivalAt: string | null;
+  totalCost: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -112,6 +117,10 @@ export type CreateOrderInput = {
   approvalTarget: ApprovalTarget;
   items: OrderItem[];
   currencyCode: CurrencyCode;
+  requestedApproverId?: string | null;
+  requestedApproverName?: string | null;
+  requestedApproverRole?: string | null;
+  approvalMessage?: string;
 };
 
 export type ReceiveOrderInput = {
