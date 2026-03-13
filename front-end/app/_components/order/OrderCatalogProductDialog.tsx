@@ -257,10 +257,6 @@ function CatalogProductDialogContent({
     setErrorMessage("");
   }
 
-  function handleDeleteSingleAttribute(attributeId: string) {
-    removeAttributes([attributeId]);
-  }
-
   function handleToggleAttributeSelection(attributeId: string) {
     setSelectedAttributeIds((current) =>
       current.includes(attributeId)
@@ -493,7 +489,7 @@ function CatalogProductDialogContent({
                       Select Variables
                     </p>
                     <p className="mt-[4px] text-[11px] text-[#8a94a3]">
-                      Click a row to delete one, or use checkboxes for bulk delete.
+                      Click a row or checkbox to select variables, then delete them explicitly.
                     </p>
                     <div className="mt-[10px] max-h-[220px] space-y-[8px] overflow-y-auto pr-[2px]">
                       {attributes.map((attribute, index) => {
@@ -506,36 +502,43 @@ function CatalogProductDialogContent({
                           (attribute.name.trim()
                             ? "No value yet"
                             : "Empty variable");
+                        const selected = activeSelectedAttributeIds.includes(
+                          attribute.id,
+                        );
 
                         return (
-                          <div
+                          <button
                             key={attribute.id}
-                            className="flex items-start gap-[8px] rounded-[10px] border border-[#e6ebf2] bg-[#f8fafc] p-[8px]"
+                            type="button"
+                            onClick={() =>
+                              handleToggleAttributeSelection(attribute.id)
+                            }
+                            disabled={isSaving}
+                            className={`flex w-full cursor-pointer items-start gap-[8px] rounded-[10px] border p-[8px] text-left disabled:cursor-not-allowed disabled:opacity-50 ${
+                              selected
+                                ? "border-[#b8cbf8] bg-[#edf3ff]"
+                                : "border-[#e6ebf2] bg-[#f8fafc]"
+                            }`}
                           >
                             <input
                               type="checkbox"
-                              checked={activeSelectedAttributeIds.includes(attribute.id)}
+                              checked={selected}
                               onChange={() =>
                                 handleToggleAttributeSelection(attribute.id)
                               }
                               onClick={(event) => event.stopPropagation()}
+                              disabled={isSaving}
                               className="mt-[3px] h-[14px] w-[14px] cursor-pointer rounded border border-[#b7c2d0]"
                             />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDeleteSingleAttribute(attribute.id)
-                              }
-                              className="flex-1 cursor-pointer text-left"
-                            >
+                            <span className="flex-1">
                               <span className="block text-[12px] font-medium text-[#1f2733]">
                                 {attributeLabel}
                               </span>
                               <span className="mt-[2px] block text-[11px] text-[#7f8894]">
                                 {attributeValue}
                               </span>
-                            </button>
-                          </div>
+                            </span>
+                          </button>
                         );
                       })}
                     </div>
@@ -543,7 +546,7 @@ function CatalogProductDialogContent({
                       <button
                         type="button"
                         onClick={handleDeleteSelectedAttributes}
-                        disabled={activeSelectedAttributeIds.length === 0}
+                        disabled={activeSelectedAttributeIds.length === 0 || isSaving}
                         className="cursor-pointer rounded-[8px] border border-[#efc3bd] px-[10px] py-[7px] text-[11px] font-medium text-[#cf5b4d] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Delete Selected
@@ -551,7 +554,7 @@ function CatalogProductDialogContent({
                       <button
                         type="button"
                         onClick={handleDeleteAllAttributes}
-                        disabled={attributes.length === 0}
+                        disabled={attributes.length === 0 || isSaving}
                         className="cursor-pointer rounded-[8px] border border-[#efc3bd] px-[10px] py-[7px] text-[11px] font-medium text-[#cf5b4d] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Delete All

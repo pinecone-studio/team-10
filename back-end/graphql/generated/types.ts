@@ -98,6 +98,7 @@ export type Mutation = {
   createCatalogProduct: CatalogProduct;
   createOrder: Order;
   createReceive: Receive;
+  deleteCatalogCategory: Scalars['Boolean']['output'];
   deleteOrder: Scalars['Boolean']['output'];
   deleteReceive: Scalars['Boolean']['output'];
   updateCatalogProduct?: Maybe<CatalogProduct>;
@@ -147,6 +148,11 @@ export type MutationCreateReceiveArgs = {
   receivedAt?: InputMaybe<Scalars['String']['input']>;
   receivedByUserId?: InputMaybe<Scalars['ID']['input']>;
   status: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteCatalogCategoryArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -443,6 +449,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   createCatalogProduct?: Resolver<ResolversTypes['CatalogProduct'], ParentType, ContextType, RequireFields<MutationCreateCatalogProductArgs, 'displayName' | 'productCode'>>;
   createOrder?: Resolver<ResolversTypes['Order'], ParentType, ContextType, RequireFields<MutationCreateOrderArgs, 'orderName' | 'status' | 'whyOrdered'>>;
   createReceive?: Resolver<ResolversTypes['Receive'], ParentType, ContextType, RequireFields<MutationCreateReceiveArgs, 'status'>>;
+  deleteCatalogCategory?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteCatalogCategoryArgs, 'id'>>;
   deleteOrder?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteOrderArgs, 'id'>>;
   deleteReceive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteReceiveArgs, 'id'>>;
   updateCatalogProduct?: Resolver<Maybe<ResolversTypes['CatalogProduct']>, ParentType, ContextType, RequireFields<MutationUpdateCatalogProductArgs, 'id'>>;

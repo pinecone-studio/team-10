@@ -106,6 +106,12 @@ const createCatalogCategoryMutation = gql`
   }
 `;
 
+const deleteCatalogCategoryMutation = gql`
+  mutation DeleteCatalogCategory($id: ID!) {
+    deleteCatalogCategory(id: $id)
+  }
+`;
+
 const createCatalogProductMutation = gql`
   mutation CreateCatalogProduct(
     $categoryId: ID!
@@ -303,6 +309,18 @@ export async function createCatalogCategoryRequest(displayName: string) {
   });
 
   return data?.createCatalogCategory ?? null;
+}
+
+export async function deleteCatalogCategoryRequest(id: string) {
+  const { data } = await apolloClient.mutate<{
+    deleteCatalogCategory: boolean;
+  }>({
+    mutation: deleteCatalogCategoryMutation,
+    variables: { id },
+    fetchPolicy: "no-cache",
+  });
+
+  return data?.deleteCatalogCategory ?? false;
 }
 
 export async function createCatalogProductRequest(input: CatalogApiProductInput) {

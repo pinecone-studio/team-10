@@ -73,6 +73,7 @@ type Mutation {
   createCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String!, status: String, unit: String): CatalogProduct!
   createOrder(approvalTarget: String, departmentId: ID, expectedArrivalAt: String, officeId: ID, orderName: String!, status: String!, totalCost: Float, userId: ID, whyOrdered: String!): Order!
   createReceive(note: String, officeId: ID, orderId: ID, receivedAt: String, receivedByUserId: ID, status: String!): Receive!
+  deleteCatalogCategory(id: ID!): Boolean!
   deleteOrder(id: ID!): Boolean!
   deleteReceive(id: ID!): Boolean!
   updateCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String, id: ID!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String, status: String, unit: String): CatalogProduct

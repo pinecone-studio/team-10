@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import {
   createCatalogCategoryRequest,
   createCatalogProductRequest,
+  deleteCatalogCategoryRequest,
   fetchCatalogSnapshot,
   updateCatalogProductRequest,
   type CatalogApiProductInput,
@@ -271,6 +272,26 @@ export async function createCatalogCategory(name: string) {
           normalizeCatalogName(itemType.name) === "general",
       ) ?? null,
   };
+}
+
+export async function deleteCatalogCategories(categoryIds: string[]) {
+  const uniqueCategoryIds = [...new Set(categoryIds.filter(Boolean))];
+  if (uniqueCategoryIds.length === 0) return;
+
+  const snapshot = await getLatestCatalogSnapshot();
+  const existingCategoryIds = new Set(snapshot.categories.map((category) => category.id));
+  const removableCategoryIds = uniqueCategoryIds.filter((categoryId) =>
+    existingCategoryIds.has(categoryId),
+  );
+
+  for (const categoryId of removableCategoryIds) {
+    const deleted = await deleteCatalogCategoryRequest(categoryId);
+    if (!deleted) {
+      throw new Error("Failed to delete category.");
+    }
+  }
+
+  await refreshCatalogStore();
 }
 
 export function suggestCatalogProductCode(

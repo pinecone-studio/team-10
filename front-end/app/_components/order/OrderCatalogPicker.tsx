@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { createCatalogCategory, useCatalogStore } from "../../_lib/catalog-store";
+import {
+  createCatalogCategory,
+  deleteCatalogCategories,
+  useCatalogStore,
+} from "../../_lib/catalog-store";
 import { CubeIcon } from "./OrderCreateIcons";
 import { OrderCatalogProductDialog } from "./OrderCatalogProductDialog";
 
@@ -83,6 +87,49 @@ function CheckIcon() {
   );
 }
 
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className="h-[14px] w-[14px]" aria-hidden="true">
+      <path
+        d="M8 3.25v9.5M3.25 8h9.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CreateCatalogItemCard({
+  label,
+  description,
+  onClick,
+}: {
+  label: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full cursor-pointer items-center gap-[10px] rounded-[10px] border border-dashed border-[#78a4ff] bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_100%)] px-[12px] py-[10px] text-left transition hover:border-[#5d8df4] hover:bg-[linear-gradient(135deg,#f3f8ff_0%,#e9f2ff_100%)]"
+    >
+      <span className="inline-flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[8px] border border-[#d5e3ff] bg-white text-[#4d78da] shadow-[0_4px_10px_rgba(77,120,218,0.12)]">
+        <PlusIcon />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-medium text-[#204186]">
+          {label}
+        </span>
+        <span className="mt-[2px] block text-[11px] text-[#6983b7]">
+          {description}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export function OrderCatalogPicker({
   selectedCatalogProductId,
   onSelectCatalogProduct,
@@ -101,14 +148,18 @@ export function OrderCatalogPicker({
   const [dialogProductId, setDialogProductId] = useState<string | null>(null);
   const [isCreatingCategory, setCreatingCategory] = useState(false);
   const [isSavingCategory, setSavingCategory] = useState(false);
+  const [isDeleteCategoryMenuOpen, setDeleteCategoryMenuOpen] = useState(false);
+  const [isDeletingCategories, setDeletingCategories] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryError, setCategoryError] = useState("");
+  const [selectedDeleteCategoryIds, setSelectedDeleteCategoryIds] = useState<string[]>([]);
   const [panelStyle, setPanelStyle] = useState<{
     top: number;
     left: number;
     width: number;
     height: number;
   } | null>(null);
+  const deleteCategoryMenuRef = useRef<HTMLDivElement | null>(null);
   const resolvedSelectedCategoryId = useMemo(() => {
     if (catalog.categories.length === 0) return "";
 
@@ -140,6 +191,16 @@ export function OrderCatalogPicker({
         .filter((group) => group.products.length > 0),
     [catalog.itemTypes, productsForCategory, resolvedSelectedCategoryId],
   );
+  const categoryProductCounts = useMemo(
+    () =>
+      new Map(
+        catalog.categories.map((category) => [
+          category.id,
+          catalog.products.filter((product) => product.categoryId === category.id).length,
+        ]),
+      ),
+    [catalog.categories, catalog.products],
+  );
   const hasCategories = catalog.categories.length > 0;
   const selectedCategory =
     catalog.categories.find(
@@ -152,7 +213,13 @@ export function OrderCatalogPicker({
   const emptyStateDescription = hasCategories
     ? "Create a new item to get started."
     : "Add a category first to start building the catalog.";
-  const primaryActionLabel = hasCategories ? "Create Item" : "Add Category";
+  const activeSelectedDeleteCategoryIds = useMemo(
+    () =>
+      selectedDeleteCategoryIds.filter((categoryId) =>
+        catalog.categories.some((category) => category.id === categoryId),
+      ),
+    [catalog.categories, selectedDeleteCategoryIds],
+  );
 
   useEffect(() => {
     if (!isPickerOpen) return undefined;
@@ -229,6 +296,33 @@ export function OrderCatalogPicker({
     };
   }, [isPickerOpen]);
 
+  useEffect(() => {
+    if (!isDeleteCategoryMenuOpen) return undefined;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (
+        deleteCategoryMenuRef.current &&
+        !deleteCategoryMenuRef.current.contains(event.target as Node)
+      ) {
+        setDeleteCategoryMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setDeleteCategoryMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isDeleteCategoryMenuOpen]);
+
   function clearFocusedElement() {
     if (
       typeof document !== "undefined" &&
@@ -247,6 +341,7 @@ export function OrderCatalogPicker({
   function handleOpenCreateDialog() {
     if (!hasCategories || !resolvedSelectedCategoryId) {
       setCreatingCategory(true);
+      setDeleteCategoryMenuOpen(false);
       clearFocusedElement();
       return;
     }
@@ -255,6 +350,7 @@ export function OrderCatalogPicker({
     setDialogProductId(null);
     setDialogOpen(true);
     setPickerOpen(false);
+    setDeleteCategoryMenuOpen(false);
     clearFocusedElement();
   }
 
@@ -284,6 +380,44 @@ export function OrderCatalogPicker({
     }
   }
 
+  function handleToggleDeleteCategorySelection(categoryId: string) {
+    setSelectedDeleteCategoryIds((current) =>
+      current.includes(categoryId)
+        ? current.filter((currentId) => currentId !== categoryId)
+        : [...current, categoryId],
+    );
+  }
+
+  async function removeCategories(categoryIds: string[]) {
+    if (categoryIds.length === 0) return;
+
+    setDeletingCategories(true);
+    setCategoryError("");
+
+    try {
+      await deleteCatalogCategories(categoryIds);
+      setSelectedDeleteCategoryIds((current) =>
+        current.filter((categoryId) => !categoryIds.includes(categoryId)),
+      );
+      setDeleteCategoryMenuOpen(false);
+      clearFocusedElement();
+    } catch (error) {
+      setCategoryError(
+        error instanceof Error ? error.message : "Failed to delete category.",
+      );
+    } finally {
+      setDeletingCategories(false);
+    }
+  }
+
+  async function handleDeleteSelectedCategories() {
+    await removeCategories(activeSelectedDeleteCategoryIds);
+  }
+
+  async function handleDeleteAllCategories() {
+    await removeCategories(catalog.categories.map((category) => category.id));
+  }
+
   const pickerOverlay =
     isPickerOpen && panelStyle && typeof document !== "undefined"
       ? createPortal(
@@ -310,9 +444,7 @@ export function OrderCatalogPicker({
                   </p>
                   <div className="mt-[8px] min-h-0 flex-1 space-y-[4px] overflow-y-auto overscroll-contain pr-[4px] [scrollbar-gutter:stable]">
                     {catalog.categories.map((category) => {
-                      const count = catalog.products.filter(
-                        (product) => product.categoryId === category.id,
-                      ).length;
+                      const count = categoryProductCounts.get(category.id) ?? 0;
                       const active = category.id === resolvedSelectedCategoryId;
 
                       return (
@@ -388,6 +520,7 @@ export function OrderCatalogPicker({
                         type="button"
                         onClick={() => {
                           setCreatingCategory(true);
+                          setDeleteCategoryMenuOpen(false);
                           clearFocusedElement();
                         }}
                         className="inline-flex h-[32px] w-full cursor-pointer items-center justify-center rounded-[8px] bg-[#9aa7ba] px-[10px] text-[11px] text-white"
@@ -395,6 +528,100 @@ export function OrderCatalogPicker({
                         + Add new category
                       </button>
                     )}
+                    <div className="relative mt-[8px]" ref={deleteCategoryMenuRef}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteCategoryMenuOpen((current) => !current);
+                          setCreatingCategory(false);
+                          clearFocusedElement();
+                        }}
+                        disabled={catalog.categories.length === 0 || isDeletingCategories}
+                        className="inline-flex h-[32px] w-full cursor-pointer items-center justify-center rounded-[8px] border border-[#efc3bd] bg-white px-[10px] text-[11px] text-[#cf5b4d] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Delete categories
+                      </button>
+                      {isDeleteCategoryMenuOpen && catalog.categories.length > 0 ? (
+                        <div className="absolute bottom-full left-0 z-20 mb-[8px] w-[250px] rounded-[14px] border border-[#d8dde3] bg-white p-[12px] shadow-[0_18px_40px_rgba(16,24,34,0.18)]">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7f8894]">
+                            Select Categories
+                          </p>
+                          <p className="mt-[4px] text-[11px] text-[#8a94a3]">
+                            Click a row or checkbox to select categories, then delete them explicitly.
+                          </p>
+                          <div className="mt-[10px] max-h-[220px] space-y-[8px] overflow-y-auto pr-[2px]">
+                            {catalog.categories.map((category) => {
+                              const selected = activeSelectedDeleteCategoryIds.includes(
+                                category.id,
+                              );
+
+                              return (
+                                <button
+                                  key={category.id}
+                                  type="button"
+                                  onClick={() =>
+                                    handleToggleDeleteCategorySelection(category.id)
+                                  }
+                                  disabled={isDeletingCategories}
+                                  className={`flex w-full cursor-pointer items-start gap-[8px] rounded-[10px] border p-[8px] text-left disabled:cursor-not-allowed disabled:opacity-50 ${
+                                    selected
+                                      ? "border-[#b8cbf8] bg-[#edf3ff]"
+                                      : "border-[#e6ebf2] bg-[#f8fafc]"
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={() =>
+                                      handleToggleDeleteCategorySelection(category.id)
+                                    }
+                                    onClick={(event) => event.stopPropagation()}
+                                    disabled={isDeletingCategories}
+                                    className="mt-[3px] h-[14px] w-[14px] cursor-pointer rounded border border-[#b7c2d0]"
+                                  />
+                                  <span className="flex-1">
+                                    <span className="block text-[12px] font-medium text-[#1f2733]">
+                                      {category.name}
+                                    </span>
+                                    <span className="mt-[2px] block text-[11px] text-[#7f8894]">
+                                      {`${categoryProductCounts.get(category.id) ?? 0} item${(categoryProductCounts.get(category.id) ?? 0) === 1 ? "" : "s"}`}
+                                    </span>
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-[12px] flex items-center justify-between gap-[8px]">
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteSelectedCategories()}
+                              disabled={
+                                activeSelectedDeleteCategoryIds.length === 0 ||
+                                isDeletingCategories
+                              }
+                              className="cursor-pointer rounded-[8px] border border-[#efc3bd] px-[10px] py-[7px] text-[11px] font-medium text-[#cf5b4d] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Delete Selected
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteAllCategories()}
+                              disabled={
+                                catalog.categories.length === 0 || isDeletingCategories
+                              }
+                              className="cursor-pointer rounded-[8px] border border-[#efc3bd] px-[10px] py-[7px] text-[11px] font-medium text-[#cf5b4d] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Delete All
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                    {!isCreatingCategory && categoryError ? (
+                      <p className="mt-[6px] text-[11px] text-[#cf5b4d]">
+                        {categoryError}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
@@ -410,26 +637,17 @@ export function OrderCatalogPicker({
                           : "Add a category to start building the catalog."}
                       </p>
                     </div>
-                    <div className="flex items-center gap-[8px]">
-                      <button
-                        type="button"
-                        onClick={handleOpenCreateDialog}
-                        className="inline-flex h-[32px] cursor-pointer items-center justify-center rounded-[8px] bg-[#111827] px-[12px] text-[11px] text-white"
-                      >
-                        {primaryActionLabel}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPickerOpen(false);
-                          clearFocusedElement();
-                        }}
-                        className="inline-flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[8px] border border-[#d8dde3] bg-white text-[#6d7682]"
-                        aria-label="Close goods picker"
-                      >
-                        <CloseIcon />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPickerOpen(false);
+                        clearFocusedElement();
+                      }}
+                      className="inline-flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[8px] border border-[#d8dde3] bg-white text-[#6d7682]"
+                      aria-label="Close goods picker"
+                    >
+                      <CloseIcon />
+                    </button>
                   </div>
 
                   {productsForCategory.length === 0 ? (
@@ -441,16 +659,25 @@ export function OrderCatalogPicker({
                       <p className="text-[13px] text-[#6c7685]">
                         {emptyStateDescription}
                       </p>
-                      <button
-                        type="button"
-                        onClick={handleOpenCreateDialog}
-                        className="mt-[18px] inline-flex h-[32px] cursor-pointer items-center justify-center rounded-[8px] bg-[#94a3b8] px-[14px] text-[11px] text-white"
-                      >
-                        {hasCategories ? "+ Create Item" : "+ Add Category"}
-                      </button>
+                      <div className="mt-[18px] w-full max-w-[420px]">
+                        <CreateCatalogItemCard
+                          label={hasCategories ? "Create Item" : "Add Category"}
+                          description={
+                            hasCategories
+                              ? "Create a new product card for this category."
+                              : "Start by adding your first category."
+                          }
+                          onClick={handleOpenCreateDialog}
+                        />
+                      </div>
                     </div>
                   ) : (
                     <div className="mt-[18px] min-h-0 flex-1 space-y-[16px] overflow-y-auto overscroll-contain pr-[6px] [scrollbar-gutter:stable]">
+                      <CreateCatalogItemCard
+                        label="Create Item"
+                        description={`Add a new product to ${selectedCategory?.name ?? "this category"}.`}
+                        onClick={handleOpenCreateDialog}
+                      />
                       {itemTypeGroups.map(({ itemType, products }) => (
                         <div key={itemType.id}>
                           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8b94a1]">

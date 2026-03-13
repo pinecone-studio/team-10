@@ -78,6 +78,7 @@ export const CatalogTypeDefs = `
 
   type Mutation {
     createCatalogCategory(displayName: String!): CatalogCategory!
+    deleteCatalogCategory(id: ID!): Boolean!
     createCatalogProduct(
       itemTypeId: ID
       categoryId: ID

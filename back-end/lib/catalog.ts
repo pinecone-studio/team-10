@@ -696,6 +696,29 @@ export async function createCatalogCategory(
   return mapCategory(categoryRow);
 }
 
+export async function deleteCatalogCategory(
+  db: AppDb,
+  id: string,
+): Promise<boolean> {
+  const numericId = parseIntegerId("Catalog category id", id);
+  const [existingCategory] = await db
+    .select({ id: catalogCategories.id })
+    .from(catalogCategories)
+    .where(eq(catalogCategories.id, numericId))
+    .limit(1);
+
+  if (!existingCategory) {
+    return false;
+  }
+
+  await db
+    .delete(catalogCategories)
+    .where(eq(catalogCategories.id, numericId))
+    .run();
+
+  return true;
+}
+
 export async function createCatalogProduct(
   db: AppDb,
   input: CreateCatalogProductInput,

@@ -70,6 +70,7 @@ type CatalogProductImage {
 
 type Mutation {
   createCatalogCategory(displayName: String!): CatalogCategory!
+  deleteCatalogCategory(id: ID!): Boolean!
   createCatalogProduct(
     attributes: [CatalogAttributeInput!]
     categoryId: ID
