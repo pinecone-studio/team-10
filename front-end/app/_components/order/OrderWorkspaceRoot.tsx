@@ -20,7 +20,8 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
       hideHeader
       contentAlignment="left"
       contentWidthClassName="max-w-none"
-      contentPaddingClassName="pt-[10px] pl-[20px] pr-[40px] lg:pt-[18px] lg:pl-[40px] lg:pr-[60px]"
+      outerClassName="px-[20px] py-0"
+      contentPaddingClassName="pt-[60px] pl-[20px] pr-[50px] lg:pl-[40px]"
     >
       {state.stage === "history" ? (
         <OrderHistoryView
@@ -45,14 +46,14 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
           onFillDemo={state.loadDemo}
           onOpenHistory={state.openHistory}
           onOrderChange={state.updateDraftOrder}
+          onGoodsDraftChange={state.updateGoodsDraftField}
           onPermissionMessageChange={state.setPermissionMessage}
-          onQuantityChange={state.updateGoodsQuantity}
-          onSelectCatalogProduct={state.selectCatalogProduct}
           onAddItem={state.addDraftItem}
           onAddDraftRow={state.addDraftRow}
           onRemoveDraftRow={state.removeDraftRow}
           onUpdateItemQuantity={state.updateItemQuantity}
           onRemoveItem={state.removeItem}
+          onOpenDetail={state.openDetail}
           onSubmit={state.submit}
         />
       ) : null}

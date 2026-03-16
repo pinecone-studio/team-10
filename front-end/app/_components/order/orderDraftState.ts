@@ -4,7 +4,11 @@ import {
   generateRequestNumber,
   getTodayDateInputValue,
 } from "../../_lib/order-store";
-import type { ApprovalTarget, DepartmentOption } from "../../_lib/order-types";
+import type {
+  ApprovalTarget,
+  CurrencyCode,
+  DepartmentOption,
+} from "../../_lib/order-types";
 
 export const DEFAULT_ORDER_REQUESTER = "Batbayar Dorj";
 
@@ -21,9 +25,12 @@ export type DraftOrder = {
 
 export type GoodsDraft = {
   id: string;
-  selectedCatalogProductId: string | null;
+  itemName: string;
+  code: string;
   quantity: string;
+  unit: string;
   unitPrice: string;
+  currencyCode: CurrencyCode;
 };
 
 export function createDraftOrder(): DraftOrder {
@@ -42,9 +49,12 @@ export function createDraftOrder(): DraftOrder {
 export function createGoodsDraft(): GoodsDraft {
   return {
     id: `goods-draft-${Math.random().toString(36).slice(2, 10)}`,
-    selectedCatalogProductId: null,
+    itemName: "",
+    code: "",
     quantity: "1",
+    unit: "",
     unitPrice: "",
+    currencyCode: "USD",
   };
 }
 

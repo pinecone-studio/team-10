@@ -1,59 +1,85 @@
 "use client";
 
-import { useCatalogStore } from "../../_lib/catalog-store";
+import type { ComponentProps } from "react";
+import { useMemo, useState } from "react";
 import { formatCurrency } from "../../_lib/order-store";
 import type { OrderCreateViewProps } from "./OrderCreateView.types";
-import { Input, Select } from "./OrderFormFields";
+import { ItemCubeIcon, PlusIcon } from "./OrderCreateIcons";
+import { Input } from "./OrderFormFields";
+
+function ItemCell(props: ComponentProps<"div">) {
+  return (
+    <div
+      {...props}
+      className={`flex h-[50px] items-center rounded-[14px] border border-[#edf2f7] bg-white px-5 text-[12px] text-[#0f172a] shadow-[0_1px_4px_rgba(15,23,42,0.03)] ${props.className ?? ""}`}
+    />
+  );
+}
 
 function DraftRow(props: {
   draft: OrderCreateViewProps["goodsDrafts"][number];
   canAdd: boolean;
-  onSelectProduct: (productId: string) => void;
-  onQuantityChange: (value: string) => void;
-  onAddItem: () => void;
-  onRemoveDraft: () => void;
+  onChange: OrderCreateViewProps["onGoodsDraftChange"];
 }) {
-  const catalog = useCatalogStore();
-  const selectedProduct = catalog.products.find(
-    (product) => product.id === props.draft.selectedCatalogProductId,
-  );
+  const total = useMemo(() => {
+    const quantity = Number(props.draft.quantity || 0);
+    const price = Number(props.draft.unitPrice || 0);
+    return formatCurrency(quantity * price, props.draft.currencyCode);
+  }, [props.draft]);
 
   return (
-    <div className="grid gap-3 rounded-[14px] border border-[#e2e8f0] bg-[#f8fafc] p-4 lg:grid-cols-[1.8fr_0.8fr_0.8fr_0.9fr_auto_auto]">
-      <Select
-        value={props.draft.selectedCatalogProductId ?? ""}
-        onChange={(event) => props.onSelectProduct(event.target.value)}
-      >
-        <option value="">Select product</option>
-        {catalog.products.map((product) => (
-          <option key={product.id} value={product.id}>
-            {product.name}
-          </option>
-        ))}
-      </Select>
-      <Input value={selectedProduct?.code ?? ""} readOnly placeholder="Code" />
+    <div className="grid grid-cols-[52px_1.8fr_1.15fr_0.8fr_1.05fr_0.7fr_0.95fr] items-center gap-4 px-5 py-5">
+      <span className="inline-flex h-[50px] w-[50px] items-center justify-center rounded-[14px] border border-[#edf2f7] bg-[#f8fbff]">
+        <ItemCubeIcon />
+      </span>
+      <Input
+        value={props.draft.itemName}
+        onChange={(event) =>
+          props.onChange(props.draft.id, "itemName", event.target.value)
+        }
+        placeholder="Item name"
+        className="h-[50px] rounded-[14px] border-[#edf2f7] px-5 text-[12px]"
+      />
+      <Input
+        value={props.draft.code}
+        onChange={(event) =>
+          props.onChange(props.draft.id, "code", event.target.value)
+        }
+        placeholder="Code"
+        className="h-[50px] rounded-[14px] border-[#edf2f7] px-5 text-[12px]"
+      />
       <Input
         value={props.draft.quantity}
-        onChange={(event) => props.onQuantityChange(event.target.value)}
-        placeholder="Qty"
+        onChange={(event) =>
+          props.onChange(props.draft.id, "quantity", event.target.value)
+        }
         type="number"
+        min="0"
+        className="h-[50px] rounded-[14px] border-[#edf2f7] px-5 text-[12px]"
       />
-      <Input value={selectedProduct?.unit ?? ""} readOnly placeholder="Unit" />
-      <button
-        type="button"
-        onClick={props.onAddItem}
-        disabled={!props.canAdd}
-        className="inline-flex h-12 items-center justify-center rounded-[10px] bg-[#111827] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+      <Input
+        value={props.draft.unit}
+        onChange={(event) =>
+          props.onChange(props.draft.id, "unit", event.target.value)
+        }
+        placeholder="Unit"
+        className="h-[50px] rounded-[14px] border-[#edf2f7] px-5 text-[12px]"
+      />
+      <Input
+        value={props.draft.unitPrice}
+        onChange={(event) =>
+          props.onChange(props.draft.id, "unitPrice", event.target.value)
+        }
+        type="number"
+        min="0"
+        placeholder="0"
+        className="h-[50px] rounded-[14px] border-[#edf2f7] px-5 text-[12px]"
+      />
+      <ItemCell
+        className={`justify-end px-4 font-medium ${props.canAdd ? "" : "text-[#94a3b8]"}`}
       >
-        Add item
-      </button>
-      <button
-        type="button"
-        onClick={props.onRemoveDraft}
-        className="inline-flex h-12 items-center justify-center rounded-[10px] border border-[#d9e0e8] px-4 text-sm text-[#64748b]"
-      >
-        Remove
-      </button>
+        {total}
+      </ItemCell>
     </div>
   );
 }
@@ -64,91 +90,85 @@ export function OrderCreateItemsEditor(
     | "goodsDrafts"
     | "canAddItems"
     | "draftItems"
-    | "onSelectCatalogProduct"
-    | "onQuantityChange"
+    | "onGoodsDraftChange"
     | "onAddItem"
-    | "onAddDraftRow"
-    | "onRemoveDraftRow"
     | "onUpdateItemQuantity"
-    | "onRemoveItem"
   >,
 ) {
+  const [isComposerOpen, setComposerOpen] = useState(false);
+  const activeDraft = props.goodsDrafts[0];
+  const canSaveDraft = Boolean(activeDraft && (props.canAddItems[0] ?? false));
+
+  function handleAddItem() {
+    if (!activeDraft) return;
+    if (!isComposerOpen) {
+      setComposerOpen(true);
+      return;
+    }
+    if (!canSaveDraft) return;
+    props.onAddItem(activeDraft.id);
+    setComposerOpen(false);
+  }
+
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h4 className="text-[14px] font-semibold text-[#111827]">
-          Order Items
-        </h4>
-        <button
-          type="button"
-          onClick={props.onAddDraftRow}
-          className="inline-flex h-10 items-center justify-center rounded-[10px] border border-[#cbd5e1] px-4 text-sm font-medium text-[#111827]"
-        >
-          + Add Item
-        </button>
+    <section className="rounded-[20px] border border-[#d9e0e8] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+      <div className="border-b border-[#e8eef5] px-7 py-6">
+        <h3 className="text-[18px] font-semibold text-[#0f172a]">Order Items</h3>
       </div>
-      <div className="space-y-3">
-        {props.goodsDrafts.map((draft, index) => (
-          <DraftRow
-            key={draft.id}
-            draft={draft}
-            canAdd={props.canAddItems[index] ?? false}
-            onSelectProduct={(productId) =>
-              props.onSelectCatalogProduct(draft.id, productId)
-            }
-            onQuantityChange={(value) =>
-              props.onQuantityChange(draft.id, value)
-            }
-            onAddItem={() => props.onAddItem(draft.id)}
-            onRemoveDraft={() => props.onRemoveDraftRow(draft.id)}
-          />
-        ))}
-      </div>
-      <div className="mt-4 overflow-hidden rounded-[14px] border border-[#e2e8f0]">
-        <div className="grid grid-cols-[1.6fr_1.1fr_0.7fr_0.7fr_0.8fr_1fr_44px] bg-[#eff6ff] px-3 py-3 text-xs font-medium uppercase tracking-[0.02em] text-[#64748b]">
-          <span>Item Name</span>
-          <span>Code</span>
-          <span>Qty</span>
-          <span>Unit</span>
-          <span>Price</span>
-          <span className="text-right">Total</span>
-          <span />
-        </div>
-        {props.draftItems.length > 0 ? (
-          props.draftItems.map((item, index) => (
-            <div
-              key={`${item.catalogId}-${index}`}
-              className="grid grid-cols-[1.6fr_1.1fr_0.7fr_0.7fr_0.8fr_1fr_44px] items-center gap-2 border-t border-[#eef2f6] px-3 py-3 text-sm text-[#334155]"
-            >
-              <span>{item.name}</span>
-              <span>{item.code}</span>
-              <Input
-                value={String(item.quantity)}
-                onChange={(event) =>
-                  props.onUpdateItemQuantity(index, event.target.value)
-                }
-                className="h-9 px-3 text-center"
-              />
-              <span>{item.unit}</span>
-              <span>{item.unitPrice}</span>
-              <span className="text-right font-medium">
-                {formatCurrency(item.totalPrice, item.currencyCode)}
-              </span>
-              <button
-                type="button"
-                onClick={() => props.onRemoveItem(index)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-[8px] border border-[#fecaca] text-[#dc2626]"
-              >
-                x
-              </button>
-            </div>
-          ))
-        ) : (
-          <div className="px-6 py-12 text-center text-sm text-[#94a3b8]">
-            Added items will appear here.
+      <div className="px-7 py-6">
+        <div className="overflow-hidden border-y border-[#dbe6f3]">
+          <div className="grid grid-cols-[2fr_1.15fr_0.8fr_1fr_0.7fr_0.95fr] bg-[#eaf3ff] px-5 py-6 text-[12px] font-medium text-[#64748b]">
+            <span>Item Name</span>
+            <span>Code</span>
+            <span>Qty</span>
+            <span>Unit</span>
+            <span>Price</span>
+            <span className="text-right">Total</span>
           </div>
-        )}
+          <div className="divide-y divide-[#dbe6f3]">
+            {props.draftItems.map((item, index) => (
+              <div key={`${item.catalogId}-${index}`} className="grid grid-cols-[52px_1.8fr_1.15fr_0.8fr_1.05fr_0.7fr_0.95fr] items-center gap-4 px-5 py-5">
+                <span className="inline-flex h-[50px] w-[50px] items-center justify-center rounded-[14px] bg-[#f8fbff]">
+                  <ItemCubeIcon />
+                </span>
+                <ItemCell>{item.name}</ItemCell>
+                <ItemCell>{item.code}</ItemCell>
+                <Input
+                  value={String(item.quantity)}
+                  onChange={(event) =>
+                    props.onUpdateItemQuantity(index, event.target.value)
+                  }
+                  type="number"
+                  min="0"
+                  className="h-[50px] rounded-[14px] border-[#edf2f7] px-5 text-[12px]"
+                />
+                <ItemCell>{item.unit}</ItemCell>
+                <ItemCell>{String(item.unitPrice)}</ItemCell>
+                <ItemCell className="justify-end px-4 font-medium">
+                  {formatCurrency(item.totalPrice, item.currencyCode)}
+                </ItemCell>
+              </div>
+            ))}
+            {isComposerOpen && activeDraft ? (
+              <DraftRow
+                draft={activeDraft}
+                canAdd={canSaveDraft}
+                onChange={props.onGoodsDraftChange}
+              />
+            ) : null}
+          </div>
+        </div>
+        <div className="mt-5 border-t border-[#dbe6f3] pt-5">
+          <button
+            type="button"
+            onClick={handleAddItem}
+            className="inline-flex h-[46px] items-center justify-center gap-3 rounded-[14px] border border-dashed border-[#a5b4fc] px-5 text-[12px] font-medium text-[#0f172a] transition duration-150 hover:bg-[#f8faff] active:scale-[0.98] active:bg-[#eef2ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
+          >
+            <PlusIcon />
+            <span>Add Item</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

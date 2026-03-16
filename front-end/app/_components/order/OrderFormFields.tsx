@@ -16,7 +16,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-[12px] text-[#64748b]">{label}</span>
+      <span className="mb-2 block text-[12px] font-semibold">{label}</span>
       {children}
     </label>
   );
@@ -35,7 +35,7 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className={`h-12 w-full rounded-[10px] border border-[#d9e0e8] bg-white px-4 text-sm text-[#111827] outline-none ${props.className ?? ""}`}
+      className={`h-12 w-full rounded-[10px] border border-[#d9e0e8] bg-white px-4 text-sm text-[#62748E] outline-none ${props.className ?? ""}`}
     />
   );
 }

@@ -19,8 +19,8 @@ export function OrderDetailView(props: {
         onBack={props.onBack}
         action={
           <div className="flex items-center gap-3">
-            <button type="button" className="inline-flex h-11 items-center justify-center rounded-[10px] border border-[#d9e0e8] bg-[#f8fafc] px-4 text-sm font-medium text-[#111827]">Download PDF</button>
-            <button type="button" onClick={props.onCreateNote} className="inline-flex h-11 w-11 items-center justify-center rounded-[10px] border border-[#d9e0e8] bg-white text-[#111827]">+</button>
+            <button type="button" className="inline-flex h-11 items-center justify-center rounded-[10px] border border-[#d9e0e8] bg-[#f8fafc] px-4 text-sm font-medium text-[#111827] transition duration-150 hover:bg-white active:scale-[0.98] active:bg-[#eef2f7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2">Download PDF</button>
+            <button type="button" onClick={props.onCreateNote} className="inline-flex h-11 w-11 items-center justify-center rounded-[10px] border border-[#d9e0e8] bg-white text-[#111827] transition duration-150 hover:bg-[#f8fafc] active:scale-[0.98] active:bg-[#eef2f7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2">+</button>
           </div>
         }
       />

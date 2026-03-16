@@ -15,8 +15,12 @@ export function OrderHistoryView(props: {
   onOpenDetail: (orderId: string) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [isNotificationOpen, setNotificationOpen] = useState(false);
-  const visibleOrders = useMemo(() => filterOrdersByQuery(props.orders, searchQuery), [props.orders, searchQuery]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const visibleOrders = useMemo(
+    () => filterOrdersByDateRange(filterOrdersByQuery(props.orders, searchQuery), startDate, endDate),
+    [endDate, props.orders, searchQuery, startDate],
+  );
   const counts = useMemo(() => buildCounts(props.allOrders), [props.allOrders]);
 
   return (
@@ -25,13 +29,16 @@ export function OrderHistoryView(props: {
         counts={counts}
         selectedFilter={props.selectedFilter}
         searchQuery={searchQuery}
-        isNotificationOpen={isNotificationOpen}
+        startDate={startDate}
+        endDate={endDate}
         onFilterChange={props.onFilterChange}
         onSearchChange={setSearchQuery}
+        onDateRangeChange={(nextStartDate, nextEndDate) => {
+          setStartDate(nextStartDate);
+          setEndDate(nextEndDate);
+        }}
         onOpenCreate={props.onOpenCreate}
         onOpenDetail={props.onOpenDetail}
-        onToggleNotifications={() => setNotificationOpen((current) => !current)}
-        onCloseNotifications={() => setNotificationOpen(false)}
       />
       <div className="px-9 pb-9">
         <OrderHistoryTable orders={visibleOrders} onOpenDetail={props.onOpenDetail} />
@@ -49,6 +56,19 @@ function filterOrdersByQuery(orders: StoredOrder[], searchQuery: string) {
       .toLowerCase()
       .includes(query),
   );
+}
+
+function filterOrdersByDateRange(
+  orders: StoredOrder[],
+  startDate: string,
+  endDate: string,
+) {
+  if (!startDate && !endDate) return orders;
+  return orders.filter((order) => {
+    if (startDate && order.requestDate < startDate) return false;
+    if (endDate && order.requestDate > endDate) return false;
+    return true;
+  });
 }
 
 function buildCounts(orders: StoredOrder[]) {

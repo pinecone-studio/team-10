@@ -36,11 +36,11 @@ export function RoleSidebar({
       <div className="mx-[12px] flex items-start gap-[12px] border-b border-white/10 pb-[20px]">
         <div className="mt-[1px] flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-white text-black">
           <Image
-            src="/file.svg"
+            src="/box.svg"
             alt=""
             width={18}
             height={18}
-            className="h-[18px] w-[18px] shrink-0 brightness-0"
+            className="h-[16px] w-[16px] shrink-0"
           />
         </div>
         <div>
