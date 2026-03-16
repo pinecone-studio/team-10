@@ -17,7 +17,7 @@ export function RoleWorkspace({ role, roleLabel, section }: { role: AppRole; rol
   if (role === "finance" && section === "order") return <FinanceApprovalSection />;
   if ((role === "inventoryHead" || role === "systemAdmin") && section === "receive") return <InventoryReceiveSection />;
   if (role === "inventoryHead" && section === "storage") return <InventoryStorageSection />;
-  if (role === "hrManager" && section === "distribution") return <HRDistributionSection />;
+  if ((role === "hrManager" || role === "systemAdmin") && section === "distribution") return <HRDistributionSection />;
   if (role === "employee" && section === "distribution") return <EmployeeAssetsSection />;
   if (role === "systemAdmin") return <PlaceholderSection title="System admin overview" subtitle="Unified operational snapshot for the asset lifecycle." description={`Current section: ${section.toUpperCase()}`} />;
   if (role === "itAdmin") return <PlaceholderSection title="IT Admin workspace" subtitle="Receiving, maintenance, and disposal support." description="This role stays as a placeholder while the inventory-to-HR flow is being extended." />;
