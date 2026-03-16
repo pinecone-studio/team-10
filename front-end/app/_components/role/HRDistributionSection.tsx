@@ -14,6 +14,7 @@ import {
   WorkspaceShell,
 } from "../shared/WorkspacePrimitives";
 import DistributionHeader from "../distribution/DistributionHeader";
+import DistributionDashboard from "../distribution/DistributionDashboard";
 
 const assignees = [
   { name: "Bat-Erdene", role: "Employee" },
@@ -38,7 +39,12 @@ export function HRDistributionSection() {
   );
 
   if (!selectedOrder) {
-    return <DistributionHeader />;
+    return (
+      <div className="w-full">
+        <DistributionHeader />
+        <DistributionDashboard />
+      </div>
+    );
   }
 
   return (
