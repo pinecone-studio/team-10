@@ -101,7 +101,7 @@ export function OrderHistoryTable(props: {
               key={order.id}
               type="button"
               onClick={() => props.onOpenDetail(order.id)}
-              className="grid w-full grid-cols-[0.9fr_1.5fr_1.2fr_1fr_1fr_1fr] items-center rounded-[12px] border border-[#e5e7eb] bg-white px-5 py-4 text-left transition hover:border-[#cbd5e1] hover:shadow-[0_8px_24px_rgba(15,23,42,0.05)]"
+              className="grid w-full grid-cols-[0.9fr_1.5fr_1.2fr_1fr_1fr_1fr] items-center rounded-[12px] border border-[#e5e7eb] bg-white px-5 py-4 text-left transition duration-150 hover:border-[#cbd5e1] hover:shadow-[0_8px_24px_rgba(15,23,42,0.05)] active:scale-[0.995] active:bg-[#f8fafc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
             >
               <span className="text-[14px] font-medium text-[#2563eb]">
                 #{order.requestNumber.slice(-6)}

@@ -18,13 +18,17 @@ export type OrderCreateViewProps = {
     key: Key,
     value: DraftOrder[Key],
   ) => void;
+  onGoodsDraftChange: <Key extends keyof GoodsDraft>(
+    draftId: string,
+    key: Key,
+    value: GoodsDraft[Key],
+  ) => void;
   onPermissionMessageChange: (value: string) => void;
-  onQuantityChange: (draftId: string, value: string) => void;
-  onSelectCatalogProduct: (draftId: string, productId: string) => void;
   onAddItem: (draftId: string) => void;
   onAddDraftRow: () => void;
   onRemoveDraftRow: (draftId: string) => void;
   onUpdateItemQuantity: (index: number, value: string) => void;
   onRemoveItem: (index: number) => void;
+  onOpenDetail: (orderId: string) => void;
   onSubmit: () => void;
 };

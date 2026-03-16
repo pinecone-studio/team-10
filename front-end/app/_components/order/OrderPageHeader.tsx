@@ -40,7 +40,7 @@ export function OrderPageHeader({ title, backLabel, onBack, action }: Props) {
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex items-center gap-2 text-sm text-[#111827]"
+            className="inline-flex items-center gap-2 rounded-[8px] px-2 py-1 text-sm text-[#111827] transition duration-150 hover:bg-[#f8fafc] active:scale-[0.98] active:bg-[#eef2f7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
           >
             <BackIcon />
             <span>{backLabel}</span>
