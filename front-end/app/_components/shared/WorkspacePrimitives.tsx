@@ -22,7 +22,7 @@ export function WorkspaceShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex-1 bg-[#efefef] px-[20px] py-[32px]">
+    <div className="flex-1 bg-white px-[20px] py-[32px]">
       <div
         className={`flex h-full w-full flex-col gap-[18px] ${contentAlignment === "left" ? "mr-auto ml-0" : "mx-auto"} ${contentWidthClassName} ${contentPaddingClassName}`}
       >
