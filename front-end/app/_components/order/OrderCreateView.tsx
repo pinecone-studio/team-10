@@ -10,7 +10,7 @@ import type { OrderCreateViewProps } from "./OrderCreateView.types";
 
 export function OrderCreateView(props: OrderCreateViewProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-[22px]">
       <OrderPageHeader
         title="Inventory Order Request System"
         backLabel="Back to Order History"
@@ -18,8 +18,8 @@ export function OrderCreateView(props: OrderCreateViewProps) {
         action={<OrderNotificationButton onOpenDetail={props.onOpenDetail} />}
       />
       <OrderCreateStepper />
-      <div className="px-9 pb-9 pt-8">
-        <div className="grid gap-6 xl:grid-cols-[1.9fr_0.85fr]">
+      <div className="px-[24px] pb-[34px] pt-0 lg:px-[44px]">
+        <div className="grid items-start gap-[22px] xl:grid-cols-[minmax(0,753px)_333px]">
           <div className="space-y-6">
             <OrderCreateDetailsCard
               draftOrder={props.draftOrder}
