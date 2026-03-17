@@ -109,7 +109,7 @@ export function OrderHistoryDateRangePicker(props: {
         setDraftStartDate(props.startDate);
         setDraftEndDate(props.endDate);
         setOpen((current) => !current);
-      }} className="inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-[#d9e0e8] bg-white px-4 text-[14px] text-[#111827] transition duration-150 hover:bg-[#f8fafc] active:scale-[0.98] active:bg-[#eef2f7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2">
+      }} className="inline-flex h-9 cursor-pointer items-center justify-center gap-[6px] rounded-[6px] border border-[#e3e4e8] bg-white px-3 text-[14px] text-black transition duration-150 hover:bg-[#f8fafc] active:scale-[0.98] active:bg-[#eef2f7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2">
         <CalendarIcon />
         <span>{label}</span>
       </button>

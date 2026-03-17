@@ -36,7 +36,7 @@ export function OrderNotificationButton(props: {
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="relative inline-flex h-12 w-12 cursor-pointer items-center justify-center rounded-[10px] border border-[#d9e0e8] bg-white transition duration-150 hover:bg-[#f8fafc] active:scale-[0.98] active:bg-[#eef2f7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
+        className="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-[6px] border border-[#e2e8f0] bg-white transition duration-150 hover:bg-[#f8fafc] active:scale-[0.98] active:bg-[#eef2f7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
       >
         <NotificationIcon />
       </button>

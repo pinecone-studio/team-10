@@ -2,16 +2,15 @@
 
 import { departmentOptions } from "../../_lib/order-catalog";
 import type { OrderCreateViewProps } from "./OrderCreateView.types";
-import { CalendarIcon, CheckCircleIcon, ChevronDownIcon } from "./OrderCreateIcons";
+import { CalendarIcon, ChevronDownIcon } from "./OrderCreateIcons";
 import { Field, Input, Select } from "./OrderFormFields";
 import { formatLongRequestDate } from "./orderCreateUtils";
 
 function ReadonlyField({ label, value }: { label: string; value: string }) {
   return (
     <Field label={label}>
-      <div className="flex h-12 items-center justify-between rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4">
-        <span className="text-[14px] text-[#0f172a]">{value}</span>
-        <CheckCircleIcon />
+      <div className="flex h-9 items-center rounded-[6px] border border-[#e2e8f0] bg-white px-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+        <span className="text-[14px] text-[#020618]">{value}</span>
       </div>
     </Field>
   );
@@ -19,11 +18,11 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
 
 export function OrderCreateDetailsCard(props: Pick<OrderCreateViewProps, "draftOrder" | "onOrderChange">) {
   return (
-    <section className="rounded-[20px] border border-[#d9e0e8] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-      <div className="border-b border-[#e8eef5] px-7 py-6">
-        <h3 className="text-[18px] font-semibold text-[#0f172a]">Order Details</h3>
+    <section className="rounded-[12px] border border-[#e2e8f0] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]">
+      <div className="border-b border-[#e2e8f0] bg-[rgba(241,245,249,0.3)] px-6 py-4">
+        <h3 className="text-[16px] font-semibold leading-6 text-[#020618]">Order Details</h3>
       </div>
-      <div className="grid gap-x-14 gap-y-6 px-7 py-7 md:grid-cols-2">
+      <div className="grid gap-x-[52px] gap-y-5 px-6 py-6 md:grid-cols-2">
         <ReadonlyField label="Request ID" value={props.draftOrder.requestNumber} />
         <ReadonlyField label="Request Date" value={formatLongRequestDate(props.draftOrder.requestDate)} />
         <Field label="Department">
@@ -34,7 +33,7 @@ export function OrderCreateDetailsCard(props: Pick<OrderCreateViewProps, "draftO
                 props.onOrderChange("department", event.target.value);
                 props.onOrderChange("requestedApproverId", "");
               }}
-              className="appearance-none pr-10 text-[14px] text-[#64748b]"
+              className="appearance-none pr-10"
             >
               {departmentOptions.map((department) => (
                 <option key={department} value={department}>
@@ -53,7 +52,7 @@ export function OrderCreateDetailsCard(props: Pick<OrderCreateViewProps, "draftO
               value={props.draftOrder.deliveryDate}
               onChange={(event) => props.onOrderChange("deliveryDate", event.target.value)}
               type="date"
-              className="pl-11 text-[14px] text-[#64748b]"
+              className="pl-11 text-[#62748e]"
             />
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
               <CalendarIcon />

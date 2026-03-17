@@ -24,7 +24,7 @@ export function OrderHistoryView(props: {
   const counts = useMemo(() => buildCounts(props.allOrders), [props.allOrders]);
 
   return (
-    <div className="space-y-5 px-0 pb-0">
+    <div className="min-h-[calc(100vh-60px)] space-y-0 bg-[#f8fafc]">
       <OrderHistoryToolbar
         counts={counts}
         selectedFilter={props.selectedFilter}
@@ -40,8 +40,10 @@ export function OrderHistoryView(props: {
         onOpenCreate={props.onOpenCreate}
         onOpenDetail={props.onOpenDetail}
       />
-      <div className="px-9 pb-9">
-        <OrderHistoryTable orders={visibleOrders} onOpenDetail={props.onOpenDetail} />
+      <div className="px-0 pb-[40px] pt-6">
+        <div className="mx-auto w-full max-w-[1237px] px-[24px] lg:px-[44px]">
+          <OrderHistoryTable orders={visibleOrders} onOpenDetail={props.onOpenDetail} />
+        </div>
       </div>
     </div>
   );

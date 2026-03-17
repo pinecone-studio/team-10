@@ -11,6 +11,7 @@ export function WorkspaceShell({
   contentWidthClassName = "max-w-[1137px]",
   contentPaddingClassName = "",
   outerClassName = "px-[20px] py-[32px]",
+  backgroundClassName = "bg-white",
   children,
 }: {
   title: string;
@@ -21,10 +22,11 @@ export function WorkspaceShell({
   contentWidthClassName?: string;
   contentPaddingClassName?: string;
   outerClassName?: string;
+  backgroundClassName?: string;
   children: ReactNode;
 }) {
   return (
-    <div className={`flex-1 bg-white ${outerClassName}`}>
+    <div className={`flex-1 ${backgroundClassName} ${outerClassName}`}>
       <div
         className={`flex h-full w-full flex-col gap-[18px] ${contentAlignment === "left" ? "mr-auto ml-0" : "mx-auto"} ${contentWidthClassName} ${contentPaddingClassName}`}
       >

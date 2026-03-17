@@ -20,8 +20,9 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
       hideHeader
       contentAlignment="left"
       contentWidthClassName="max-w-none"
-      outerClassName="px-[20px] py-0"
-      contentPaddingClassName="pt-[60px] pl-[20px] pr-[50px] lg:pl-[40px]"
+      outerClassName="px-0 py-0"
+      contentPaddingClassName=""
+      backgroundClassName="bg-[#f8fafc]"
     >
       {state.stage === "history" ? (
         <OrderHistoryView
