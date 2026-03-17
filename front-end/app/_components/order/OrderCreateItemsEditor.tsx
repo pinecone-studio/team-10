@@ -4,8 +4,12 @@ import type { ComponentProps } from "react";
 import { useMemo, useState } from "react";
 import { formatCurrency } from "../../_lib/order-store";
 import type { OrderCreateViewProps } from "./OrderCreateView.types";
-import { ItemCubeIcon, PlusIcon } from "./OrderCreateIcons";
+import { PlusIcon } from "./OrderCreateIcons";
 import { Input } from "./OrderFormFields";
+
+const ITEM_GRID_CLASS =
+  "grid-cols-[minmax(0,1.65fr)_92px_72px_96px_96px]";
+const HEADER_CELL_CLASS = "flex items-center px-[10px] py-3";
 
 function ItemCell(props: ComponentProps<"div">) {
   return (
@@ -28,25 +32,20 @@ function DraftRow(props: {
   }, [props.draft]);
 
   return (
-    <div className="grid grid-cols-[48px_minmax(166px,1.4fr)_128px_77px_117px_57px_100px] items-center gap-[6px] border-b border-[#e2e8f0] px-0 py-2">
-      <span className="inline-flex h-8 w-8 items-center justify-center rounded-[4px] border border-white bg-[#f8fafc]">
-        <ItemCubeIcon />
-      </span>
+    <div className={`grid ${ITEM_GRID_CLASS} items-center gap-[8px] border-b border-[#e2e8f0] px-0 py-2`}>
       <Input
         value={props.draft.itemName}
         onChange={(event) =>
           props.onChange(props.draft.id, "itemName", event.target.value)
         }
         placeholder="Item name"
-        className="h-8 rounded-[6px] border-transparent px-[13px] text-[12px]"
+        className="h-8 min-w-0 rounded-[6px] border border-transparent bg-white px-[10px] text-[12px] text-[#0f172a] placeholder:text-[#94a3b8]"
       />
       <Input
         value={props.draft.code}
-        onChange={(event) =>
-          props.onChange(props.draft.id, "code", event.target.value)
-        }
-        placeholder="Code"
-        className="h-8 rounded-[6px] border-transparent px-[13px] text-[12px]"
+        readOnly
+        aria-label="Generated code"
+        className="h-8 min-w-0 rounded-[6px] border border-transparent bg-[#f8fafc] px-[10px] text-[12px] font-medium text-[#0f172a]"
       />
       <Input
         value={props.draft.quantity}
@@ -55,15 +54,7 @@ function DraftRow(props: {
         }
         type="number"
         min="0"
-        className="h-8 rounded-[6px] border-transparent px-[13px] text-[12px]"
-      />
-      <Input
-        value={props.draft.unit}
-        onChange={(event) =>
-          props.onChange(props.draft.id, "unit", event.target.value)
-        }
-        placeholder="Unit"
-        className="h-8 rounded-[6px] border-transparent px-[13px] text-[12px]"
+        className="h-8 min-w-0 rounded-[6px] border border-transparent bg-white px-[10px] text-center text-[12px] text-[#0f172a]"
       />
       <Input
         value={props.draft.unitPrice}
@@ -73,10 +64,10 @@ function DraftRow(props: {
         type="number"
         min="0"
         placeholder="0"
-        className="h-8 rounded-[6px] border-transparent px-[13px] text-[12px]"
+        className="h-8 min-w-0 rounded-[6px] border border-transparent bg-white px-[10px] text-[12px] text-[#0f172a]"
       />
       <ItemCell
-        className={`justify-end px-4 font-medium ${props.canAdd ? "" : "text-[#94a3b8]"}`}
+        className={`justify-end px-[10px] font-medium ${props.canAdd ? "text-[#0f172a]" : "text-[#94a3b8]"}`}
       >
         {total}
       </ItemCell>
@@ -116,27 +107,23 @@ export function OrderCreateItemsEditor(
         <h3 className="text-[16px] font-semibold leading-6 text-[#020618]">Order Items</h3>
       </div>
       <div className="px-6 py-6">
-        <div className="overflow-x-auto border-b border-[#dbeafe]">
-          <div className="min-w-[695px]">
-            <div className="grid grid-cols-[214px_128px_77px_117px_57px_100px] border-b border-[#dbeafe] bg-[#eff6ff] px-0 py-0 text-[12px] font-medium text-[#64748b]">
-              <span className="px-2 py-3">Item Name</span>
-              <span className="px-2 py-3">Code</span>
-              <span className="px-2 py-3 text-center">Qty</span>
-              <span className="px-2 py-3">Unit</span>
-              <span className="px-2 py-3 text-right">Price</span>
-              <span className="px-2 py-3 text-right">Total</span>
+        <div className="border-b border-[#dbeafe]">
+          <div className="w-full">
+            <div className={`grid ${ITEM_GRID_CLASS} items-center border-b border-[#dbeafe] bg-[#eff6ff] px-0 py-0 text-[12px] font-medium text-[#64748b]`}>
+              <span className={HEADER_CELL_CLASS}>Item Name</span>
+              <span className={`${HEADER_CELL_CLASS} justify-center`}>Code</span>
+              <span className={`${HEADER_CELL_CLASS} justify-center`}>Qty</span>
+              <span className={`${HEADER_CELL_CLASS} justify-end`}>Price</span>
+              <span className={`${HEADER_CELL_CLASS} justify-end`}>Total</span>
             </div>
             <div>
               {props.draftItems.map((item, index) => (
                 <div
                   key={`${item.catalogId}-${index}`}
-                  className="grid grid-cols-[48px_166px_128px_77px_117px_57px_100px] items-center gap-[6px] border-b border-[#e2e8f0] py-2"
+                  className={`grid ${ITEM_GRID_CLASS} items-center gap-[8px] border-b border-[#e2e8f0] py-2`}
                 >
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-[4px] border border-white bg-[#f8fafc]">
-                    <ItemCubeIcon />
-                  </span>
-                  <ItemCell>{item.name}</ItemCell>
-                  <ItemCell>{item.code}</ItemCell>
+                  <ItemCell className="min-w-0 truncate">{item.name}</ItemCell>
+                  <ItemCell className="min-w-0 justify-center bg-[#f8fafc] px-[10px] font-medium">{item.code}</ItemCell>
                   <Input
                     value={String(item.quantity)}
                     onChange={(event) =>
@@ -144,11 +131,12 @@ export function OrderCreateItemsEditor(
                     }
                     type="number"
                     min="0"
-                    className="h-8 rounded-[6px] border-transparent px-[13px] text-[12px]"
+                    className="h-8 min-w-0 rounded-[6px] border-transparent px-[10px] text-center text-[12px]"
                   />
-                  <ItemCell>{item.unit}</ItemCell>
-                  <ItemCell>{String(item.unitPrice)}</ItemCell>
-                  <ItemCell className="justify-end px-px font-medium">
+                  <ItemCell className="min-w-0 justify-end px-[10px]">
+                    {String(item.unitPrice)}
+                  </ItemCell>
+                  <ItemCell className="min-w-0 justify-end px-[10px] font-medium">
                     {formatCurrency(item.totalPrice, item.currencyCode)}
                   </ItemCell>
                 </div>
