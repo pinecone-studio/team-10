@@ -71,8 +71,8 @@ export function ReceiveSection() {
     return (
       <WorkspaceShell
         title="Receive and serialize"
-        subtitle="QR / Barcode Generation"
-        contentAlignment="left"
+        subtitle="Each item is recorded, verified, and serialized."
+        contentAlignment="center"
         contentWidthClassName="max-w-[1138px]"
         outerClassName="px-[34px] py-[28px]"
       >
@@ -89,8 +89,8 @@ export function ReceiveSection() {
   return (
     <WorkspaceShell
       title="Receive and serialize"
-      subtitle="QR / Barcode Generation"
-      contentAlignment="left"
+      subtitle="Each item is recorded, verified, and serialized."
+      contentAlignment="center"
       contentWidthClassName="max-w-[1138px]"
       outerClassName="px-[34px] py-[28px]"
     >
@@ -162,7 +162,7 @@ export function ReceiveSection() {
 
               setSelectedRowIds([]);
             }}
-            className="inline-flex h-[36px] items-center gap-[10px] rounded-[8px] bg-[#101828] px-[18px] text-[14px] font-medium text-white disabled:opacity-40"
+            className="inline-flex h-[40px] items-center gap-[10px] rounded-[8px] bg-[#101828] px-[16px] text-[16px] font-medium text-white shadow-[0_1px_2px_rgba(16,24,40,0.05)] disabled:opacity-40"
           >
             <span>Submit for approval</span>
             <span aria-hidden="true">›</span>

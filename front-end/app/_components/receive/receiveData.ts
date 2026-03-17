@@ -5,9 +5,9 @@ import type { ReceiveCondition, ReceiveRow } from "./receiveTypes";
 
 const RECEIVED_CONDITIONS: ReceiveCondition[] = [
   "good",
-  "minorDamage",
   "damaged",
   "defective",
+  "missing",
 ];
 
 export const ROWS_PER_PAGE_OPTIONS = [10, 20, 30] as const;
@@ -56,7 +56,7 @@ export function getReceivedCount(order: StoredOrder, quantity: number, itemIndex
 }
 
 function inferCondition(order: StoredOrder, itemIndex: number): ReceiveCondition {
-  if (order.status === "approved_finance") return "new";
+  if (order.status === "approved_finance") return "good";
 
   return RECEIVED_CONDITIONS[(order.id.length + itemIndex) % RECEIVED_CONDITIONS.length]!;
 }

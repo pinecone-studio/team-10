@@ -1,11 +1,10 @@
 "use client";
 
 export type ReceiveCondition =
-  | "new"
   | "good"
-  | "minorDamage"
   | "damaged"
-  | "defective";
+  | "defective"
+  | "missing";
 
 export type ReceiveRow = {
   id: string;
