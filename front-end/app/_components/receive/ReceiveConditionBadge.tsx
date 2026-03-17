@@ -6,30 +6,25 @@ const CONDITION_STYLES: Record<
   ReceiveCondition,
   { label: string; textClassName: string; iconClassName: string }
 > = {
-  new: {
-    label: "New",
-    textClassName: "text-[#334155]",
-    iconClassName: "text-[#111111]",
-  },
   good: {
     label: "Good",
-    textClassName: "text-[#6f6f6f]",
+    textClassName: "text-[#667085]",
     iconClassName: "text-[#84cc16]",
-  },
-  minorDamage: {
-    label: "Partial",
-    textClassName: "text-[#6f6f6f]",
-    iconClassName: "text-[#f97316]",
   },
   damaged: {
     label: "Damaged",
-    textClassName: "text-[#6f6f6f]",
-    iconClassName: "text-[#ef4444]",
+    textClassName: "text-[#667085]",
+    iconClassName: "text-[#f97316]",
   },
   defective: {
     label: "Defective",
-    textClassName: "text-[#6f6f6f]",
-    iconClassName: "text-[#111111]",
+    textClassName: "text-[#667085]",
+    iconClassName: "text-[#ef4444]",
+  },
+  missing: {
+    label: "Missing",
+    textClassName: "text-[#667085]",
+    iconClassName: "text-[#98a2b3]",
   },
 };
 
@@ -45,7 +40,7 @@ export function ReceiveConditionBadge({ condition }: { condition: ReceiveConditi
 
   return (
     <span
-      className={`inline-flex h-[28px] items-center gap-[6px] rounded-[14px] border border-[#dddddd] bg-white px-[10px] text-[12px] leading-none ${config.textClassName}`}
+      className={`inline-flex h-[22px] items-center gap-[4px] rounded-[999px] border border-[#d0d5dd] bg-white px-[8px] text-[12px] leading-none ${config.textClassName}`}
     >
       <span className={config.iconClassName} aria-hidden="true">
         <ConditionIcon condition={condition} />
@@ -58,38 +53,11 @@ export function ReceiveConditionBadge({ condition }: { condition: ReceiveConditi
 function ConditionIcon({ condition }: { condition: ReceiveCondition }) {
   if (condition === "good") {
     return (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
         <path
           d="M7 1.4L8.627 4.698L12.267 5.227L9.633 7.793L10.255 11.418L7 9.707L3.745 11.418L4.367 7.793L1.733 5.227L5.373 4.698L7 1.4Z"
           stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
-  if (condition === "minorDamage") {
-    return (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-        <path
-          d="M7 1.4L8.627 4.698L12.267 5.227L9.633 7.793L10.255 11.418L7 9.707L3.745 11.418L4.367 7.793L1.733 5.227L5.373 4.698L7 1.4Z"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M7 12.4V4.9"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <path
-          d="M5.2 6.7L7 4.9L8.8 6.7"
-          stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="1.7"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -99,25 +67,26 @@ function ConditionIcon({ condition }: { condition: ReceiveCondition }) {
 
   if (condition === "damaged") {
     return (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
         <path
           d="M7 1.4L8.627 4.698L12.267 5.227L9.633 7.793L10.255 11.418L7 9.707L3.745 11.418L4.367 7.793L1.733 5.227L5.373 4.698L7 1.4Z"
           stroke="currentColor"
-          strokeWidth="1.6"
+          strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         <path
-          d="M4.2 4.2L9.8 9.8"
+          d="M7 11.6V6.1"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="1.5"
           strokeLinecap="round"
         />
         <path
-          d="M9.8 4.2L4.2 9.8"
+          d="M5.5 7.4L7 5.9L8.5 7.4"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="1.5"
           strokeLinecap="round"
+          strokeLinejoin="round"
         />
       </svg>
     );
@@ -125,26 +94,18 @@ function ConditionIcon({ condition }: { condition: ReceiveCondition }) {
 
   if (condition === "defective") {
     return (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-        <rect
-          x="1.75"
-          y="1.75"
-          width="10.5"
-          height="10.5"
-          rx="1.3"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.4" />
         <path
-          d="M5 5L9 9"
+          d="M5.2 5.2L8.8 8.8"
           stroke="currentColor"
-          strokeWidth="1.5"
+          strokeWidth="1.4"
           strokeLinecap="round"
         />
         <path
-          d="M9 5L5 9"
+          d="M8.8 5.2L5.2 8.8"
           stroke="currentColor"
-          strokeWidth="1.5"
+          strokeWidth="1.4"
           strokeLinecap="round"
         />
       </svg>
@@ -152,17 +113,26 @@ function ConditionIcon({ condition }: { condition: ReceiveCondition }) {
   }
 
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
       <path
-        d="M7.5 1.3L8.815 5.155L12.7 6.5L8.815 7.845L7.5 11.7L6.185 7.845L2.3 6.5L6.185 5.155L7.5 1.3Z"
+        d="M4.4 4.4L9.6 9.6"
         stroke="currentColor"
-        strokeWidth="1.7"
+        strokeWidth="1.4"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
       <path
-        d="M11.45 1.55L11.865 2.735L13.05 3.15L11.865 3.565L11.45 4.75L11.035 3.565L9.85 3.15L11.035 2.735L11.45 1.55Z"
-        fill="currentColor"
+        d="M9.6 4.4L4.4 9.6"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M3.1 2.8H10.9V11.2H3.1V2.8Z"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray="1.8 1.8"
       />
     </svg>
   );
