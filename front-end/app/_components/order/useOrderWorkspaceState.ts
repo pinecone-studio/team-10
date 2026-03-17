@@ -8,6 +8,7 @@ import {
   DEFAULT_ORDER_REQUESTER,
   createDraftOrder,
   createGoodsDraft,
+  generateFourDigitItemCode,
   getOffsetDateInputValue,
 } from "./orderDraftState";
 import {
@@ -29,12 +30,20 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
   const [draftItems, setDraftItems] = useState<OrderItem[]>([]);
   const [permissionMessage, setPermissionMessage] = useState("");
 
+  function getNextGoodsCode(extraCodes: string[] = []) {
+    return generateFourDigitItemCode([
+      ...orders.map((order) => order.items.map((item) => item.code)).flat(),
+      ...draftItems.map((item) => item.code),
+      ...goodsDrafts.map((draft) => draft.code),
+      ...extraCodes,
+    ]);
+  }
+
   const selectedOrder = orders.find((order) => order.id === selectedOrderId) ?? null;
   const canAddItems = goodsDrafts.map((goodsDraft) =>
     Boolean(
       goodsDraft.itemName.trim() &&
         goodsDraft.code.trim() &&
-        goodsDraft.unit.trim() &&
         Number(goodsDraft.quantity) > 0 &&
         Number(goodsDraft.unitPrice) > 0,
     ),
@@ -53,7 +62,7 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
   const filteredOrders = useMemo(() => filterOrders(orders, selectedFilter), [orders, selectedFilter]);
   function resetDraft() {
     setDraftOrder(createDraftOrder());
-    setGoodsDrafts([createGoodsDraft()]);
+    setGoodsDrafts([createGoodsDraft(getNextGoodsCode())]);
     setDraftItems([]);
     setPermissionMessage("");
   }
@@ -90,13 +99,17 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
         goodsDraft.id,
         goodsDraft.itemName.trim(),
         goodsDraft.code.trim(),
-        goodsDraft.unit.trim(),
+        goodsDraft.unit.trim() || "pcs",
         Number(goodsDraft.quantity),
         Number(goodsDraft.unitPrice),
         goodsDraft.currencyCode,
       ),
     ]);
-    setGoodsDrafts((current) => current.map((draft) => (draft.id === draftId ? createGoodsDraft() : draft)));
+    setGoodsDrafts((current) =>
+      current.map((draft) =>
+        draft.id === draftId ? createGoodsDraft(getNextGoodsCode([goodsDraft.code])) : draft,
+      ),
+    );
   }
 
   return {
@@ -121,7 +134,11 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
     setPermissionMessage,
     updateGoodsDraftField,
     addDraftItem,
-    addDraftRow: () => setGoodsDrafts((current) => [...current, createGoodsDraft()]),
+    addDraftRow: () =>
+      setGoodsDrafts((current) => [
+        ...current,
+        createGoodsDraft(getNextGoodsCode()),
+      ]),
     removeDraftRow: (draftId: string) => setGoodsDrafts((current) => current.length > 1 ? current.filter((draft) => draft.id !== draftId) : current),
     updateItemQuantity: (index: number, value: string) => {
       const nextQuantity = Math.max(0, Number(value));
@@ -137,7 +154,7 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
         requestedApproverId: getDefaultHigherUpApproverId("IT Office"),
       });
       setDraftItems(await buildDemoDraftItems());
-      setGoodsDrafts([createGoodsDraft()]);
+      setGoodsDrafts([createGoodsDraft(getNextGoodsCode())]);
     },
     submit: async () => {
       const selectedApprover = getHigherUpApproverById(draftOrder.requestedApproverId);

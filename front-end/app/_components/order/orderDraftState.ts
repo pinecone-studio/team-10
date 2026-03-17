@@ -33,6 +33,22 @@ export type GoodsDraft = {
   currencyCode: CurrencyCode;
 };
 
+export function generateFourDigitItemCode(usedCodes: string[] = []) {
+  const normalizedCodes = new Set(
+    usedCodes
+      .filter((code) => /^\d{4}$/.test(code))
+      .map((code) => Number(code)),
+  );
+
+  for (let code = 1000; code <= 9999; code += 1) {
+    if (!normalizedCodes.has(code)) {
+      return String(code);
+    }
+  }
+
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
 export function createDraftOrder(): DraftOrder {
   return {
     orderName: "",
@@ -46,13 +62,13 @@ export function createDraftOrder(): DraftOrder {
   };
 }
 
-export function createGoodsDraft(): GoodsDraft {
+export function createGoodsDraft(code = generateFourDigitItemCode()): GoodsDraft {
   return {
     id: `goods-draft-${Math.random().toString(36).slice(2, 10)}`,
     itemName: "",
-    code: "",
+    code,
     quantity: "1",
-    unit: "",
+    unit: "pcs",
     unitPrice: "",
     currencyCode: "USD",
   };
