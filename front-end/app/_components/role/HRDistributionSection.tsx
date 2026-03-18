@@ -18,6 +18,7 @@ import DistributionDashboard from "../distribution/DistributionDashboard";
 import DistributionSearchFilter from "../distribution/DistributionSearchFilter";
 import DistributionOrder from "../distribution/DistributionOrder";
 import AvailableOrder from "../distribution/AvailableOrder";
+import EmployeeOrder from "../distribution/EmployeeOrder";
 
 const assignees = [
   { name: "Bat-Erdene", role: "Employee" },
@@ -49,6 +50,7 @@ export function HRDistributionSection() {
         <DistributionSearchFilter />
         <DistributionOrder />
         <AvailableOrder />
+        <EmployeeOrder />
       </div>
     );
   }
