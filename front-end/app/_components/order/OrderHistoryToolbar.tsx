@@ -39,9 +39,14 @@ export function OrderHistoryToolbar(props: {
     <>
       <div className="flex items-end justify-between gap-4 bg-white px-[24px] pb-4 pt-[60px] lg:pl-[44px] lg:pr-[60px]">
         <div>
-          <h2 className="text-[24px] font-bold leading-none text-black">
-            Order history
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-[24px] font-bold leading-none text-black">
+              Order history
+            </h2>
+            <span className="inline-flex items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#2563eb]">
+              Updated
+            </span>
+          </div>
           <p className="mt-1 text-[14px] leading-5 text-[#64748b]">
             View and manage all inventory order requests.
           </p>

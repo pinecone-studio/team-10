@@ -1,5 +1,7 @@
 "use client";
 
+import type { CurrencyCode } from "../../_lib/order-types";
+
 export type ReceiveCondition =
   | "good"
   | "damaged"
@@ -19,7 +21,7 @@ export type ReceiveRow = {
   condition: ReceiveCondition;
   quantity: number;
   received: number;
-  currencyCode: "USD" | "MNT" | "EUR";
+  currencyCode: CurrencyCode;
   unitPrice: number;
   purchaseCost: number;
   selectable: boolean;

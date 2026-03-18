@@ -344,19 +344,8 @@ function parseApprovalTarget(
   return approvalTarget as DbApprovalQueue;
 }
 
-function parseCurrencyCode(
-  currencyCode?: string | null,
-  fallback: CurrencyCode = "MNT",
-): CurrencyCode {
-  if (!currencyCode) return fallback;
-
-  if (!currencyCodeValues.includes(currencyCode as CurrencyCode)) {
-    throw new Error(
-      `Currency code must be one of: ${currencyCodeValues.join(", ")}.`,
-    );
-  }
-
-  return currencyCode as CurrencyCode;
+function parseCurrencyCode(): CurrencyCode {
+  return "USD";
 }
 
 function parseReceivedCondition(
@@ -411,7 +400,7 @@ function mapOrderItem(row: OrderItemRow): OrderLineItemRecord {
     quantity: row.quantity,
     unitPrice: row.unitCost,
     totalPrice: row.quantity * row.unitCost,
-    currencyCode: row.currencyCode,
+    currencyCode: "USD",
   };
 }
 
@@ -440,7 +429,7 @@ function mapOrder(
     items,
     totalAmount:
       row.totalCost ?? items.reduce((sum, item) => sum + item.totalPrice, 0),
-    currencyCode: row.currencyCode,
+    currencyCode: "USD",
     status: mapDbStatusToFront(row.status),
     requestedApproverId: row.requestedApproverId,
     requestedApproverName: row.requestedApproverName,
@@ -529,7 +518,6 @@ async function buildOrderItemValues(
   db: AppDb,
   orderId: number,
   item: OrderLineItemInput,
-  fallbackCurrencyCode: CurrencyCode,
 ) {
   const catalogProduct = await getCatalogProductContext(db, item.catalogId);
   const quantity = Number(item.quantity);
@@ -570,10 +558,7 @@ async function buildOrderItemValues(
     catalogProductId: catalogProduct?.id ?? null,
     quantity,
     unitCost: unitPrice,
-    currencyCode: parseCurrencyCode(
-      item.currencyCode,
-      catalogProduct?.defaultCurrencyCode ?? fallbackCurrencyCode,
-    ),
+    currencyCode: parseCurrencyCode(),
     fromWhere: item.fromWhere?.trim() || "catalog",
     additionalNotes: item.additionalNotes?.trim() || null,
     eta: item.eta ?? null,
@@ -584,7 +569,6 @@ async function replaceOrderItems(
   db: AppDb,
   orderId: number,
   items: OrderLineItemInput[],
-  fallbackCurrencyCode: CurrencyCode,
 ) {
   await db.delete(orderItems).where(eq(orderItems.orderId, orderId)).run();
 
@@ -592,9 +576,7 @@ async function replaceOrderItems(
 
   const values = [];
   for (const item of items) {
-    values.push(
-      await buildOrderItemValues(db, orderId, item, fallbackCurrencyCode),
-    );
+    values.push(await buildOrderItemValues(db, orderId, item));
   }
 
   await db.insert(orderItems).values(values).run();
@@ -791,10 +773,7 @@ export async function createOrder(
     requestDate,
     input.requestNumber,
   );
-  const currencyCode = parseCurrencyCode(
-    input.currencyCode,
-    parseCurrencyCode(normalizedItems[0]?.currencyCode, "MNT"),
-  );
+  const currencyCode = parseCurrencyCode();
 
   const [row] = await db
     .insert(orders)
@@ -806,10 +785,7 @@ export async function createOrder(
       userId,
       officeId,
       departmentId,
-      whyOrdered:
-        input.whyOrdered?.trim() ||
-        input.approvalMessage?.trim() ||
-        "Requested from the inventory order workspace.",
+      whyOrdered: input.whyOrdered?.trim() ?? "",
       status: parseOrderStatus(input.status, "pendingHigherUpApproval"),
       approvalTarget: parseApprovalTarget(input.approvalTarget),
       expectedArrivalAt: input.deliveryDate ?? null,
@@ -827,7 +803,7 @@ export async function createOrder(
     })
     .returning({ id: orders.id });
 
-  await replaceOrderItems(db, row.id, normalizedItems, currencyCode);
+  await replaceOrderItems(db, row.id, normalizedItems);
 
   const createdOrder = await getOrderById(db, String(row.id));
   if (!createdOrder) {
@@ -896,10 +872,7 @@ export async function updateOrder(
   }
 
   if (input.whyOrdered !== undefined) {
-    updates.whyOrdered =
-      input.whyOrdered?.trim() ||
-      existingOrder.whyOrdered ||
-      "Requested from the inventory order workspace.";
+    updates.whyOrdered = input.whyOrdered?.trim() ?? "";
   }
 
   if (input.status !== undefined) {
@@ -919,10 +892,7 @@ export async function updateOrder(
   }
 
   if (input.currencyCode !== undefined) {
-    updates.currencyCode = parseCurrencyCode(
-      input.currencyCode,
-      existingOrder.currencyCode,
-    );
+    updates.currencyCode = parseCurrencyCode();
   }
 
   if (input.requestedApproverId !== undefined) {
@@ -1001,16 +971,8 @@ export async function updateOrder(
 
   await db.update(orders).set(updates).where(eq(orders.id, numericId)).run();
 
-  const nextCurrencyCode =
-    updates.currencyCode ?? existingOrder.currencyCode;
-
   if (input.items !== undefined) {
-    await replaceOrderItems(
-      db,
-      numericId,
-      input.items ?? [],
-      nextCurrencyCode,
-    );
+    await replaceOrderItems(db, numericId, input.items ?? []);
   }
 
   const nextDbStatus = updates.status ?? existingOrder.status;

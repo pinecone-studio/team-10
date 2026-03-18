@@ -21,7 +21,7 @@ export function OrderCreateSummarySidebar(
 ) {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const { subtotal, tax, grandTotal } = createTotalRows(props.draftItems);
-  const currencyCode = props.draftItems[0]?.currencyCode ?? "MNT";
+  const currencyCode = props.draftItems[0]?.currencyCode ?? "USD";
 
   return (
     <aside className="rounded-[12px] border border-[#e2e8f0] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]">

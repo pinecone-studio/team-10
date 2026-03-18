@@ -14,6 +14,7 @@ import type {
   ApprovalTarget,
   AssignOrderInput,
   CreateOrderInput,
+  CurrencyCode,
   GoodsCatalogItem,
   OrderItem,
   OrderStatus,
@@ -76,6 +77,14 @@ function migrateLegacyStatus(status: string | undefined): OrderStatus {
   return "pending_higher_up";
 }
 
+function getOrderCurrencyCode(
+  source: Partial<Pick<StoredOrder, "currencyCode" | "items">> | CreateOrderInput,
+): CurrencyCode {
+  const explicitCurrencyCode =
+    "currencyCode" in source ? source.currencyCode : undefined;
+  return explicitCurrencyCode ?? source.items?.[0]?.currencyCode ?? "USD";
+}
+
 function normalizeOrder(order: Partial<StoredOrder>): StoredOrder {
   const normalizedOrderName =
     order.orderName && order.orderName.trim() !== "Order name"
@@ -93,7 +102,7 @@ function normalizeOrder(order: Partial<StoredOrder>): StoredOrder {
     approvalTarget: order.approvalTarget ?? "any_higher_ups",
     items: Array.isArray(order.items) ? order.items : [],
     totalAmount: typeof order.totalAmount === "number" ? order.totalAmount : 0,
-    currencyCode: order.currencyCode ?? order.items?.[0]?.currencyCode ?? "MNT",
+    currencyCode: getOrderCurrencyCode(order),
     status: migrateLegacyStatus(order.status),
     requestedApproverId: order.requestedApproverId ?? null,
     requestedApproverName: order.requestedApproverName ?? null,
@@ -317,7 +326,7 @@ function createLocalOrderFallback(input: CreateOrderInput): StoredOrder {
     approvalTarget: input.approvalTarget,
     items,
     totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
-    currencyCode: input.currencyCode,
+    currencyCode: getOrderCurrencyCode({ items }),
     status: "pending_finance",
     requestedApproverId: input.requestedApproverId ?? null,
     requestedApproverName: input.requestedApproverName ?? null,
@@ -381,7 +390,7 @@ export async function createOrder(input: CreateOrderInput) {
     const nextOrder = preserveKnownItems(await createOrderRequest(input), {
       items: input.items,
       totalAmount: input.items.reduce((sum, item) => sum + item.totalPrice, 0),
-      currencyCode: input.currencyCode,
+      currencyCode: getOrderCurrencyCode(input),
     });
     return upsertOrderSnapshot(nextOrder);
   } catch (error) {

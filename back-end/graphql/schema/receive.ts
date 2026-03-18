@@ -19,6 +19,12 @@ export const ReceiveTypeDefs = `
   type Receive {
     id: ID!
     orderId: ID!
+    orderItemId: ID!
+    quantityReceived: Int!
+    conditionStatus: String!
+    receivedCondition: String
+    storageLocation: String
+    serialNumbers: [String!]!
     receivedByUserId: ID!
     officeId: ID!
     status: String!
@@ -46,21 +52,27 @@ export const ReceiveTypeDefs = `
       officeId: ID
     ): ReceiveOrderItemPayload!
     createReceive(
-      orderId: ID
-      receivedByUserId: ID
-      officeId: ID
-      status: String!
+      orderId: ID!
+      orderItemId: ID!
+      quantityReceived: Int!
+      conditionStatus: String!
       receivedAt: String
+      receivedCondition: String
       note: String
+      storageLocation: String
+      serialNumbers: [String!]
     ): Receive!
     updateReceive(
       id: ID!
       orderId: ID
-      receivedByUserId: ID
-      officeId: ID
-      status: String
+      orderItemId: ID
+      quantityReceived: Int
+      conditionStatus: String
       receivedAt: String
+      receivedCondition: String
       note: String
+      storageLocation: String
+      serialNumbers: [String!]
     ): Receive
     deleteReceive(id: ID!): Boolean!
   }

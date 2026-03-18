@@ -8,20 +8,18 @@ export const currencyOptions: Array<{
   symbol: string;
 }> = [
   { code: "USD", label: "US Dollar", symbol: "$" },
-  { code: "MNT", label: "MN Tugrug", symbol: "\u20AE" },
-  { code: "EUR", label: "Euro", symbol: "\u20AC" },
 ];
 
 export function getCurrencySymbol(currencyCode: CurrencyCode) {
   return (
     currencyOptions.find((option) => option.code === currencyCode)?.symbol ??
-    "\u20AE"
+    "$"
   );
 }
 
 export function formatCurrency(
   value: number,
-  currencyCode: CurrencyCode = "MNT",
+  currencyCode: CurrencyCode = "USD",
 ) {
   const safeValue = Number.isFinite(value) ? value : 0;
   return `${getCurrencySymbol(currencyCode)}${new Intl.NumberFormat("en-US").format(safeValue)}`;
