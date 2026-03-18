@@ -94,6 +94,7 @@ export type StoredOrder = {
   receivedNote: string;
   storageLocation: string;
   serialNumbers: string[];
+  assetIds: string[];
   assignedTo: string | null;
   assignedRole: string | null;
   assignedAt: string | null;
@@ -124,11 +125,15 @@ export type CreateOrderInput = {
 
 export type ReceiveOrderInput = {
   orderId: string;
+  catalogId: string;
+  itemCode: string;
+  quantityReceived: number;
   receivedAt: string;
   receivedCondition: ReceivedCondition;
   receivedNote: string;
   storageLocation: string;
   serialNumbers: string[];
+  assetIds: string[];
 };
 
 export type AssignOrderInput = {

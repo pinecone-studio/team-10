@@ -9,7 +9,7 @@ export type ReceiveCondition =
 export type ReceiveRow = {
   id: string;
   orderId: string;
-  orderStatus: "approved_finance" | "received_inventory";
+  orderStatus: "approved_finance" | "received_inventory" | "assigned_hr";
   requestNumber: string;
   index: number;
   assetName: string;
