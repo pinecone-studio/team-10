@@ -150,6 +150,22 @@ function upsertOrderSnapshot(order: StoredOrder) {
   return normalizedOrder;
 }
 
+function preserveKnownItems(
+  nextOrder: StoredOrder,
+  source: Pick<StoredOrder, "items" | "totalAmount" | "currencyCode">,
+) {
+  if (nextOrder.items.length >= source.items.length || source.items.length === 0) {
+    return nextOrder;
+  }
+
+  return normalizeOrder({
+    ...nextOrder,
+    items: source.items,
+    totalAmount: source.totalAmount,
+    currencyCode: source.currencyCode,
+  });
+}
+
 function subscribe(callback: () => void) {
   subscribers.add(callback);
   ensureOrdersStoreLoaded();
@@ -247,7 +263,11 @@ export async function loadOrdersSnapshot() {
 
 export async function createOrder(input: CreateOrderInput) {
   try {
-    const nextOrder = await createOrderRequest(input);
+    const nextOrder = preserveKnownItems(await createOrderRequest(input), {
+      items: input.items,
+      totalAmount: input.items.reduce((sum, item) => sum + item.totalPrice, 0),
+      currencyCode: input.currencyCode,
+    });
     return upsertOrderSnapshot(nextOrder);
   } catch (error) {
     console.error("Falling back to local order creation.", error);
@@ -274,7 +294,10 @@ export async function reviewHigherUpOrder(input: {
       throw new Error("Failed to update higher-up review.");
     }
 
-    upsertOrderSnapshot(updatedOrder);
+    const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
+    upsertOrderSnapshot(
+      existingOrder ? preserveKnownItems(updatedOrder, existingOrder) : updatedOrder,
+    );
   } catch (error) {
     console.error("Falling back to local higher-up review.", error);
     const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
@@ -312,7 +335,10 @@ export async function reviewFinanceOrder(input: {
       throw new Error("Failed to update finance review.");
     }
 
-    upsertOrderSnapshot(updatedOrder);
+    const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
+    upsertOrderSnapshot(
+      existingOrder ? preserveKnownItems(updatedOrder, existingOrder) : updatedOrder,
+    );
   } catch (error) {
     console.error("Falling back to local finance review.", error);
     const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
@@ -340,37 +366,139 @@ export async function reviewFinanceOrder(input: {
 }
 
 export async function receiveInventoryOrder(input: ReceiveOrderInput) {
+  const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
+  if (!existingOrder) {
+    throw new Error("Order not found.");
+  }
+
+  const targetItem = existingOrder.items.find(
+    (item) => item.catalogId === input.catalogId && item.code === input.itemCode,
+  );
+  if (!targetItem) {
+    throw new Error("Order item not found.");
+  }
+
+  const safeQuantity = Math.max(1, Math.min(input.quantityReceived, targetItem.quantity));
+  const remainingQuantity = targetItem.quantity - safeQuantity;
+  const receivedItem: OrderItem = {
+    ...targetItem,
+    quantity: safeQuantity,
+    totalPrice: targetItem.unitPrice * safeQuantity,
+  };
+  const remainingItems = existingOrder.items.flatMap((item) => {
+    if (item.catalogId !== input.catalogId || item.code !== input.itemCode) {
+      return [item];
+    }
+
+    if (remainingQuantity <= 0) {
+      return [];
+    }
+
+    return [
+      {
+        ...item,
+        quantity: remainingQuantity,
+        totalPrice: item.unitPrice * remainingQuantity,
+      },
+    ];
+  });
+  const remainingTotalAmount = remainingItems.reduce(
+    (sum, item) => sum + item.totalPrice,
+    0,
+  );
+  const receivedTotalAmount = receivedItem.totalPrice;
+  const hasRemainingItems = remainingItems.length > 0;
+
   try {
     const updatedOrder = await updateOrderRequest(input.orderId, {
-      status: "received_inventory",
-      receivedAt: input.receivedAt,
-      receivedCondition: input.receivedCondition,
-      receivedNote: input.receivedNote,
-      storageLocation: input.storageLocation,
-      serialNumbers: input.serialNumbers,
+      status: hasRemainingItems ? "approved_finance" : "received_inventory",
+      receivedAt: hasRemainingItems ? null : input.receivedAt,
+      receivedCondition: hasRemainingItems ? null : input.receivedCondition,
+      receivedNote: hasRemainingItems ? "" : input.receivedNote,
+      storageLocation: hasRemainingItems ? "" : input.storageLocation,
+      serialNumbers: hasRemainingItems ? [] : input.serialNumbers,
+      items: hasRemainingItems ? remainingItems : [receivedItem],
+      totalAmount: hasRemainingItems ? remainingTotalAmount : receivedTotalAmount,
     });
 
     if (!updatedOrder) {
       throw new Error("Failed to save received order details.");
     }
 
+    if (hasRemainingItems) {
+      const storedOrder = normalizeOrder({
+        ...existingOrder,
+        id: `${existingOrder.id}-received-${Date.now()}`,
+        items: [receivedItem],
+        totalAmount: receivedTotalAmount,
+        status: "received_inventory",
+        receivedAt: input.receivedAt,
+        receivedCondition: input.receivedCondition,
+        receivedNote: input.receivedNote,
+        storageLocation: input.storageLocation,
+        serialNumbers: input.serialNumbers,
+        updatedAt: new Date().toISOString(),
+      });
+      writeOrdersSnapshot([
+        storedOrder,
+        updatedOrder,
+        ...cachedOrdersSnapshot.filter(
+          (order) => order.id !== existingOrder.id && order.id !== storedOrder.id,
+        ),
+      ]);
+      return;
+    }
+
     upsertOrderSnapshot(updatedOrder);
   } catch (error) {
     console.error("Falling back to local receive flow.", error);
-    const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
-    if (!existingOrder) {
-      throw error;
+    const updatedAt = new Date().toISOString();
+
+    if (hasRemainingItems) {
+      const remainingOrder = normalizeOrder({
+        ...existingOrder,
+        items: remainingItems,
+        totalAmount: remainingTotalAmount,
+        status: "approved_finance",
+        receivedAt: null,
+        receivedCondition: null,
+        receivedNote: "",
+        storageLocation: "",
+        serialNumbers: [],
+        updatedAt,
+      });
+      const storedOrder = normalizeOrder({
+        ...existingOrder,
+        id: `${existingOrder.id}-received-${Date.now()}`,
+        items: [receivedItem],
+        totalAmount: receivedTotalAmount,
+        status: "received_inventory",
+        receivedAt: input.receivedAt,
+        receivedCondition: input.receivedCondition,
+        receivedNote: input.receivedNote,
+        storageLocation: input.storageLocation,
+        serialNumbers: input.serialNumbers,
+        updatedAt,
+      });
+      writeOrdersSnapshot([
+        storedOrder,
+        remainingOrder,
+        ...cachedOrdersSnapshot.filter((order) => order.id !== existingOrder.id),
+      ]);
+      return;
     }
 
     upsertOrderSnapshot({
       ...existingOrder,
+      items: [receivedItem],
+      totalAmount: receivedTotalAmount,
       status: "received_inventory",
       receivedAt: input.receivedAt,
       receivedCondition: input.receivedCondition,
       receivedNote: input.receivedNote,
       storageLocation: input.storageLocation,
       serialNumbers: input.serialNumbers,
-      updatedAt: new Date().toISOString(),
+      updatedAt,
     });
   }
 }
@@ -387,7 +515,10 @@ export async function assignOrderToPerson(input: AssignOrderInput) {
     throw new Error("Failed to save assignment.");
   }
 
-  upsertOrderSnapshot(updatedOrder);
+  const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
+  upsertOrderSnapshot(
+    existingOrder ? preserveKnownItems(updatedOrder, existingOrder) : updatedOrder,
+  );
 }
 
 export { departmentOptions, formatCurrency, formatDisplayDate, getTodayDateInputValue };

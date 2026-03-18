@@ -13,6 +13,7 @@ import { ReceivePagination } from "./ReceivePagination";
 import { ReceiveTable } from "./ReceiveTable";
 import { ReceiveToolbar } from "./ReceiveToolbar";
 import {
+  buildQrToken,
   buildReceiveRows,
   buildSerialNumbers,
   ROWS_PER_PAGE_OPTIONS,
@@ -25,12 +26,7 @@ export function ReceiveSection() {
   const orders = useOrdersStore();
   const catalog = useCatalogStore();
   const receiveOrders = useMemo(
-    () =>
-      orders.filter(
-        (order) =>
-          order.status === "approved_finance" ||
-          order.status === "received_inventory",
-      ),
+    () => orders.filter((order) => order.status === "approved_finance"),
     [orders],
   );
   const rows = useMemo(() => buildReceiveRows(receiveOrders), [receiveOrders]);
@@ -47,6 +43,9 @@ export function ReceiveSection() {
     useState<ReceiveCondition>("good");
   const [quantityReceived, setQuantityReceived] = useState("1");
   const [receivedNote, setReceivedNote] = useState("");
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [scanValue, setScanValue] = useState("");
+  const [scanResult, setScanResult] = useState<"idle" | "success" | "error">("idle");
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -79,6 +78,17 @@ export function ReceiveSection() {
         : null,
     [activeRow, catalog.products],
   );
+  const generatedQrCodes = useMemo(() => {
+    if (!activeRow) return [];
+    const count = Math.max(1, Math.min(activeRow.quantity, Number(quantityReceived) || 1));
+    return Array.from({ length: count }, (_, index) => {
+      const serialNumber = `${activeRow.itemCode}-${String(index + 1).padStart(3, "0")}`;
+      return {
+        serialNumber,
+        token: buildQrToken(activeRow.orderId, activeRow.itemCode, serialNumber),
+      };
+    });
+  }, [activeRow, quantityReceived]);
 
   if (rows.length === 0) {
     return (
@@ -111,10 +121,10 @@ export function ReceiveSection() {
         <div className="flex min-h-[calc(100vh-180px)] flex-col gap-[18px]">
           <button
             type="button"
-            onClick={() => setSelectedRowId(null)}
+            onClick={() => resetDetailState(setSelectedRowId, setUploadedImage, setScanValue, setScanResult)}
             className="inline-flex w-fit items-center gap-2 text-[14px] font-medium text-[#344054]"
           >
-            <span aria-hidden="true">←</span>
+            <span aria-hidden="true">{"<-"}</span>
             <span>Back to Receive</span>
           </button>
 
@@ -141,7 +151,14 @@ export function ReceiveSection() {
                 />
               </div>
               <div className="mt-[16px] overflow-hidden rounded-[12px] border border-[#dce6f3] bg-[linear-gradient(180deg,#eff6ff_0%,#dbeafe_100%)]">
-                {activeProduct?.imageUrl ? (
+                {uploadedImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={uploadedImage}
+                    alt={`${activeRow.assetName} upload`}
+                    className="h-[220px] w-full object-cover"
+                  />
+                ) : activeProduct?.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={activeProduct.imageUrl}
@@ -164,6 +181,21 @@ export function ReceiveSection() {
                   </div>
                 )}
               </div>
+              <label className="mt-[12px] flex cursor-pointer items-center justify-center rounded-[10px] border border-dashed border-[#93c5fd] bg-[#f8fbff] px-4 py-3 text-[13px] font-medium text-[#2563eb]">
+                Upload item image
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => setUploadedImage(String(reader.result));
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
             </div>
 
             <div className="rounded-[12px] border border-[#dcdfe4] bg-white p-[18px]">
@@ -212,6 +244,46 @@ export function ReceiveSection() {
                     placeholder="Add receive note..."
                   />
                 </Field>
+                <div className="rounded-[12px] border border-[#dbe3ee] bg-[#f8fbff] p-4">
+                  <p className="text-[13px] font-semibold text-[#0f172a]">QR generate and scan</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[10px] border border-[#dbeafe] bg-white p-3">
+                      <div className="flex justify-center">
+                        <QrPreview value={generatedQrCodes[0]?.token ?? activeRow.itemCode} />
+                      </div>
+                      <p className="mt-3 truncate text-center text-[11px] text-[#475569]">
+                        {generatedQrCodes[0]?.token ?? activeRow.itemCode}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <input
+                        value={scanValue}
+                        onChange={(event) => {
+                          const nextValue = event.target.value;
+                          setScanValue(nextValue);
+                          if (!nextValue) {
+                            setScanResult("idle");
+                            return;
+                          }
+                          setScanResult(
+                            generatedQrCodes.some((entry) => entry.token === nextValue)
+                              ? "success"
+                              : "error",
+                          );
+                        }}
+                        placeholder="Paste / scan QR token"
+                        className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none"
+                      />
+                      <p className={`text-[12px] ${scanResult === "success" ? "text-[#16a34a]" : scanResult === "error" ? "text-[#dc2626]" : "text-[#64748b]"}`}>
+                        {scanResult === "success"
+                          ? "QR verified locally."
+                          : scanResult === "error"
+                            ? "QR code does not match generated item token."
+                            : "Backendgui local QR verification."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 <button
                   type="button"
                   disabled={!activeRow.selectable || Number(quantityReceived) <= 0}
@@ -226,6 +298,17 @@ export function ReceiveSection() {
                     if (order) {
                       await receiveInventoryOrder({
                         orderId: order.id,
+                        catalogId:
+                          activeProduct?.id ??
+                          order.items.find(
+                            (item) => item.code === activeRow.itemCode,
+                          )?.catalogId ??
+                          activeRow.itemCode,
+                        itemCode: activeRow.itemCode,
+                        quantityReceived: Math.max(
+                          1,
+                          Math.min(activeRow.quantity, Number(quantityReceived) || 1),
+                        ),
                         receivedAt: receivedDate,
                         receivedCondition:
                           receivedCondition === "good" ? "complete" : "issue",
@@ -233,7 +316,10 @@ export function ReceiveSection() {
                           receivedNote.trim() ||
                           `Received ${activeRow.assetName} and completed intake.`,
                         storageLocation: "Main warehouse / Intake",
-                        serialNumbers: buildSerialNumbers(order),
+                        serialNumbers:
+                          generatedQrCodes.length > 0
+                            ? generatedQrCodes.map((entry) => entry.serialNumber)
+                            : buildSerialNumbers(order),
                       });
                     }
 
@@ -287,6 +373,9 @@ export function ReceiveSection() {
             setQuantityReceived(`${row?.quantity ?? 1}`);
             setReceivedCondition("good");
             setReceivedNote("");
+            setUploadedImage(null);
+            setScanValue("");
+            setScanResult("idle");
           }}
         />
 
@@ -344,4 +433,34 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
       <p className="mt-[6px] text-[22px] font-semibold text-[#3b82f6]">{value}</p>
     </div>
   );
+}
+
+function QrPreview({ value }: { value: string }) {
+  const cells = Array.from({ length: 81 }, (_, index) => {
+    const charCode = value.charCodeAt(index % value.length) || 0;
+    return (charCode + index) % 2 === 0;
+  });
+
+  return (
+    <div className="grid grid-cols-9 gap-px rounded-[8px] bg-white p-2 shadow-[0_8px_20px_rgba(148,163,184,0.12)]">
+      {cells.map((filled, index) => (
+        <span
+          key={`${value}-${index}`}
+          className={`h-3 w-3 rounded-[1px] ${filled ? "bg-[#0f172a]" : "bg-[#dbeafe]"}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function resetDetailState(
+  setSelectedRowId: (value: string | null) => void,
+  setUploadedImage: (value: string | null) => void,
+  setScanValue: (value: string) => void,
+  setScanResult: (value: "idle" | "success" | "error") => void,
+) {
+  setSelectedRowId(null);
+  setUploadedImage(null);
+  setScanValue("");
+  setScanResult("idle");
 }
