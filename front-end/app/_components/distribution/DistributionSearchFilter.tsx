@@ -10,9 +10,9 @@ type DistributionSearchFilterProps = {
   value?: string;
   placeholder?: string;
   onChange?: (value: string) => void;
-  activeTab?: "distributions" | "available-assets" | "employee-requests";
+  activeTab?: "distributions" | "available-assets" | "employee-requests" | "pending-retrieval";
   onTabChange?: (
-    value: "distributions" | "available-assets" | "employee-requests",
+    value: "distributions" | "available-assets" | "employee-requests" | "pending-retrieval",
   ) => void;
 };
 const statuses = [
@@ -160,6 +160,17 @@ export default function DistributionSearchFilter({
             }`}
           >
             Employee Requests
+          </button>
+          <button
+            type="button"
+            onClick={() => onTabChange?.("pending-retrieval")}
+            className={`cursor-pointer text-[14px] font-normal leading-5 transition-colors hover:text-[#0A0A0A] ${
+              activeTab === "pending-retrieval"
+                ? "text-[#0A0A0A] underline underline-offset-[3px]"
+                : "text-[#64748B]"
+            }`}
+          >
+            Pending Retrieval
           </button>
         </div>
       </div>
