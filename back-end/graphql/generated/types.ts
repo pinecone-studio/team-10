@@ -357,6 +357,7 @@ export type OrderItemInput = {
 
 export type Query = {
   __typename?: 'Query';
+  asset?: Maybe<StorageAsset>;
   catalogCategories: Array<CatalogCategory>;
   catalogItemTypes: Array<CatalogItemType>;
   catalogProduct?: Maybe<CatalogProduct>;
@@ -366,6 +367,13 @@ export type Query = {
   orders: Array<Order>;
   receive?: Maybe<Receive>;
   receives: Array<Receive>;
+  storageAssets: Array<StorageAsset>;
+};
+
+
+export type QueryAssetArgs = {
+  id?: InputMaybe<Scalars['ID']['input']>;
+  qrCode?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -428,6 +436,33 @@ export type ReceivedAsset = {
   id: Scalars['ID']['output'];
   qrCode: Scalars['String']['output'];
   serialNumber?: Maybe<Scalars['String']['output']>;
+};
+
+export type StorageAsset = {
+  __typename?: 'StorageAsset';
+  assetCode: Scalars['String']['output'];
+  assetName: Scalars['String']['output'];
+  assetStatus: Scalars['String']['output'];
+  category: Scalars['String']['output'];
+  conditionStatus: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  currencyCode: Scalars['String']['output'];
+  department: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  itemType: Scalars['String']['output'];
+  orderId: Scalars['ID']['output'];
+  qrCode: Scalars['String']['output'];
+  receiveNote?: Maybe<Scalars['String']['output']>;
+  receivedAt: Scalars['String']['output'];
+  requestDate: Scalars['String']['output'];
+  requestNumber: Scalars['String']['output'];
+  requester: Scalars['String']['output'];
+  serialNumber?: Maybe<Scalars['String']['output']>;
+  storageId?: Maybe<Scalars['ID']['output']>;
+  storageName: Scalars['String']['output'];
+  storageType?: Maybe<Scalars['String']['output']>;
+  unitCost?: Maybe<Scalars['Float']['output']>;
+  updatedAt: Scalars['String']['output'];
 };
 
 
@@ -521,6 +556,7 @@ export type ResolversTypes = {
   Receive: ResolverTypeWrapper<Receive>;
   ReceiveOrderItemPayload: ResolverTypeWrapper<ReceiveOrderItemPayload>;
   ReceivedAsset: ResolverTypeWrapper<ReceivedAsset>;
+  StorageAsset: ResolverTypeWrapper<StorageAsset>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
 };
 
@@ -546,6 +582,7 @@ export type ResolversParentTypes = {
   Receive: Receive;
   ReceiveOrderItemPayload: ReceiveOrderItemPayload;
   ReceivedAsset: ReceivedAsset;
+  StorageAsset: StorageAsset;
   String: Scalars['String']['output'];
 };
 
@@ -700,6 +737,7 @@ export type OrderItemResolvers<ContextType = GraphQLContext, ParentType extends 
 };
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
+  asset?: Resolver<Maybe<ResolversTypes['StorageAsset']>, ParentType, ContextType, Partial<QueryAssetArgs>>;
   catalogCategories?: Resolver<Array<ResolversTypes['CatalogCategory']>, ParentType, ContextType>;
   catalogItemTypes?: Resolver<Array<ResolversTypes['CatalogItemType']>, ParentType, ContextType, Partial<QueryCatalogItemTypesArgs>>;
   catalogProduct?: Resolver<Maybe<ResolversTypes['CatalogProduct']>, ParentType, ContextType, RequireFields<QueryCatalogProductArgs, 'id'>>;
@@ -709,6 +747,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   orders?: Resolver<Array<ResolversTypes['Order']>, ParentType, ContextType>;
   receive?: Resolver<Maybe<ResolversTypes['Receive']>, ParentType, ContextType, RequireFields<QueryReceiveArgs, 'id'>>;
   receives?: Resolver<Array<ResolversTypes['Receive']>, ParentType, ContextType>;
+  storageAssets?: Resolver<Array<ResolversTypes['StorageAsset']>, ParentType, ContextType>;
 };
 
 export type ReceiveResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Receive'] = ResolversParentTypes['Receive']> = {
@@ -741,6 +780,33 @@ export type ReceivedAssetResolvers<ContextType = GraphQLContext, ParentType exte
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type StorageAssetResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['StorageAsset'] = ResolversParentTypes['StorageAsset']> = {
+  assetCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  assetName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  assetStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  conditionStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  currencyCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  department?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  itemType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  orderId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  qrCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  receiveNote?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  receivedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  requestDate?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  requestNumber?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  requester?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  serialNumber?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  storageId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  storageName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  storageType?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  unitCost?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type Resolvers<ContextType = GraphQLContext> = {
   CatalogCategory?: CatalogCategoryResolvers<ContextType>;
   CatalogItemType?: CatalogItemTypeResolvers<ContextType>;
@@ -755,5 +821,6 @@ export type Resolvers<ContextType = GraphQLContext> = {
   Receive?: ReceiveResolvers<ContextType>;
   ReceiveOrderItemPayload?: ReceiveOrderItemPayloadResolvers<ContextType>;
   ReceivedAsset?: ReceivedAssetResolvers<ContextType>;
+  StorageAsset?: StorageAssetResolvers<ContextType>;
 };
 
