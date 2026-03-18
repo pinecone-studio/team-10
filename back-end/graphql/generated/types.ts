@@ -134,7 +134,6 @@ export type MutationCreateCatalogProductArgs = {
 export type MutationCreateOrderArgs = {
   approvalMessage?: InputMaybe<Scalars['String']['input']>;
   approvalTarget?: InputMaybe<Scalars['String']['input']>;
-  currencyCode?: InputMaybe<Scalars['String']['input']>;
   deliveryDate?: InputMaybe<Scalars['String']['input']>;
   department?: InputMaybe<Scalars['String']['input']>;
   departmentId?: InputMaybe<Scalars['ID']['input']>;
@@ -155,12 +154,15 @@ export type MutationCreateOrderArgs = {
 
 
 export type MutationCreateReceiveArgs = {
+  conditionStatus: Scalars['String']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
-  officeId?: InputMaybe<Scalars['ID']['input']>;
-  orderId?: InputMaybe<Scalars['ID']['input']>;
+  orderId: Scalars['ID']['input'];
+  orderItemId: Scalars['ID']['input'];
+  quantityReceived: Scalars['Int']['input'];
   receivedAt?: InputMaybe<Scalars['String']['input']>;
-  receivedByUserId?: InputMaybe<Scalars['ID']['input']>;
-  status: Scalars['String']['input'];
+  receivedCondition?: InputMaybe<Scalars['String']['input']>;
+  serialNumbers?: InputMaybe<Array<Scalars['String']['input']>>;
+  storageLocation?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -228,7 +230,6 @@ export type MutationUpdateOrderArgs = {
   assignedAt?: InputMaybe<Scalars['String']['input']>;
   assignedRole?: InputMaybe<Scalars['String']['input']>;
   assignedTo?: InputMaybe<Scalars['String']['input']>;
-  currencyCode?: InputMaybe<Scalars['String']['input']>;
   deliveryDate?: InputMaybe<Scalars['String']['input']>;
   department?: InputMaybe<Scalars['String']['input']>;
   departmentId?: InputMaybe<Scalars['ID']['input']>;
@@ -261,13 +262,16 @@ export type MutationUpdateOrderArgs = {
 
 
 export type MutationUpdateReceiveArgs = {
+  conditionStatus?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
-  officeId?: InputMaybe<Scalars['ID']['input']>;
   orderId?: InputMaybe<Scalars['ID']['input']>;
+  orderItemId?: InputMaybe<Scalars['ID']['input']>;
+  quantityReceived?: InputMaybe<Scalars['Int']['input']>;
   receivedAt?: InputMaybe<Scalars['String']['input']>;
-  receivedByUserId?: InputMaybe<Scalars['ID']['input']>;
-  status?: InputMaybe<Scalars['String']['input']>;
+  receivedCondition?: InputMaybe<Scalars['String']['input']>;
+  serialNumbers?: InputMaybe<Array<Scalars['String']['input']>>;
+  storageLocation?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type Notification = {
@@ -345,7 +349,6 @@ export type OrderItemInput = {
   catalogId?: InputMaybe<Scalars['ID']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
   code: Scalars['String']['input'];
-  currencyCode?: InputMaybe<Scalars['String']['input']>;
   eta?: InputMaybe<Scalars['String']['input']>;
   fromWhere?: InputMaybe<Scalars['String']['input']>;
   itemType?: InputMaybe<Scalars['String']['input']>;
@@ -410,13 +413,19 @@ export type QueryReceiveArgs = {
 
 export type Receive = {
   __typename?: 'Receive';
+  conditionStatus: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   note?: Maybe<Scalars['String']['output']>;
   officeId: Scalars['ID']['output'];
   orderId: Scalars['ID']['output'];
+  orderItemId: Scalars['ID']['output'];
+  quantityReceived: Scalars['Int']['output'];
   receivedAt: Scalars['String']['output'];
   receivedByUserId: Scalars['ID']['output'];
+  receivedCondition?: Maybe<Scalars['String']['output']>;
+  serialNumbers: Array<Scalars['String']['output']>;
   status: Scalars['String']['output'];
+  storageLocation?: Maybe<Scalars['String']['output']>;
 };
 
 export type ReceiveOrderItemPayload = {
@@ -654,7 +663,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   createCatalogCategory?: Resolver<ResolversTypes['CatalogCategory'], ParentType, ContextType, RequireFields<MutationCreateCatalogCategoryArgs, 'displayName'>>;
   createCatalogProduct?: Resolver<ResolversTypes['CatalogProduct'], ParentType, ContextType, RequireFields<MutationCreateCatalogProductArgs, 'displayName' | 'productCode'>>;
   createOrder?: Resolver<ResolversTypes['Order'], ParentType, ContextType, RequireFields<MutationCreateOrderArgs, 'orderName'>>;
-  createReceive?: Resolver<ResolversTypes['Receive'], ParentType, ContextType, RequireFields<MutationCreateReceiveArgs, 'status'>>;
+  createReceive?: Resolver<ResolversTypes['Receive'], ParentType, ContextType, RequireFields<MutationCreateReceiveArgs, 'conditionStatus' | 'orderId' | 'orderItemId' | 'quantityReceived'>>;
   deleteCatalogCategory?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteCatalogCategoryArgs, 'id'>>;
   deleteOrder?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteOrderArgs, 'id'>>;
   deleteReceive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteReceiveArgs, 'id'>>;
@@ -751,13 +760,19 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
 };
 
 export type ReceiveResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Receive'] = ResolversParentTypes['Receive']> = {
+  conditionStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   note?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   officeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   orderId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  orderItemId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  quantityReceived?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   receivedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   receivedByUserId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  receivedCondition?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  serialNumbers?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  storageLocation?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 

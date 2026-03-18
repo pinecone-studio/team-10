@@ -4,6 +4,7 @@ import {
   conditionStatusValues,
   orderItems,
   orders,
+  receivedConditionValues,
   receiveItems,
   receiveStatusValues,
   receives,
@@ -20,6 +21,7 @@ import { getOrderById, type OrderRecord } from "./orders.ts";
 
 type ReceiveStatus = (typeof receiveStatusValues)[number];
 type ConditionStatus = (typeof conditionStatusValues)[number];
+type ReceivedCondition = (typeof receivedConditionValues)[number];
 
 type ReceiveRow = {
   id: number;
@@ -206,6 +208,22 @@ function normalizeSerialNumbers(
   return nextSerialNumbers;
 }
 
+function parseReceivedCondition(
+  receivedCondition?: string | null,
+): ReceivedCondition | null {
+  if (receivedCondition === undefined || receivedCondition === null) {
+    return null;
+  }
+
+  if (!receivedConditionValues.includes(receivedCondition as ReceivedCondition)) {
+    throw new Error(
+      `Received condition must be one of: ${receivedConditionValues.join(", ")}.`,
+    );
+  }
+
+  return receivedCondition as ReceivedCondition;
+}
+
 function parseJsonStringArray(value: string | null) {
   if (!value) return [] as string[];
 
@@ -331,21 +349,6 @@ async function mapReceivedAssetsByReceiveItemId(
     currentStorageId:
       row.currentStorageId === null ? null : String(row.currentStorageId),
   }));
-}
-
-export async function listReceives(db: AppDb): Promise<ReceiveRecord[]> {
-  const rows = await db
-    .select(receiveSelection)
-    .from(receives)
-    .orderBy(asc(receives.id));
-
-  if (!receivedConditionValues.includes(receivedCondition as ReceivedCondition)) {
-    throw new Error(
-      `Received condition must be one of: ${receivedConditionValues.join(", ")}.`,
-    );
-  }
-
-  return receivedCondition as ReceivedCondition;
 }
 
 function deriveReceiveStatus(
@@ -564,7 +567,7 @@ export async function receiveOrderItem(
       receivedAt,
       note: input.receivedNote?.trim() || null,
     })
-    .returning(receiveSelection);
+    .returning({ id: receives.id });
 
   const [receiveItem] = await db
     .insert(receiveItems)
@@ -653,8 +656,13 @@ export async function receiveOrderItem(
     throw new Error("Failed to load order after receive intake.");
   }
 
+  const nextReceive = await getReceiveById(db, String(receive.id));
+  if (!nextReceive) {
+    throw new Error("Failed to load receive after receive intake.");
+  }
+
   return {
-    receive: mapReceive(receive),
+    receive: nextReceive,
     order: nextOrder,
     assets: await mapReceivedAssetsByReceiveItemId(db, receiveItem.id),
   };
