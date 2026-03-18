@@ -27,6 +27,7 @@ export default async function RolePage({ params, searchParams }: RolePageProps) 
       : defaultSection;
 
   return (
+<<<<<<< 101-qr-back-end
     <main className="min-h-screen bg-[#efefef] text-slate-900">
       <RoleSessionProvider role={role}>
         <section className="flex min-h-screen">
@@ -34,6 +35,13 @@ export default async function RolePage({ params, searchParams }: RolePageProps) 
           <RoleWorkspace role={role} roleLabel={roleMeta.label} section={section} />
         </section>
       </RoleSessionProvider>
+=======
+    <main className="min-h-screen overflow-x-hidden bg-[#efefef] text-slate-900">
+      <section className="flex min-h-screen overflow-x-hidden">
+        <RoleSidebar role={role} currentSection={section} />
+        <RoleWorkspace role={role} roleLabel={roleMeta.label} section={section} />
+      </section>
+>>>>>>> main
     </main>
   );
 }
