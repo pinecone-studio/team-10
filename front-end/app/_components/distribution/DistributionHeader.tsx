@@ -11,7 +11,7 @@ export default function DistributionHeader() {
             </p>
           </div>
           <div className="flex gap-3">
-            <div className="flex items-center py-2 px-4 justify-center gap-1.5 rounded-md bg-slate-900 box-border w-41 h-10">
+            <div className="flex h-10 w-41 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-slate-900 px-4 py-2 box-border transition hover:bg-slate-800 active:scale-[0.99]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="15"
@@ -36,7 +36,7 @@ export default function DistributionHeader() {
                 New distribution
               </p>
             </div>
-            <div className="border border-slate-200 bg-white rounded-md justify-center items-center p-2 gap-2 w-10 h-10">
+            <div className="flex h-10 w-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-slate-200 bg-white p-2 transition hover:bg-slate-50 active:scale-[0.99]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"

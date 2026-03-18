@@ -27,6 +27,9 @@ const assignees = [
 ];
 
 export function HRDistributionSection() {
+  const [activeTab, setActiveTab] = useState<
+    "distributions" | "available-assets" | "employee-requests"
+  >("distributions");
   const orders = useOrdersStore();
   const readyOrders = orders.filter(
     (order) => order.status === "received_inventory",
@@ -47,10 +50,13 @@ export function HRDistributionSection() {
       <div className="w-full">
         <DistributionHeader />
         <DistributionDashboard />
-        <DistributionSearchFilter />
-        <DistributionOrder />
-        <AvailableOrder />
-        <EmployeeOrder />
+        <DistributionSearchFilter
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        {activeTab === "distributions" ? <DistributionOrder /> : null}
+        {activeTab === "available-assets" ? <AvailableOrder /> : null}
+        {activeTab === "employee-requests" ? <EmployeeOrder /> : null}
       </div>
     );
   }
