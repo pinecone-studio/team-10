@@ -10,7 +10,6 @@ import {
 import { useCatalogStore } from "../../_lib/catalog-store";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import { ReceivePagination } from "./ReceivePagination";
-import { ReceiveStepper } from "./ReceiveStepper";
 import { ReceiveTable } from "./ReceiveTable";
 import { ReceiveToolbar } from "./ReceiveToolbar";
 import {
@@ -118,8 +117,6 @@ export function ReceiveSection() {
             <span aria-hidden="true">←</span>
             <span>Back to Receive</span>
           </button>
-
-          <ReceiveStepper />
 
           <div className="grid gap-[18px] xl:grid-cols-[minmax(0,1.1fr)_420px]">
             <div className="rounded-[12px] border border-[#dcdfe4] bg-white p-[18px]">
