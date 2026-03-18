@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { createOrder, useOrdersStore } from "../../_lib/order-store";
-import type { OrderItem } from "../../_lib/order-types";
+import { createOrder, syncOrdersStore, useOrdersStore } from "../../_lib/order-store";
+import type { AppRole } from "../../_lib/roles";
+import type { ApprovalTarget, DepartmentOption, OrderItem } from "../../_lib/order-types";
 import { buildDemoDraftItems } from "./orderDemoData";
 import {
   DEFAULT_ORDER_REQUESTER,
@@ -12,15 +13,14 @@ import {
   getOffsetDateInputValue,
 } from "./orderDraftState";
 import {
-  getDefaultHigherUpApproverId,
-  getHigherUpApproverById,
+  getDefaultApproverId,
 } from "./orderApprovers";
 import { createOrderItem, filterOrders } from "./orderWorkspaceHelpers";
 
 type Stage = "history" | "create" | "detail";
 type Filter = "all" | "pending" | "completed" | "cancelled";
 
-export function useOrderWorkspaceState(canViewHistory: boolean) {
+export function useOrderWorkspaceState(role: AppRole, canViewHistory: boolean) {
   const orders = useOrdersStore();
   const [stage, setStage] = useState<Stage>(canViewHistory ? "history" : "create");
   const [selectedFilter, setSelectedFilter] = useState<Filter>("all");
@@ -51,12 +51,14 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
   const canSubmitDraft = Boolean(
     draftOrder.deliveryDate &&
       draftItems.length > 0 &&
-      draftOrder.requestedApproverId.trim(),
+      (draftOrder.approvalTarget === "finance" || draftOrder.requestedApproverId.trim()),
   );
   const missingSubmitFields = [
     !draftOrder.deliveryDate && "Delivery date",
     draftItems.length === 0 && "At least one added good",
-    !draftOrder.requestedApproverId.trim() && "Approver",
+    draftOrder.approvalTarget !== "finance" &&
+      !draftOrder.requestedApproverId.trim() &&
+      "Approver",
   ].filter(Boolean) as string[];
   const summaryTotal = draftItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const filteredOrders = useMemo(() => filterOrders(orders, selectedFilter), [orders, selectedFilter]);
@@ -71,7 +73,30 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
     key: Key,
     value: (typeof draftOrder)[Key],
   ) {
-    setDraftOrder((current) => ({ ...current, [key]: value }));
+    setDraftOrder((current) => {
+      if (key === "approvalTarget") {
+        const nextApprovalTarget = value as ApprovalTarget;
+        return {
+          ...current,
+          approvalTarget: nextApprovalTarget,
+          requestedApproverId:
+            nextApprovalTarget === "finance"
+              ? ""
+              : getDefaultApproverId(current.department, nextApprovalTarget),
+        };
+      }
+
+      if (key === "department") {
+        const nextDepartment = value as DepartmentOption;
+        return {
+          ...current,
+          department: nextDepartment,
+          requestedApproverId: getDefaultApproverId(nextDepartment, current.approvalTarget),
+        };
+      }
+
+      return { ...current, [key]: value };
+    });
   }
 
   function updateGoodsDraft(draftId: string, updates: Partial<(typeof goodsDrafts)[number]>) {
@@ -151,18 +176,17 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
         ...createDraftOrder(),
         requester: DEFAULT_ORDER_REQUESTER,
         deliveryDate: getOffsetDateInputValue(3),
-        requestedApproverId: getDefaultHigherUpApproverId("IT Office"),
+        requestedApproverId: "",
       });
       setDraftItems(await buildDemoDraftItems());
       setGoodsDrafts([createGoodsDraft(getNextGoodsCode())]);
     },
     submit: async () => {
-      const selectedApprover = getHigherUpApproverById(draftOrder.requestedApproverId);
       const resolvedRequester = draftOrder.requester.trim() || DEFAULT_ORDER_REQUESTER;
       const resolvedOrderName =
         draftOrder.orderName.trim() ||
         draftItems[0]?.name ||
-        `${draftOrder.department} inventory request`;
+        "Inventory request";
       const nextOrder = await createOrder({
         orderName: resolvedOrderName,
         requestNumber: draftOrder.requestNumber,
@@ -170,14 +194,20 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
         department: draftOrder.department,
         requester: resolvedRequester,
         deliveryDate: draftOrder.deliveryDate,
-        approvalTarget: draftOrder.approvalTarget,
+        status: "pending_finance",
+        approvalTarget: "finance",
         items: draftItems,
         currencyCode: draftItems[0]?.currencyCode ?? "MNT",
-        requestedApproverId: draftOrder.requestedApproverId,
-        requestedApproverName: selectedApprover?.fullName ?? null,
-        requestedApproverRole: selectedApprover?.positionLabel ?? null,
+        requestedApproverId: null,
+        requestedApproverName: "Finance",
+        requestedApproverRole: "Finance Queue",
         approvalMessage: permissionMessage,
       });
+      await syncOrdersStore();
+      if (canViewHistory && typeof window !== "undefined") {
+        window.location.assign(`/${role}?section=order&refresh=${Date.now()}`);
+        return;
+      }
       setSelectedOrderId(nextOrder.id);
       resetDraft();
       setStage(canViewHistory ? "history" : "detail");

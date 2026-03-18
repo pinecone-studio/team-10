@@ -102,9 +102,9 @@ export function OrderCreateItemsEditor(
   }
 
   return (
-    <section className="rounded-[12px] border border-[#e2e8f0] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]">
-      <div className="border-b border-[#e2e8f0] bg-[rgba(241,245,249,0.3)] px-6 py-4">
-        <h3 className="text-[16px] font-semibold leading-6 text-[#020618]">Order Items</h3>
+    <section className="rounded-b-[18px] border border-[#e2e8f0] border-t-0 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]">
+      <div className="border-b border-[#e2e8f0] bg-white px-6 py-5">
+        <h3 className="text-[18px] font-semibold leading-6 text-[#111827]">Order Items</h3>
       </div>
       <div className="px-6 py-6">
         <div className="border-b border-[#dbeafe]">

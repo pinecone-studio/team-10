@@ -115,7 +115,13 @@ export function OrderHistoryTable(props: {
                     #{order.requestNumber.slice(-6)}
                   </span>
                   <span className="text-[14px] font-medium text-[#475569]">
-                    {getOrderSummaryName(order)}
+                    <span className="block">{getOrderSummaryName(order)}</span>
+                    {order.items.length > 0 ? (
+                      <span className="mt-1 block truncate text-[12px] font-normal text-[#94a3b8]">
+                        {order.items[0]?.code} · {order.items[0]?.quantity} {order.items[0]?.unit}
+                        {order.items.length > 1 ? ` · +${order.items.length - 1} more item` : ""}
+                      </span>
+                    ) : null}
                   </span>
                   <div className="flex items-center gap-[6px] text-[14px] font-medium text-[#475569]">
                     <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e2e8f0] px-[5px] text-[10px] font-normal text-[#2563eb]">

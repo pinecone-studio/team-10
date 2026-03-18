@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { RoleSessionProvider } from "../_components/RoleSessionProvider";
 import { RoleSidebar } from "../_components/RoleSidebar";
 import { RoleWorkspace } from "../_components/RoleWorkspace";
 import { roleNavSections, type SectionKey } from "../_lib/navigation";
@@ -27,10 +28,12 @@ export default async function RolePage({ params, searchParams }: RolePageProps) 
 
   return (
     <main className="min-h-screen bg-[#efefef] text-slate-900">
-      <section className="flex min-h-screen">
-        <RoleSidebar role={role} currentSection={section} />
-        <RoleWorkspace role={role} roleLabel={roleMeta.label} section={section} />
-      </section>
+      <RoleSessionProvider role={role}>
+        <section className="flex min-h-screen">
+          <RoleSidebar role={role} currentSection={section} />
+          <RoleWorkspace role={role} roleLabel={roleMeta.label} section={section} />
+        </section>
+      </RoleSessionProvider>
     </main>
   );
 }

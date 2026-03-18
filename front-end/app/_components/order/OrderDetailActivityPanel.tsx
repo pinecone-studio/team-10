@@ -16,13 +16,13 @@ export function OrderDetailActivityPanel({ order }: { order: StoredOrder }) {
   );
 
   return (
-    <section className="rounded-[18px] border border-[#d9e0e8] bg-white p-4">
+    <section className="rounded-[18px] border border-[#d9e0e8] bg-white p-4 shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
       <div className="border-b border-[#eef2f6] pb-4"><h3 className="text-[28px] font-semibold leading-none text-[#111827]">Activity Feed</h3></div>
       <div className="space-y-6 py-5">
         {feedEvents.map((event, index) => (
           <div key={`${event.date}-${index}`} className="flex gap-3">
             <div className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#dbeafe] text-xs font-semibold text-[#2563eb]">{event.actor.slice(0, 2).toUpperCase()}</div>
-            <div className="flex-1"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium text-[#334155]">{event.actor}</p><p className="text-xs text-[#94a3b8]">{index === 0 ? presentation.type : "Requester"}</p></div><p className="mt-1 text-sm text-[#64748b]">{event.message}</p><p className="mt-1 text-xs text-[#94a3b8]">{event.date}</p></div>
+            <div className="flex-1"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium text-[#334155]">{event.actor}</p><p className="text-xs text-[#94a3b8]">{index === 0 ? presentation.type : "Requester"}</p></div><p className="mt-1 text-sm text-[#64748b]">{event.message}</p><p className="mt-2 text-xs text-[#94a3b8]">{event.date}</p></div>
           </div>
         ))}
         {comments.map((comment, index) => (

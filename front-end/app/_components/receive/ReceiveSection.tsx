@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { receiveInventoryOrder, useOrdersStore } from "../../_lib/order-store";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
+import { ReceiveActionPanel } from "./ReceiveActionPanel";
 import { ReceivePagination } from "./ReceivePagination";
 import { ReceiveStepper } from "./ReceiveStepper";
 import { ReceiveTable } from "./ReceiveTable";
@@ -27,12 +28,18 @@ export function ReceiveSection() {
   const rows = useMemo(() => buildReceiveRows(receiveOrders), [receiveOrders]);
   const [search, setSearch] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
-  const [rowsPerPage, setRowsPerPage] = useState<(typeof ROWS_PER_PAGE_OPTIONS)[number]>(10);
+  const [rowsPerPage, setRowsPerPage] =
+    useState<(typeof ROWS_PER_PAGE_OPTIONS)[number]>(10);
   const [page, setPage] = useState(1);
+  const [storageLocation, setStorageLocation] = useState(
+    "Main warehouse / Intake",
+  );
+  const [receivedNote, setReceivedNote] = useState(
+    "Checked and received by Inventory Head.",
+  );
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-
     if (!normalizedSearch) return rows;
 
     return rows.filter(
@@ -58,7 +65,6 @@ export function ReceiveSection() {
     pagedRows
       .filter((row) => row.selectable)
       .every((row) => activeSelectedRowIds.includes(row.id));
-
   const pendingOrderIds = Array.from(
     new Set(
       rows
@@ -108,19 +114,27 @@ export function ReceiveSection() {
               .map((row) => row.id);
 
             if (checked) {
-              setSelectedRowIds((current) => Array.from(new Set([...current, ...pageSelectableIds])));
+              setSelectedRowIds((current) =>
+                Array.from(new Set([...current, ...pageSelectableIds])),
+              );
               return;
             }
 
-            setSelectedRowIds((current) => current.filter((rowId) => !pageSelectableIds.includes(rowId)));
+            setSelectedRowIds((current) =>
+              current.filter((rowId) => !pageSelectableIds.includes(rowId)),
+            );
           }}
           onToggleRow={(rowId, checked) => {
             if (checked) {
-              setSelectedRowIds((current) => (current.includes(rowId) ? current : [...current, rowId]));
+              setSelectedRowIds((current) =>
+                current.includes(rowId) ? current : [...current, rowId],
+              );
               return;
             }
 
-            setSelectedRowIds((current) => current.filter((currentRowId) => currentRowId !== rowId));
+            setSelectedRowIds((current) =>
+              current.filter((currentRowId) => currentRowId !== rowId),
+            );
           }}
         />
 
@@ -141,33 +155,33 @@ export function ReceiveSection() {
           onLastPage={() => setPage(totalPages)}
         />
 
-        <div className="mt-auto flex justify-end pt-[42px]">
-          <button
-            type="button"
-            disabled={pendingOrderIds.length === 0}
-            onClick={() => {
-              pendingOrderIds.forEach((orderId) => {
-                const order = receiveOrders.find((entry) => entry.id === orderId);
-                if (!order || order.status !== "approved_finance") return;
+        <ReceiveActionPanel
+          storageLocation={storageLocation}
+          receivedNote={receivedNote}
+          disabled={pendingOrderIds.length === 0}
+          onStorageLocationChange={setStorageLocation}
+          onReceivedNoteChange={setReceivedNote}
+          onSubmit={() => {
+            pendingOrderIds.forEach((orderId) => {
+              const order = receiveOrders.find((entry) => entry.id === orderId);
+              if (!order || order.status !== "approved_finance") return;
 
               void receiveInventoryOrder({
                 orderId: order.id,
                 receivedAt: new Date().toISOString().slice(0, 10),
                 receivedCondition: "complete",
-                  receivedNote: "Received from purchase queue and serialized.",
-                  storageLocation: "Main warehouse / Intake",
-                  serialNumbers: buildSerialNumbers(order),
-                });
+                receivedNote:
+                  receivedNote.trim() ||
+                  "Checked and received by Inventory Head.",
+                storageLocation:
+                  storageLocation.trim() || "Main warehouse / Intake",
+                serialNumbers: buildSerialNumbers(order),
               });
+            });
 
-              setSelectedRowIds([]);
-            }}
-            className="inline-flex h-[40px] items-center gap-[10px] rounded-[8px] bg-[#101828] px-[16px] text-[16px] font-medium text-white shadow-[0_1px_2px_rgba(16,24,40,0.05)] disabled:opacity-40"
-          >
-            <span>Submit for approval</span>
-            <span aria-hidden="true">›</span>
-          </button>
-        </div>
+            setSelectedRowIds([]);
+          }}
+        />
       </div>
     </WorkspaceShell>
   );

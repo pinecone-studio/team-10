@@ -57,7 +57,7 @@ export function createDraftOrder(): DraftOrder {
     department: "IT Office",
     requester: DEFAULT_ORDER_REQUESTER,
     deliveryDate: getTodayDateInputValue(),
-    approvalTarget: "any_higher_ups",
+    approvalTarget: "finance",
     requestedApproverId: "",
   };
 }

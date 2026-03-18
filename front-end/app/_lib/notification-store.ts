@@ -24,6 +24,7 @@ const EMPTY_NOTIFICATIONS: OrderNotification[] = [];
 let cachedNotifications = EMPTY_NOTIFICATIONS;
 let activeLoadPromise: Promise<OrderNotification[]> | null = null;
 let hasLoadedNotifications = false;
+let activeViewerUserId: string | null = null;
 const subscribers = new Set<() => void>();
 
 function emitChange() {
@@ -75,7 +76,7 @@ export async function refreshNotificationsStore() {
     return activeLoadPromise;
   }
 
-  activeLoadPromise = fetchNotificationsRequest()
+  activeLoadPromise = fetchNotificationsRequest(activeViewerUserId)
     .then((notifications) => {
       writeNotificationsSnapshot(notifications.map(mapNotification));
       return cachedNotifications;
@@ -119,15 +120,28 @@ export function useNotificationsStore() {
   );
 }
 
+export function setNotificationsViewerUserId(userId: string | null) {
+  if (activeViewerUserId === userId) return;
+
+  activeViewerUserId = userId;
+  cachedNotifications = EMPTY_NOTIFICATIONS;
+  hasLoadedNotifications = false;
+  activeLoadPromise = null;
+  ensureNotificationsLoaded();
+}
+
 export async function markNotificationAsRead(notificationId: string) {
-  const nextNotification = await markNotificationAsReadRequest(notificationId);
+  const nextNotification = await markNotificationAsReadRequest(
+    notificationId,
+    activeViewerUserId,
+  );
   if (!nextNotification) return;
 
   upsertNotification(mapNotification(nextNotification));
 }
 
 export async function markAllNotificationsAsRead() {
-  const didMarkAll = await markAllNotificationsAsReadRequest();
+  const didMarkAll = await markAllNotificationsAsReadRequest(activeViewerUserId);
   if (!didMarkAll) return;
 
   writeNotificationsSnapshot(

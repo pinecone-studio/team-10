@@ -28,6 +28,11 @@ export const permissionRequestOptions = [
     label: "Any Higher-ups",
     description: "Routes the order to any eligible approver before Finance review.",
   },
+  {
+    value: "finance",
+    label: "Finance",
+    description: "Sends the order straight to the finance approval queue.",
+  },
 ] as const;
 
 let cachedOrdersSnapshot: StoredOrder[] = EMPTY_ORDERS;
@@ -133,6 +138,10 @@ async function refreshOrdersStore() {
   return activeLoadPromise;
 }
 
+export async function syncOrdersStore() {
+  return refreshOrdersStore();
+}
+
 function ensureOrdersStoreLoaded() {
   if (hasLoadedOrders || activeLoadPromise) return;
 
@@ -161,7 +170,7 @@ function subscribe(callback: () => void) {
 
 export function getApprovalTargetLabel(target: ApprovalTarget) {
   if (target === "any_higher_ups") return "Any Higher-ups";
-  return "Approval queue";
+  return "Finance";
 }
 
 export function useOrdersStore() {

@@ -115,6 +115,7 @@ export type CreateOrderInput = {
   requester: string;
   deliveryDate: string;
   approvalTarget: ApprovalTarget;
+  status?: OrderStatus;
   items: OrderItem[];
   currencyCode: CurrencyCode;
   requestedApproverId?: string | null;

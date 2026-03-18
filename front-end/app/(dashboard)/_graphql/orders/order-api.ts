@@ -174,6 +174,7 @@ const createOrderMutation = gql`
     $requestDate: String
     $requester: String
     $department: String
+    $status: String
     $approvalTarget: String
     $deliveryDate: String
     $currencyCode: String
@@ -189,6 +190,7 @@ const createOrderMutation = gql`
       requestDate: $requestDate
       requester: $requester
       department: $department
+      status: $status
       approvalTarget: $approvalTarget
       deliveryDate: $deliveryDate
       currencyCode: $currencyCode
@@ -376,8 +378,12 @@ function mapOrder(order: OrderDto): StoredOrder {
 }
 
 function mapOrderItemInput(item: OrderItem) {
+  const normalizedCatalogId = /^\d+$/.test(item.catalogId)
+    ? item.catalogId
+    : null;
+
   return {
-    catalogId: item.catalogId || null,
+    catalogId: normalizedCatalogId,
     name: item.name,
     code: item.code,
     unit: item.unit,
@@ -405,6 +411,7 @@ export async function createOrderRequest(input: CreateOrderRequestInput) {
       requestDate: input.requestDate,
       requester: input.requester.trim(),
       department: input.department,
+      status: input.status ?? null,
       approvalTarget: input.approvalTarget,
       deliveryDate: input.deliveryDate,
       currencyCode: input.currencyCode,

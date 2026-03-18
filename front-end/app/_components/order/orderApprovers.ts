@@ -1,6 +1,6 @@
 "use client";
 
-import type { DepartmentOption } from "../../_lib/order-types";
+import type { ApprovalTarget, DepartmentOption } from "../../_lib/order-types";
 
 export type HigherUpPosition =
   | "ceo"
@@ -12,40 +12,44 @@ export type HigherUpPosition =
   | "departmentManager"
   | "manager";
 
-export type HigherUpApprover = {
+export type OrderApprover = {
   initials: string;
   id: string;
   fullName: string;
-  position: HigherUpPosition;
+  position: HigherUpPosition | "financeManager";
   positionLabel: string;
   department: DepartmentOption | "Executive Office";
   departmentLabel: string;
+  approvalTarget: ApprovalTarget;
 };
 
-const higherUpApprovers: HigherUpApprover[] = [
-  ["AS", "approvee-ceo", "Ariunsanaa Sukhbaatar", "ceo", "CEO", "Executive Office", "Executive office"],
-  ["NE", "approvee-general-manager", "Narmandakh Erdene", "generalManager", "General Manager", "Executive Office", "Executive office"],
-  ["ER", "approvee-cfo", "Erdenechimeg Rentsen", "cfo", "CFO", "Finance Office", "Finance office"],
-  ["AP", "approvee-coo", "Anujin Purevdorj", "coo", "COO", "Operations", "Operations"],
-  ["MB", "approvee-cto", "Munkh-Erdene Battsengel", "cto", "CTO", "IT Office", "Information technology"],
-  ["GB", "approvee-it-head", "Ganbold Batjargal", "departmentHead", "Department Head", "IT Office", "Information technology"],
-  ["SG", "approvee-hr-manager", "Sarnai Gombo", "manager", "HR Manager", "Human Resources", "Human resources"],
-  ["BL", "approvee-operations-manager", "Bilegt Lkhagva", "manager", "Operations Manager", "Operations", "Operations"],
-  ["TM", "approvee-procurement-manager", "Temuulen Munkh", "departmentManager", "Procurement Manager", "Procurement", "Procurement"],
+const orderApprovers: OrderApprover[] = [
+  ["AS", "approvee-ceo", "Ariunsanaa Sukhbaatar", "ceo", "CEO", "Executive Office", "Executive office", "any_higher_ups"],
+  ["NE", "approvee-general-manager", "Narmandakh Erdene", "generalManager", "General Manager", "Executive Office", "Executive office", "any_higher_ups"],
+  ["ER", "approvee-cfo", "Erdenechimeg Rentsen", "cfo", "CFO", "Finance Office", "Finance office", "any_higher_ups"],
+  ["AP", "approvee-coo", "Anujin Purevdorj", "coo", "COO", "Operations", "Operations", "any_higher_ups"],
+  ["MB", "approvee-cto", "Munkh-Erdene Battsengel", "cto", "CTO", "IT Office", "Information technology", "any_higher_ups"],
+  ["GB", "approvee-it-head", "Ganbold Batjargal", "departmentHead", "Department Head", "IT Office", "Information technology", "any_higher_ups"],
+  ["SG", "approvee-hr-manager", "Sarnai Gombo", "manager", "HR Manager", "Human Resources", "Human resources", "any_higher_ups"],
+  ["BL", "approvee-operations-manager", "Bilegt Lkhagva", "manager", "Operations Manager", "Operations", "Operations", "any_higher_ups"],
+  ["TM", "approvee-procurement-manager", "Temuulen Munkh", "departmentManager", "Procurement Manager", "Procurement", "Procurement", "any_higher_ups"],
+  ["UN", "finance-controller", "Undrakh Naran", "financeManager", "Finance Controller", "Finance Office", "Finance office", "finance"],
+  ["BK", "finance-manager", "Bolormaa Khash", "financeManager", "Finance Manager", "Finance Office", "Finance office", "finance"],
 ].map(
-  ([initials, id, fullName, position, positionLabel, department, departmentLabel]) => ({
+  ([initials, id, fullName, position, positionLabel, department, departmentLabel, approvalTarget]) => ({
     initials,
     id,
     fullName,
-    position: position as HigherUpPosition,
+    position: position as OrderApprover["position"],
     positionLabel,
-    department: department as HigherUpApprover["department"],
+    department: department as OrderApprover["department"],
     departmentLabel,
+    approvalTarget: approvalTarget as ApprovalTarget,
   }),
 );
 
 function getApproverRank(
-  approver: HigherUpApprover,
+  approver: OrderApprover,
   department: DepartmentOption,
 ) {
   if (approver.department === department) return 0;
@@ -55,8 +59,13 @@ function getApproverRank(
   return 2;
 }
 
-export function getHigherUpApproverOptions(department: DepartmentOption) {
-  return [...higherUpApprovers].sort((left, right) => {
+export function getApproverOptions(
+  department: DepartmentOption,
+  approvalTarget: ApprovalTarget,
+) {
+  return orderApprovers
+    .filter((approver) => approver.approvalTarget === approvalTarget)
+    .sort((left, right) => {
     const rankDifference =
       getApproverRank(left, department) - getApproverRank(right, department);
 
@@ -66,10 +75,13 @@ export function getHigherUpApproverOptions(department: DepartmentOption) {
   });
 }
 
-export function getHigherUpApproverById(approverId: string) {
-  return higherUpApprovers.find((approver) => approver.id === approverId) ?? null;
+export function getApproverById(approverId: string) {
+  return orderApprovers.find((approver) => approver.id === approverId) ?? null;
 }
 
-export function getDefaultHigherUpApproverId(department: DepartmentOption) {
-  return getHigherUpApproverOptions(department)[0]?.id ?? "";
+export function getDefaultApproverId(
+  department: DepartmentOption,
+  approvalTarget: ApprovalTarget,
+) {
+  return getApproverOptions(department, approvalTarget)[0]?.id ?? "";
 }

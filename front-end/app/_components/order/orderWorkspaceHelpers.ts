@@ -18,7 +18,7 @@ export function filterOrders(
 }
 
 export function createOrderItem(
-  catalogId: string,
+  _catalogId: string,
   name: string,
   code: string,
   unit: string,
@@ -26,5 +26,14 @@ export function createOrderItem(
   unitPrice: number,
   currencyCode: OrderItem["currencyCode"],
 ) {
-  return { catalogId, name, code, unit, quantity, unitPrice, totalPrice: quantity * unitPrice, currencyCode };
+  return {
+    catalogId: "",
+    name,
+    code,
+    unit,
+    quantity,
+    unitPrice,
+    totalPrice: quantity * unitPrice,
+    currencyCode,
+  };
 }

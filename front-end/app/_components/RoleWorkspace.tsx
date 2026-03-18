@@ -12,7 +12,7 @@ import { InventoryStorageSection } from "./role/InventoryStorageSection";
 import { PlaceholderSection } from "./role/PlaceholderSection";
 
 export function RoleWorkspace({ role, roleLabel, section }: { role: AppRole; roleLabel: string; section: SectionKey }) {
-  if (section === "order" && (role === "systemAdmin" || role === "inventoryHead")) return <OrderWorkspace role={role} roleLabel={roleLabel} />;
+  if (section === "order" && (role === "systemAdmin" || role === "inventoryHead" || role === "employee")) return <OrderWorkspace role={role} roleLabel={roleLabel} />;
   if (role === "higherUpApprover" && section === "order") return <HigherUpApprovalSection />;
   if (role === "finance" && section === "order") return <FinanceApprovalSection />;
   if ((role === "inventoryHead" || role === "systemAdmin") && section === "receive") return <InventoryReceiveSection />;

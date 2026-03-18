@@ -10,8 +10,9 @@ import { useOrderWorkspaceState } from "./useOrderWorkspaceState";
 type Props = { role: AppRole; roleLabel: string };
 
 export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
-  const canViewHistory = role === "systemAdmin" || role === "inventoryHead";
-  const state = useOrderWorkspaceState(canViewHistory);
+  const canViewHistory =
+    role === "systemAdmin" || role === "inventoryHead" || role === "employee";
+  const state = useOrderWorkspaceState(role, canViewHistory);
 
   return (
     <WorkspaceShell

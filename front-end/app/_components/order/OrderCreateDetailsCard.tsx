@@ -18,9 +18,9 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
 
 export function OrderCreateDetailsCard(props: Pick<OrderCreateViewProps, "draftOrder" | "onOrderChange">) {
   return (
-    <section className="rounded-[12px] border border-[#e2e8f0] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]">
-      <div className="border-b border-[#e2e8f0] bg-[rgba(241,245,249,0.3)] px-6 py-4">
-        <h3 className="text-[16px] font-semibold leading-6 text-[#020618]">Order Details</h3>
+    <section className="rounded-t-[18px] border border-b-0 border-[#e2e8f0] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]">
+      <div className="border-b border-[#e2e8f0] bg-white px-6 py-5">
+        <h3 className="text-[18px] font-semibold leading-6 text-[#111827]">Order Details</h3>
       </div>
       <div className="grid gap-x-[52px] gap-y-5 px-6 py-6 md:grid-cols-2">
         <ReadonlyField label="Request ID" value={props.draftOrder.requestNumber} />

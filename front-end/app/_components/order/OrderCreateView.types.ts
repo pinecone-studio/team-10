@@ -30,5 +30,5 @@ export type OrderCreateViewProps = {
   onUpdateItemQuantity: (index: number, value: string) => void;
   onRemoveItem: (index: number) => void;
   onOpenDetail: (orderId: string) => void;
-  onSubmit: () => void;
+  onSubmit: () => Promise<void>;
 };
