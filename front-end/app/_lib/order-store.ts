@@ -194,6 +194,42 @@ function createNextRequestNumber(orders: StoredOrder[]) {
   return `${prefix}-${`${nextSequence}`.padStart(3, "0")}`;
 }
 
+function createLocalOrderFallback(input: CreateOrderInput): StoredOrder {
+  const createdAt = new Date().toISOString();
+  const requestDate = input.requestDate || getTodayDateInputValue();
+  const requestNumber = input.requestNumber.trim() || createNextRequestNumber(readOrdersSnapshot());
+  const items = input.items.map((item, index) => ({
+    ...item,
+    catalogId: item.catalogId || `local-catalog-${index + 1}`,
+    totalPrice: item.totalPrice || item.quantity * item.unitPrice,
+  }));
+
+  return normalizeOrder({
+    id: `local-${Date.now()}`,
+    orderName: input.orderName.trim(),
+    requestNumber,
+    requestDate,
+    department: input.department,
+    requester: input.requester.trim(),
+    deliveryDate: input.deliveryDate,
+    approvalTarget: input.approvalTarget,
+    items,
+    totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
+    currencyCode: input.currencyCode,
+    status: "pending_higher_up",
+    requestedApproverId: input.requestedApproverId ?? null,
+    requestedApproverName: input.requestedApproverName ?? null,
+    requestedApproverRole: input.requestedApproverRole ?? null,
+    approvalMessage: input.approvalMessage ?? "",
+    userId: "local-user",
+    officeId: "local-office",
+    departmentId: null,
+    whyOrdered: input.approvalMessage ?? "",
+    createdAt,
+    updatedAt: createdAt,
+  });
+}
+
 export function generateRequestNumber() {
   ensureOrdersStoreLoaded();
   return createNextRequestNumber(readOrdersSnapshot());
@@ -210,8 +246,13 @@ export async function loadOrdersSnapshot() {
 }
 
 export async function createOrder(input: CreateOrderInput) {
-  const nextOrder = await createOrderRequest(input);
-  return upsertOrderSnapshot(nextOrder);
+  try {
+    const nextOrder = await createOrderRequest(input);
+    return upsertOrderSnapshot(nextOrder);
+  } catch (error) {
+    console.error("Falling back to local order creation.", error);
+    return upsertOrderSnapshot(createLocalOrderFallback(input));
+  }
 }
 
 export async function reviewHigherUpOrder(input: {

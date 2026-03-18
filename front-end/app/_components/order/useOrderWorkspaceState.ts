@@ -71,7 +71,19 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
     key: Key,
     value: (typeof draftOrder)[Key],
   ) {
-    setDraftOrder((current) => ({ ...current, [key]: value }));
+    setDraftOrder((current) => {
+      if (key === "department") {
+        return {
+          ...current,
+          department: value as typeof current.department,
+          requestedApproverId: getDefaultHigherUpApproverId(
+            value as typeof current.department,
+          ),
+        };
+      }
+
+      return { ...current, [key]: value };
+    });
   }
 
   function updateGoodsDraft(draftId: string, updates: Partial<(typeof goodsDrafts)[number]>) {

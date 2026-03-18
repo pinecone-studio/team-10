@@ -9,6 +9,7 @@ import type {
   CurrencyCode,
   DepartmentOption,
 } from "../../_lib/order-types";
+import { getDefaultHigherUpApproverId } from "./orderApprovers";
 
 export const DEFAULT_ORDER_REQUESTER = "Batbayar Dorj";
 
@@ -50,15 +51,17 @@ export function generateFourDigitItemCode(usedCodes: string[] = []) {
 }
 
 export function createDraftOrder(): DraftOrder {
+  const department = "IT Office";
+
   return {
     orderName: "",
     requestNumber: generateRequestNumber(),
     requestDate: getTodayDateInputValue(),
-    department: "IT Office",
+    department,
     requester: DEFAULT_ORDER_REQUESTER,
     deliveryDate: getTodayDateInputValue(),
     approvalTarget: "any_higher_ups",
-    requestedApproverId: "",
+    requestedApproverId: getDefaultHigherUpApproverId(department),
   };
 }
 
