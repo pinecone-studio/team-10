@@ -15,6 +15,7 @@ import {
 } from "../shared/WorkspacePrimitives";
 import DistributionHeader from "../distribution/DistributionHeader";
 import DistributionDashboard from "../distribution/DistributionDashboard";
+import DistributionSearchFilter from "../distribution/DistributionSearchFilter";
 
 const assignees = [
   { name: "Bat-Erdene", role: "Employee" },
@@ -43,6 +44,7 @@ export function HRDistributionSection() {
       <div className="w-full">
         <DistributionHeader />
         <DistributionDashboard />
+        <DistributionSearchFilter />
       </div>
     );
   }
