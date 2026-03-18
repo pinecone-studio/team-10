@@ -321,7 +321,8 @@ export function InventoryStorageSection() {
                       {group.requestNumber}
                     </p>
                     <p className="mt-1 text-[11px] text-[#64748b]">
-                      {group.requester} | {group.rows.length} assets | {group.location}
+                      {group.requester} | {group.rows.length} assets |{" "}
+                      {group.location}
                     </p>
                   </div>
                   <div className="text-right">
