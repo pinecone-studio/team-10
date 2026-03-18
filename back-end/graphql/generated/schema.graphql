@@ -167,6 +167,7 @@ input OrderItemInput {
 }
 
 type Query {
+  asset(id: ID, qrCode: String): StorageAsset
   catalogCategories: [CatalogCategory!]!
   catalogItemTypes(categoryId: ID): [CatalogItemType!]!
   catalogProduct(id: ID!): CatalogProduct
@@ -176,6 +177,7 @@ type Query {
   orders: [Order!]!
   receive(id: ID!): Receive
   receives: [Receive!]!
+  storageAssets: [StorageAsset!]!
 }
 
 type Receive {
@@ -203,4 +205,30 @@ type ReceivedAsset {
   id: ID!
   qrCode: String!
   serialNumber: String
+}
+
+type StorageAsset {
+  assetCode: String!
+  assetName: String!
+  assetStatus: String!
+  category: String!
+  conditionStatus: String!
+  createdAt: String!
+  currencyCode: String!
+  department: String!
+  id: ID!
+  itemType: String!
+  orderId: ID!
+  qrCode: String!
+  receiveNote: String
+  receivedAt: String!
+  requestDate: String!
+  requestNumber: String!
+  requester: String!
+  serialNumber: String
+  storageId: ID
+  storageName: String!
+  storageType: String
+  unitCost: Float
+  updatedAt: String!
 }
