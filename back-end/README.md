@@ -16,6 +16,8 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+For this repo's local setup, run the backend on [http://localhost:3001](http://localhost:3001) so the front-end can stay on `3000` and proxy GraphQL requests correctly.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 ## Local GraphQL Runtime Config
