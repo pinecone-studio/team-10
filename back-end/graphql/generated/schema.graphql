@@ -78,6 +78,7 @@ type Mutation {
   deleteReceive(id: ID!): Boolean!
   markAllNotificationsAsRead(userId: ID): Boolean!
   markNotificationAsRead(id: ID!, userId: ID): Notification
+  receiveOrderItem(catalogId: ID, itemCode: String!, officeId: ID, orderId: ID!, quantityReceived: Int!, receivedAt: String, receivedByUserId: ID, receivedCondition: String!, receivedNote: String, serialNumbers: [String!], storageLocation: String): ReceiveOrderItemPayload!
   updateCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String, id: ID!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String, status: String, unit: String): CatalogProduct
   updateOrder(approvalMessage: String, approvalTarget: String, assignedAt: String, assignedRole: String, assignedTo: String, currencyCode: String, deliveryDate: String, department: String, departmentId: ID, financeNote: String, financeReviewedAt: String, financeReviewer: String, higherUpNote: String, higherUpReviewedAt: String, higherUpReviewer: String, id: ID!, items: [OrderItemInput!], officeId: ID, orderName: String, receivedAt: String, receivedCondition: String, receivedNote: String, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, serialNumbers: [String!], status: String, storageLocation: String, totalAmount: Float, userId: ID, whyOrdered: String): Order
   updateReceive(id: ID!, note: String, officeId: ID, orderId: ID, receivedAt: String, receivedByUserId: ID, status: String): Receive
@@ -185,4 +186,21 @@ type Receive {
   receivedAt: String!
   receivedByUserId: ID!
   status: String!
+}
+
+type ReceiveOrderItemPayload {
+  assets: [ReceivedAsset!]!
+  order: Order!
+  receive: Receive!
+}
+
+type ReceivedAsset {
+  assetCode: String!
+  assetName: String!
+  assetStatus: String!
+  conditionStatus: String!
+  currentStorageId: ID
+  id: ID!
+  qrCode: String!
+  serialNumber: String
 }
