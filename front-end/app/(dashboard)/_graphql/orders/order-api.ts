@@ -4,7 +4,6 @@ import { gql } from "@apollo/client/core";
 import { apolloClient } from "@/app/providers/apolloClient";
 import type {
   CreateOrderInput,
-  CurrencyCode,
   OrderItem,
   OrderStatus,
   ReceivedCondition,
@@ -80,7 +79,6 @@ export type UpdateOrderRequestInput = {
   approvalTarget?: string | null;
   deliveryDate?: string | null;
   totalAmount?: number | null;
-  currencyCode?: CurrencyCode | null;
   requestedApproverId?: string | null;
   requestedApproverName?: string | null;
   requestedApproverRole?: string | null;
@@ -176,7 +174,6 @@ const createOrderMutation = gql`
     $department: String
     $approvalTarget: String
     $deliveryDate: String
-    $currencyCode: String
     $requestedApproverId: String
     $requestedApproverName: String
     $requestedApproverRole: String
@@ -191,7 +188,6 @@ const createOrderMutation = gql`
       department: $department
       approvalTarget: $approvalTarget
       deliveryDate: $deliveryDate
-      currencyCode: $currencyCode
       requestedApproverId: $requestedApproverId
       requestedApproverName: $requestedApproverName
       requestedApproverRole: $requestedApproverRole
@@ -221,7 +217,6 @@ const updateOrderMutation = gql`
     $approvalTarget: String
     $deliveryDate: String
     $totalAmount: Float
-    $currencyCode: String
     $requestedApproverId: String
     $requestedApproverName: String
     $requestedApproverRole: String
@@ -257,7 +252,6 @@ const updateOrderMutation = gql`
       approvalTarget: $approvalTarget
       deliveryDate: $deliveryDate
       totalAmount: $totalAmount
-      currencyCode: $currencyCode
       requestedApproverId: $requestedApproverId
       requestedApproverName: $requestedApproverName
       requestedApproverRole: $requestedApproverRole
@@ -283,12 +277,8 @@ const updateOrderMutation = gql`
   }
 `;
 
-function parseCurrencyCode(value: string): CurrencyCode {
-  if (value === "USD" || value === "EUR" || value === "MNT") {
-    return value;
-  }
-
-  return "MNT";
+function parseCurrencyCode() {
+  return "USD" as const;
 }
 
 function parseApprovalTarget(value: string): StoredOrder["approvalTarget"] {
@@ -328,7 +318,7 @@ function mapOrderItem(item: OrderItemDto): OrderItem {
     quantity: item.quantity,
     unitPrice: item.unitPrice,
     totalPrice: item.totalPrice,
-    currencyCode: parseCurrencyCode(item.currencyCode),
+    currencyCode: parseCurrencyCode(),
   };
 }
 
@@ -344,7 +334,7 @@ function mapOrder(order: OrderDto): StoredOrder {
     approvalTarget: parseApprovalTarget(order.approvalTarget),
     items: order.items.map(mapOrderItem),
     totalAmount: order.totalAmount,
-    currencyCode: parseCurrencyCode(order.currencyCode),
+    currencyCode: parseCurrencyCode(),
     status: parseOrderStatus(order.status),
     requestedApproverId: order.requestedApproverId,
     requestedApproverName: order.requestedApproverName,
@@ -383,7 +373,6 @@ function mapOrderItemInput(item: OrderItem) {
     unit: item.unit,
     quantity: item.quantity,
     unitPrice: item.unitPrice,
-    currencyCode: item.currencyCode,
   };
 }
 
@@ -407,7 +396,6 @@ export async function createOrderRequest(input: CreateOrderRequestInput) {
       department: input.department,
       approvalTarget: input.approvalTarget,
       deliveryDate: input.deliveryDate,
-      currencyCode: input.currencyCode,
       requestedApproverId: input.requestedApproverId?.trim() || null,
       requestedApproverName: input.requestedApproverName?.trim() || null,
       requestedApproverRole: input.requestedApproverRole?.trim() || null,

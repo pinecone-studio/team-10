@@ -19,7 +19,7 @@ export type ReceiveRow = {
   condition: ReceiveCondition;
   quantity: number;
   received: number;
-  currencyCode: "USD" | "MNT" | "EUR";
+  currencyCode: "USD";
   unitPrice: number;
   purchaseCost: number;
   selectable: boolean;

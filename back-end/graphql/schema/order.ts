@@ -59,7 +59,6 @@ export const OrderTypeDefs = `
     unit: String
     quantity: Int!
     unitPrice: Float!
-    currencyCode: String
     category: String
     itemType: String
     fromWhere: String
@@ -87,7 +86,6 @@ export const OrderTypeDefs = `
       approvalTarget: String
       deliveryDate: String
       totalAmount: Float
-      currencyCode: String
       requestedApproverId: String
       requestedApproverName: String
       requestedApproverRole: String
@@ -109,7 +107,6 @@ export const OrderTypeDefs = `
       approvalTarget: String
       deliveryDate: String
       totalAmount: Float
-      currencyCode: String
       requestedApproverId: String
       requestedApproverName: String
       requestedApproverRole: String

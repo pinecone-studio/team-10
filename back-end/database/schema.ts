@@ -273,7 +273,7 @@ export const orders = sqliteTable(
     totalCost: real("total_cost"),
     currencyCode: text("currency_code", { enum: currencyCodeValues })
       .notNull()
-      .default("MNT"),
+      .default("USD"),
     requestedApproverId: text("requested_approver_id"),
     requestedApproverName: text("requested_approver_name"),
     requestedApproverRole: text("requested_approver_role"),
@@ -609,7 +609,7 @@ export const orderItems = sqliteTable(
     unitCost: real("unit_cost").notNull(),
     currencyCode: text("currency_code", { enum: currencyCodeValues })
       .notNull()
-      .default("MNT"),
+      .default("USD"),
     fromWhere: text("from_where").notNull(),
     additionalNotes: text("additional_notes"),
     eta: text("eta"),

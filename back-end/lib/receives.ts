@@ -1,5 +1,13 @@
-import { asc, eq } from "drizzle-orm";
-import { receiveStatusValues, receives } from "../database/schema.ts";
+import { and, asc, eq } from "drizzle-orm";
+import {
+  conditionStatusValues,
+  orderItems,
+  orders,
+  receiveItems,
+  receiveStatusValues,
+  receives,
+  receivedConditionValues,
+} from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
 import {
   parseIntegerId,
@@ -9,6 +17,8 @@ import {
 } from "./reference-resolvers.ts";
 
 type ReceiveStatus = (typeof receiveStatusValues)[number];
+type ConditionStatus = (typeof conditionStatusValues)[number];
+type ReceivedCondition = (typeof receivedConditionValues)[number];
 
 type ReceiveRow = {
   id: number;
@@ -17,7 +27,14 @@ type ReceiveRow = {
   officeId: number;
   status: ReceiveStatus;
   receivedAt: string;
-  note: string | null;
+  receiveNote: string | null;
+  orderItemId: number;
+  quantityReceived: number;
+  conditionStatus: ConditionStatus;
+  itemNote: string | null;
+  receivedCondition: ReceivedCondition | null;
+  storageLocation: string | null;
+  serialNumbersJson: string | null;
 };
 
 export type ReceiveRecord = {
@@ -28,24 +45,36 @@ export type ReceiveRecord = {
   status: ReceiveStatus;
   receivedAt: string;
   note: string | null;
+  orderItemId: string;
+  quantityReceived: number;
+  conditionStatus: ConditionStatus;
+  receivedCondition: ReceivedCondition | null;
+  storageLocation: string | null;
+  serialNumbers: string[];
 };
 
 export type CreateReceiveInput = {
   orderId?: string | null;
-  receivedByUserId?: string | null;
-  officeId?: string | null;
-  status: string;
+  orderItemId?: string | null;
+  quantityReceived?: number | null;
+  conditionStatus?: string | null;
   receivedAt?: string | null;
+  receivedCondition?: string | null;
   note?: string | null;
+  storageLocation?: string | null;
+  serialNumbers?: string[] | null;
 };
 
 export type UpdateReceiveInput = {
   orderId?: string | null;
-  receivedByUserId?: string | null;
-  officeId?: string | null;
-  status?: string | null;
+  orderItemId?: string | null;
+  quantityReceived?: number | null;
+  conditionStatus?: string | null;
   receivedAt?: string | null;
+  receivedCondition?: string | null;
   note?: string | null;
+  storageLocation?: string | null;
+  serialNumbers?: string[] | null;
 };
 
 const receiveSelection = {
@@ -55,8 +84,27 @@ const receiveSelection = {
   officeId: receives.officeId,
   status: receives.status,
   receivedAt: receives.receivedAt,
-  note: receives.note,
+  receiveNote: receives.note,
+  orderItemId: receiveItems.orderItemId,
+  quantityReceived: receiveItems.quantityReceived,
+  conditionStatus: receiveItems.conditionStatus,
+  itemNote: receiveItems.note,
+  receivedCondition: orders.receivedCondition,
+  storageLocation: orders.storageLocation,
+  serialNumbersJson: orders.serialNumbersJson,
 };
+
+function parseStringArray(value: string | null): string[] {
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((entry): entry is string => typeof entry === "string");
+  } catch {
+    return [];
+  }
+}
 
 function mapReceive(row: ReceiveRow): ReceiveRecord {
   return {
@@ -66,25 +114,113 @@ function mapReceive(row: ReceiveRow): ReceiveRecord {
     officeId: String(row.officeId),
     status: row.status,
     receivedAt: row.receivedAt,
-    note: row.note,
+    note: row.itemNote ?? row.receiveNote,
+    orderItemId: String(row.orderItemId),
+    quantityReceived: row.quantityReceived,
+    conditionStatus: row.conditionStatus,
+    receivedCondition: row.receivedCondition,
+    storageLocation: row.storageLocation,
+    serialNumbers: parseStringArray(row.serialNumbersJson),
   };
 }
 
-function parseReceiveStatus(status: string): ReceiveStatus {
-  if (!receiveStatusValues.includes(status as ReceiveStatus)) {
+function parseConditionStatus(
+  conditionStatus?: string | null,
+): ConditionStatus {
+  const normalized = conditionStatus?.trim() ?? "good";
+
+  if (!conditionStatusValues.includes(normalized as ConditionStatus)) {
     throw new Error(
-      `Receive status must be one of: ${receiveStatusValues.join(", ")}.`,
+      `Condition status must be one of: ${conditionStatusValues.join(", ")}.`,
     );
   }
 
-  return status as ReceiveStatus;
+  return normalized as ConditionStatus;
+}
+
+function parseReceivedCondition(
+  receivedCondition?: string | null,
+): ReceivedCondition | null {
+  if (receivedCondition === undefined || receivedCondition === null) {
+    return null;
+  }
+
+  if (!receivedConditionValues.includes(receivedCondition as ReceivedCondition)) {
+    throw new Error(
+      `Received condition must be one of: ${receivedConditionValues.join(", ")}.`,
+    );
+  }
+
+  return receivedCondition as ReceivedCondition;
+}
+
+function deriveReceiveStatus(
+  quantityReceived: number,
+  orderedQuantity: number,
+): ReceiveStatus {
+  return quantityReceived >= orderedQuantity ? "received" : "partiallyReceived";
+}
+
+function mapReceiveStatusToOrderStatus(status: ReceiveStatus) {
+  if (status === "received") return "received";
+  if (status === "partiallyReceived") return "partiallyReceived";
+  return "ordered";
+}
+
+async function getOrderItemContext(
+  db: AppDb,
+  orderId: number,
+  orderItemId?: string | null,
+) {
+  if (!orderItemId) {
+    throw new Error("orderItemId is required.");
+  }
+
+  const numericOrderItemId = parseIntegerId("orderItemId", orderItemId);
+
+  const [row] = await db
+    .select({
+      id: orderItems.id,
+      orderId: orderItems.orderId,
+      quantity: orderItems.quantity,
+    })
+    .from(orderItems)
+    .where(
+      and(eq(orderItems.id, numericOrderItemId), eq(orderItems.orderId, orderId)),
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new Error(`Order item ${orderItemId} does not exist for order ${orderId}.`);
+  }
+
+  return row;
+}
+
+async function getReceiveRowById(
+  db: AppDb,
+  id: string,
+): Promise<ReceiveRow | null> {
+  const numericId = parseIntegerId("Receive id", id);
+
+  const [row] = await db
+    .select(receiveSelection)
+    .from(receives)
+    .innerJoin(receiveItems, eq(receives.id, receiveItems.receiveId))
+    .innerJoin(orders, eq(receives.orderId, orders.id))
+    .where(eq(receives.id, numericId))
+    .limit(1);
+
+  return row ?? null;
 }
 
 export async function listReceives(db: AppDb): Promise<ReceiveRecord[]> {
   const rows = await db
     .select(receiveSelection)
     .from(receives)
-    .orderBy(asc(receives.id));
+    .innerJoin(receiveItems, eq(receives.id, receiveItems.receiveId))
+    .innerJoin(orders, eq(receives.orderId, orders.id))
+    .orderBy(asc(receives.id), asc(receiveItems.id));
 
   return rows.map(mapReceive);
 }
@@ -93,14 +229,7 @@ export async function getReceiveById(
   db: AppDb,
   id: string,
 ): Promise<ReceiveRecord | null> {
-  const numericId = parseIntegerId("Receive id", id);
-
-  const [row] = await db
-    .select(receiveSelection)
-    .from(receives)
-    .where(eq(receives.id, numericId))
-    .limit(1);
-
+  const row = await getReceiveRowById(db, id);
   return row ? mapReceive(row) : null;
 }
 
@@ -110,26 +239,65 @@ export async function createReceive(
   currentUserId?: string | null,
 ): Promise<ReceiveRecord> {
   const orderId = await resolveOrderId(db, input.orderId, currentUserId);
-  const receivedByUserId = await resolveUserId(
-    db,
-    input.receivedByUserId,
-    currentUserId,
-  );
-  const officeId = await resolveOfficeId(db, input.officeId);
+  const orderItem = await getOrderItemContext(db, orderId, input.orderItemId);
+  const receivedByUserId = await resolveUserId(db, undefined, currentUserId);
+  const officeId = await resolveOfficeId(db);
+  const quantityReceived = Number(input.quantityReceived);
 
-  const [row] = await db
+  if (!Number.isInteger(quantityReceived) || quantityReceived <= 0) {
+    throw new Error("quantityReceived must be a positive integer.");
+  }
+
+  if (quantityReceived > orderItem.quantity) {
+    throw new Error("quantityReceived cannot exceed the ordered quantity.");
+  }
+
+  const status = deriveReceiveStatus(quantityReceived, orderItem.quantity);
+  const receivedAt = input.receivedAt ?? new Date().toISOString();
+
+  const [receiveRow] = await db
     .insert(receives)
     .values({
       orderId,
       receivedByUserId,
       officeId,
-      status: parseReceiveStatus(input.status),
-      receivedAt: input.receivedAt ?? new Date().toISOString(),
-      note: input.note ?? null,
+      status,
+      receivedAt,
+      note: input.note?.trim() || null,
     })
-    .returning(receiveSelection);
+    .returning({ id: receives.id });
 
-  return mapReceive(row);
+  await db
+    .insert(receiveItems)
+    .values({
+      receiveId: receiveRow.id,
+      orderItemId: orderItem.id,
+      quantityReceived,
+      conditionStatus: parseConditionStatus(input.conditionStatus),
+      note: input.note?.trim() || null,
+    })
+    .run();
+
+  await db
+    .update(orders)
+    .set({
+      status: mapReceiveStatusToOrderStatus(status),
+      receivedAt,
+      receivedCondition: parseReceivedCondition(input.receivedCondition),
+      receivedNote: input.note?.trim() || null,
+      storageLocation: input.storageLocation?.trim() || null,
+      serialNumbersJson: JSON.stringify(input.serialNumbers ?? []),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(orders.id, orderId))
+    .run();
+
+  const createdReceive = await getReceiveById(db, String(receiveRow.id));
+  if (!createdReceive) {
+    throw new Error("Failed to load created receive.");
+  }
+
+  return createdReceive;
 }
 
 export async function updateReceive(
@@ -138,48 +306,95 @@ export async function updateReceive(
   input: UpdateReceiveInput,
   currentUserId?: string | null,
 ): Promise<ReceiveRecord | null> {
-  const numericId = parseIntegerId("Receive id", id);
-  const updates: Partial<typeof receives.$inferInsert> = {};
+  const existingReceive = await getReceiveRowById(db, id);
+  if (!existingReceive) return null;
 
-  if (input.orderId !== undefined && input.orderId !== null) {
-    updates.orderId = await resolveOrderId(db, input.orderId, currentUserId);
+  const orderId =
+    input.orderId !== undefined
+      ? await resolveOrderId(db, input.orderId, currentUserId)
+      : existingReceive.orderId;
+  const orderItem =
+    input.orderItemId !== undefined
+      ? await getOrderItemContext(db, orderId, input.orderItemId)
+      : await getOrderItemContext(db, orderId, String(existingReceive.orderItemId));
+  const quantityReceived =
+    input.quantityReceived !== undefined
+      ? Number(input.quantityReceived)
+      : existingReceive.quantityReceived;
+
+  if (!Number.isInteger(quantityReceived) || quantityReceived <= 0) {
+    throw new Error("quantityReceived must be a positive integer.");
   }
 
-  if (input.receivedByUserId !== undefined && input.receivedByUserId !== null) {
-    updates.receivedByUserId = await resolveUserId(
-      db,
-      input.receivedByUserId,
-      currentUserId,
-    );
+  if (quantityReceived > orderItem.quantity) {
+    throw new Error("quantityReceived cannot exceed the ordered quantity.");
   }
 
-  if (input.officeId !== undefined && input.officeId !== null) {
-    updates.officeId = await resolveOfficeId(db, input.officeId);
-  }
+  const status = deriveReceiveStatus(quantityReceived, orderItem.quantity);
+  const receivedAt = input.receivedAt ?? existingReceive.receivedAt;
+  const receivedByUserId = await resolveUserId(db, undefined, currentUserId);
+  const officeId = await resolveOfficeId(db);
 
-  if (input.status !== undefined && input.status !== null) {
-    updates.status = parseReceiveStatus(input.status);
-  }
-
-  if (input.receivedAt !== undefined && input.receivedAt !== null) {
-    updates.receivedAt = input.receivedAt;
-  }
-
-  if (input.note !== undefined) {
-    updates.note = input.note ?? null;
-  }
-
-  if (Object.keys(updates).length === 0) {
-    return getReceiveById(db, id);
-  }
-
-  const [row] = await db
+  await db
     .update(receives)
-    .set(updates)
-    .where(eq(receives.id, numericId))
-    .returning(receiveSelection);
+    .set({
+      orderId,
+      receivedByUserId,
+      officeId,
+      status,
+      receivedAt,
+      note:
+        input.note !== undefined
+          ? input.note?.trim() || null
+          : existingReceive.itemNote ?? existingReceive.receiveNote,
+    })
+    .where(eq(receives.id, parseIntegerId("Receive id", id)))
+    .run();
 
-  return row ? mapReceive(row) : null;
+  await db
+    .update(receiveItems)
+    .set({
+      orderItemId: orderItem.id,
+      quantityReceived,
+      conditionStatus:
+        input.conditionStatus !== undefined
+          ? parseConditionStatus(input.conditionStatus)
+          : existingReceive.conditionStatus,
+      note:
+        input.note !== undefined
+          ? input.note?.trim() || null
+          : existingReceive.itemNote ?? existingReceive.receiveNote,
+    })
+    .where(eq(receiveItems.receiveId, parseIntegerId("Receive id", id)))
+    .run();
+
+  await db
+    .update(orders)
+    .set({
+      status: mapReceiveStatusToOrderStatus(status),
+      receivedAt,
+      receivedCondition:
+        input.receivedCondition !== undefined
+          ? parseReceivedCondition(input.receivedCondition)
+          : existingReceive.receivedCondition,
+      receivedNote:
+        input.note !== undefined
+          ? input.note?.trim() || null
+          : existingReceive.itemNote ?? existingReceive.receiveNote,
+      storageLocation:
+        input.storageLocation !== undefined
+          ? input.storageLocation?.trim() || null
+          : existingReceive.storageLocation,
+      serialNumbersJson:
+        input.serialNumbers !== undefined
+          ? JSON.stringify(input.serialNumbers ?? [])
+          : JSON.stringify(parseStringArray(existingReceive.serialNumbersJson)),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(orders.id, orderId))
+    .run();
+
+  return getReceiveById(db, id);
 }
 
 export async function deleteReceive(db: AppDb, id: string): Promise<boolean> {

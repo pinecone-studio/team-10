@@ -71,16 +71,16 @@ type CatalogProductImage {
 type Mutation {
   createCatalogCategory(displayName: String!): CatalogCategory!
   createCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String!, status: String, unit: String): CatalogProduct!
-  createOrder(approvalMessage: String, approvalTarget: String, currencyCode: String, deliveryDate: String, department: String, departmentId: ID, items: [OrderItemInput!], officeId: ID, orderName: String!, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, status: String, totalAmount: Float, userId: ID, whyOrdered: String): Order!
-  createReceive(note: String, officeId: ID, orderId: ID, receivedAt: String, receivedByUserId: ID, status: String!): Receive!
+  createOrder(approvalMessage: String, approvalTarget: String, deliveryDate: String, department: String, departmentId: ID, items: [OrderItemInput!], officeId: ID, orderName: String!, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, status: String, totalAmount: Float, userId: ID, whyOrdered: String): Order!
+  createReceive(conditionStatus: String!, note: String, orderId: ID!, orderItemId: ID!, quantityReceived: Int!, receivedAt: String, receivedCondition: String, serialNumbers: [String!], storageLocation: String): Receive!
   deleteCatalogCategory(id: ID!): Boolean!
   deleteOrder(id: ID!): Boolean!
   deleteReceive(id: ID!): Boolean!
   markAllNotificationsAsRead(userId: ID): Boolean!
   markNotificationAsRead(id: ID!, userId: ID): Notification
   updateCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String, id: ID!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String, status: String, unit: String): CatalogProduct
-  updateOrder(approvalMessage: String, approvalTarget: String, assignedAt: String, assignedRole: String, assignedTo: String, currencyCode: String, deliveryDate: String, department: String, departmentId: ID, financeNote: String, financeReviewedAt: String, financeReviewer: String, higherUpNote: String, higherUpReviewedAt: String, higherUpReviewer: String, id: ID!, items: [OrderItemInput!], officeId: ID, orderName: String, receivedAt: String, receivedCondition: String, receivedNote: String, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, serialNumbers: [String!], status: String, storageLocation: String, totalAmount: Float, userId: ID, whyOrdered: String): Order
-  updateReceive(id: ID!, note: String, officeId: ID, orderId: ID, receivedAt: String, receivedByUserId: ID, status: String): Receive
+  updateOrder(approvalMessage: String, approvalTarget: String, assignedAt: String, assignedRole: String, assignedTo: String, deliveryDate: String, department: String, departmentId: ID, financeNote: String, financeReviewedAt: String, financeReviewer: String, higherUpNote: String, higherUpReviewedAt: String, higherUpReviewer: String, id: ID!, items: [OrderItemInput!], officeId: ID, orderName: String, receivedAt: String, receivedCondition: String, receivedNote: String, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, serialNumbers: [String!], status: String, storageLocation: String, totalAmount: Float, userId: ID, whyOrdered: String): Order
+  updateReceive(conditionStatus: String, id: ID!, note: String, orderId: ID, orderItemId: ID, quantityReceived: Int, receivedAt: String, receivedCondition: String, serialNumbers: [String!], storageLocation: String): Receive
 }
 
 type Notification {
@@ -155,7 +155,6 @@ input OrderItemInput {
   catalogId: ID
   category: String
   code: String!
-  currencyCode: String
   eta: String
   fromWhere: String
   itemType: String
@@ -178,11 +177,17 @@ type Query {
 }
 
 type Receive {
+  conditionStatus: String!
   id: ID!
   note: String
   officeId: ID!
   orderId: ID!
+  orderItemId: ID!
+  quantityReceived: Int!
   receivedAt: String!
   receivedByUserId: ID!
+  receivedCondition: String
+  serialNumbers: [String!]!
   status: String!
+  storageLocation: String
 }

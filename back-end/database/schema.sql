@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS orders (
   ),
   expected_arrival_at TEXT,
   total_cost REAL CHECK (total_cost >= 0),
-  currency_code TEXT NOT NULL DEFAULT 'MNT' CHECK (
+  currency_code TEXT NOT NULL DEFAULT 'USD' CHECK (
     currency_code IN (
       'USD',
       'MNT',
@@ -425,7 +425,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   catalog_product_id INTEGER,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   unit_cost REAL NOT NULL CHECK (unit_cost >= 0),
-  currency_code TEXT NOT NULL DEFAULT 'MNT' CHECK (
+  currency_code TEXT NOT NULL DEFAULT 'USD' CHECK (
     currency_code IN (
       'USD',
       'MNT',

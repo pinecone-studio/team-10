@@ -239,7 +239,7 @@ Table orders {
   approvalTarget approvalQueueEnum [not null, default: 'anyHigherUps']
   expectedArrivalAt timestamp
   totalCost real [note: 'CHECK (total_cost >= 0)']
-  currencyCode currencyCodeEnum [not null, default: 'MNT']
+  currencyCode currencyCodeEnum [not null, default: 'USD']
   requestedApproverId text [note: 'UI-selected approvee identifier from the permission request step.']
   requestedApproverName text
   requestedApproverRole text
@@ -468,7 +468,7 @@ Table orderItems {
   catalogProductId integer
   quantity integer [not null, note: 'CHECK (quantity > 0)']
   unitCost real [not null, note: 'CHECK (unit_cost >= 0)']
-  currencyCode currencyCodeEnum [not null, default: 'MNT']
+  currencyCode currencyCodeEnum [not null, default: 'USD']
   fromWhere text [not null]
   additionalNotes text
   eta timestamp

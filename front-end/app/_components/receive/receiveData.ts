@@ -90,7 +90,7 @@ export function buildReceiveRows(orders: StoredOrder[]): ReceiveRow[] {
         condition: inferCondition(order, itemIndex),
         quantity: item.quantity,
         received: getReceivedCount(order, item.quantity, itemIndex),
-        currencyCode: item.currencyCode,
+        currencyCode: "USD",
         unitPrice: item.unitPrice,
         purchaseCost: item.totalPrice,
         selectable: order.status === "approved_finance",

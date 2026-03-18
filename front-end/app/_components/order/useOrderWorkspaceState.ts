@@ -184,7 +184,6 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
         deliveryDate: draftOrder.deliveryDate,
         approvalTarget: draftOrder.approvalTarget,
         items: draftItems,
-        currencyCode: draftItems[0]?.currencyCode ?? "MNT",
         requestedApproverId: draftOrder.requestedApproverId,
         requestedApproverName: selectedApprover?.fullName ?? null,
         requestedApproverRole: selectedApprover?.positionLabel ?? null,
