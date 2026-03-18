@@ -10,6 +10,10 @@ type DistributionSearchFilterProps = {
   value?: string;
   placeholder?: string;
   onChange?: (value: string) => void;
+  activeTab?: "distributions" | "available-assets" | "employee-requests";
+  onTabChange?: (
+    value: "distributions" | "available-assets" | "employee-requests",
+  ) => void;
 };
 const statuses = [
   "All status",
@@ -44,6 +48,8 @@ export default function DistributionSearchFilter({
   value = "",
   placeholder = "Search by distribution number, recipient, or department...",
   onChange,
+  activeTab = "distributions",
+  onTabChange,
 }: DistributionSearchFilterProps) {
   const [internalValue, setInternalValue] = useState("");
   const isControlled = typeof onChange === "function";
@@ -79,7 +85,7 @@ export default function DistributionSearchFilter({
               <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className="flex h-9 w-full items-center justify-between rounded-[8px] border border-[#E5E5E5] bg-[rgba(255,255,255,0.002)] px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+                className="flex h-9 w-full cursor-pointer items-center justify-between rounded-[8px] border border-[#E5E5E5] bg-[rgba(255,255,255,0.002)] px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition hover:bg-[#F8FAFC] active:scale-[0.99]"
               >
                 <span className="flex items-center">
                   <span className="pr-2">
@@ -102,7 +108,7 @@ export default function DistributionSearchFilter({
                         setSelected(status);
                         setOpen(false);
                       }}
-                      className={`flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-left text-[14px] leading-5 text-[#0A0A0A] transition-colors ${
+                      className={`flex w-full cursor-pointer items-center justify-between rounded-[10px] px-3 py-2 text-left text-[14px] leading-5 text-[#0A0A0A] transition-colors ${
                         selected === status
                           ? "bg-[#F1F5F9]"
                           : "hover:bg-[#F8FAFC]"
@@ -124,19 +130,34 @@ export default function DistributionSearchFilter({
         <div className="flex items-start gap-[30px]">
           <button
             type="button"
-            className="text-[14px] font-normal leading-5 text-[#0A0A0A] underline underline-offset-[3px]"
+            onClick={() => onTabChange?.("distributions")}
+            className={`cursor-pointer text-[14px] font-normal leading-5 transition-colors hover:text-[#0A0A0A] ${
+              activeTab === "distributions"
+                ? "text-[#0A0A0A] underline underline-offset-[3px]"
+                : "text-[#64748B]"
+            }`}
           >
             Distributions
           </button>
           <button
             type="button"
-            className="text-[14px] font-normal leading-5 text-[#64748B]"
+            onClick={() => onTabChange?.("available-assets")}
+            className={`cursor-pointer text-[14px] font-normal leading-5 transition-colors hover:text-[#0A0A0A] ${
+              activeTab === "available-assets"
+                ? "text-[#0A0A0A] underline underline-offset-[3px]"
+                : "text-[#64748B]"
+            }`}
           >
             Available Assets
           </button>
           <button
             type="button"
-            className="text-[14px] font-normal leading-5 text-[#64748B]"
+            onClick={() => onTabChange?.("employee-requests")}
+            className={`cursor-pointer text-[14px] font-normal leading-5 transition-colors hover:text-[#0A0A0A] ${
+              activeTab === "employee-requests"
+                ? "text-[#0A0A0A] underline underline-offset-[3px]"
+                : "text-[#64748B]"
+            }`}
           >
             Employee Requests
           </button>
