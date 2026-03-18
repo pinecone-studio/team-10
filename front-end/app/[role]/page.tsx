@@ -26,8 +26,8 @@ export default async function RolePage({ params, searchParams }: RolePageProps) 
       : defaultSection;
 
   return (
-    <main className="min-h-screen bg-[#efefef] text-slate-900">
-      <section className="flex min-h-screen">
+    <main className="min-h-screen overflow-x-hidden bg-[#efefef] text-slate-900">
+      <section className="flex min-h-screen overflow-x-hidden">
         <RoleSidebar role={role} currentSection={section} />
         <RoleWorkspace role={role} roleLabel={roleMeta.label} section={section} />
       </section>
