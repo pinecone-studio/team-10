@@ -18,6 +18,20 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Local GraphQL Runtime Config
+
+The GraphQL route uses Cloudflare D1 over HTTP in local `next dev`, so you need these environment variables in `back-end/.env.local`:
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_D1_DATABASE_ID=...
+CLOUDFLARE_D1_API_TOKEN=...
+```
+
+`CLOUDFLARE_API_TOKEN` is also accepted as a fallback if you do not set `CLOUDFLARE_D1_API_TOKEN`.
+
+Without those values, `/api/graphql` will now return a configuration error response instead of an opaque 500.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
