@@ -36,9 +36,18 @@ export function EmployeeAssetsSection() {
             <div className="mt-[12px] space-y-[6px] text-[12px] text-[#5f5f5f]">
               {order.items.map((item, index) => (
                 <div key={`${item.catalogId}-${index}`}>
-                  {item.name} · {item.quantity} {item.unit}
+                  {item.name} - {item.quantity} {item.unit}
                 </div>
               ))}
+              {order.assetIds.length > 0 ? (
+                <div className="rounded-[8px] bg-[#f8fafc] px-3 py-3 text-[11px]">
+                  {order.assetIds.map((assetId, index) => (
+                    <div key={assetId}>
+                      {assetId} - {order.serialNumbers[index] ?? "QR ready"}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </Card>
         ))

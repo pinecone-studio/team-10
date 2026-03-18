@@ -361,6 +361,7 @@ function mapOrder(order: OrderDto): StoredOrder {
     receivedNote: order.receivedNote ?? "",
     storageLocation: order.storageLocation ?? "",
     serialNumbers: Array.isArray(order.serialNumbers) ? order.serialNumbers : [],
+    assetIds: [],
     assignedTo: order.assignedTo,
     assignedRole: order.assignedRole,
     assignedAt: order.assignedAt,
