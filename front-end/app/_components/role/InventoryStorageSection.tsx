@@ -252,7 +252,7 @@ export function InventoryStorageSection() {
   return (
     <WorkspaceShell
       title="Storage Assets"
-      subtitle="Manage your inventory stock levels"
+      subtitle="Manage inventory stock levels."
       backgroundClassName="bg-[linear-gradient(180deg,#dcebfb_0%,#eff7ff_58%,#ffffff_100%)]"
     >
       {filteredRows.length === 0 ? (
