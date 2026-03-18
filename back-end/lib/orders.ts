@@ -277,10 +277,14 @@ function mapDbStatusToFront(status: DbOrderStatus): FrontOrderStatus {
   if (status === "rejectedByHigherUp") return "rejected_higher_up";
   if (status === "pendingFinanceApproval") return "pending_finance";
   if (status === "rejectedByFinance") return "rejected_finance";
-  if (status === "financeApproved" || status === "ordered") {
+  if (
+    status === "financeApproved" ||
+    status === "ordered" ||
+    status === "partiallyReceived"
+  ) {
     return "approved_finance";
   }
-  if (status === "received" || status === "partiallyReceived") {
+  if (status === "received") {
     return "received_inventory";
   }
   return "assigned_hr";
