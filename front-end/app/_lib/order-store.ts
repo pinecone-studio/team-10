@@ -6,6 +6,7 @@ import {
   fetchOrdersRequest,
   updateOrderRequest,
 } from "@/app/(dashboard)/_graphql/orders/order-api";
+import { receiveOrderItemRequest } from "@/app/(dashboard)/_graphql/receive/receive-api";
 import { departmentOptions } from "./order-catalog";
 import { refreshNotificationsStore } from "./notification-store";
 import { formatCurrency, formatDisplayDate, getTodayDateInputValue } from "./order-format";
@@ -410,6 +411,8 @@ export async function receiveInventoryOrder(input: ReceiveOrderInput) {
   const hasRemainingItems = remainingItems.length > 0;
 
   try {
+    await receiveOrderItemRequest(input);
+
     const updatedOrder = await updateOrderRequest(input.orderId, {
       status: hasRemainingItems ? "approved_finance" : "received_inventory",
       receivedAt: hasRemainingItems ? null : input.receivedAt,

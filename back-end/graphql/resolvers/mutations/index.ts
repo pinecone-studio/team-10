@@ -10,3 +10,4 @@ export * from "./order/deleteOrder.ts";
 export * from "./receive/createReceive.ts";
 export * from "./receive/updateReceive.ts";
 export * from "./receive/deleteReceive.ts";
+export * from "./receive/receiveOrderItem.ts";
