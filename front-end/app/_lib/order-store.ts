@@ -21,6 +21,7 @@ import type {
 } from "./order-types";
 
 const EMPTY_ORDERS: StoredOrder[] = [];
+const ORDERS_STORAGE_KEY = "ams-orders-snapshot";
 
 export const permissionRequestOptions = [
   {
@@ -37,6 +38,30 @@ const subscribers = new Set<() => void>();
 
 function emitChange() {
   subscribers.forEach((subscriber) => subscriber());
+}
+
+function readPersistedOrders() {
+  if (typeof window === "undefined") return EMPTY_ORDERS;
+
+  try {
+    const rawValue = window.localStorage.getItem(ORDERS_STORAGE_KEY);
+    if (!rawValue) return EMPTY_ORDERS;
+    const parsedValue = JSON.parse(rawValue);
+    if (!Array.isArray(parsedValue)) return EMPTY_ORDERS;
+    return parsedValue.map((order) => normalizeOrder(order));
+  } catch {
+    return EMPTY_ORDERS;
+  }
+}
+
+function persistOrdersSnapshot(orders: StoredOrder[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+  } catch {
+    console.error("Failed to persist orders snapshot.");
+  }
 }
 
 function migrateLegacyStatus(status: string | undefined): OrderStatus {
@@ -84,6 +109,7 @@ function normalizeOrder(order: Partial<StoredOrder>): StoredOrder {
     receivedNote: order.receivedNote ?? "",
     storageLocation: order.storageLocation ?? "",
     serialNumbers: Array.isArray(order.serialNumbers) ? order.serialNumbers : [],
+    assetIds: Array.isArray(order.assetIds) ? order.assetIds : [],
     assignedTo: order.assignedTo ?? null,
     assignedRole: order.assignedRole ?? null,
     assignedAt: order.assignedAt ?? null,
@@ -113,6 +139,7 @@ function readOrdersSnapshot() {
 function writeOrdersSnapshot(orders: StoredOrder[]) {
   cachedOrdersSnapshot = sortOrders(orders.map((order) => normalizeOrder(order)));
   hasLoadedOrders = true;
+  persistOrdersSnapshot(cachedOrdersSnapshot);
   emitChange();
 }
 
@@ -123,7 +150,12 @@ async function refreshOrdersStore() {
 
   activeLoadPromise = fetchOrdersRequest()
     .then((orders) => {
-      writeOrdersSnapshot(orders);
+      writeOrdersSnapshot(
+        mergeRemoteOrdersWithLocal(
+          orders,
+          cachedOrdersSnapshot.length > 0 ? cachedOrdersSnapshot : readPersistedOrders(),
+        ),
+      );
       return cachedOrdersSnapshot;
     })
     .finally(() => {
@@ -135,6 +167,13 @@ async function refreshOrdersStore() {
 
 function ensureOrdersStoreLoaded() {
   if (hasLoadedOrders || activeLoadPromise) return;
+
+  const persistedOrders = readPersistedOrders();
+  if (persistedOrders.length > 0) {
+    cachedOrdersSnapshot = sortOrders(persistedOrders);
+    hasLoadedOrders = true;
+    emitChange();
+  }
 
   void refreshOrdersStore().catch((error) => {
     console.error("Failed to load orders.", error);
@@ -164,6 +203,52 @@ function preserveKnownItems(
     totalAmount: source.totalAmount,
     currencyCode: source.currencyCode,
   });
+}
+
+function preserveLocalOrderDetails(nextOrder: StoredOrder, source: StoredOrder) {
+  const mergedOrder = preserveKnownItems(nextOrder, source);
+
+  return normalizeOrder({
+    ...mergedOrder,
+    serialNumbers:
+      mergedOrder.serialNumbers.length >= source.serialNumbers.length
+        ? mergedOrder.serialNumbers
+        : source.serialNumbers,
+    assetIds:
+      mergedOrder.assetIds.length >= source.assetIds.length
+        ? mergedOrder.assetIds
+        : source.assetIds,
+    receivedAt: mergedOrder.receivedAt ?? source.receivedAt,
+    receivedCondition: mergedOrder.receivedCondition ?? source.receivedCondition,
+    receivedNote: mergedOrder.receivedNote || source.receivedNote,
+    storageLocation: mergedOrder.storageLocation || source.storageLocation,
+  });
+}
+
+function mergeRemoteOrdersWithLocal(remoteOrders: StoredOrder[], localOrders: StoredOrder[]) {
+  const mergedRemoteOrders = remoteOrders.map((remoteOrder) => {
+    const matchedLocalOrder =
+      localOrders.find((order) => order.id === remoteOrder.id) ??
+      localOrders.find(
+        (order) =>
+          order.requestNumber === remoteOrder.requestNumber &&
+          order.status === remoteOrder.status &&
+          order.requester === remoteOrder.requester &&
+          order.department === remoteOrder.department,
+      );
+
+    return matchedLocalOrder
+      ? preserveLocalOrderDetails(remoteOrder, matchedLocalOrder)
+      : remoteOrder;
+  });
+
+  const syntheticLocalOrders = localOrders.filter(
+    (localOrder) =>
+      (localOrder.id.startsWith("local-") || localOrder.id.includes("-received-")) &&
+      !mergedRemoteOrders.some((remoteOrder) => remoteOrder.id === localOrder.id),
+  );
+
+  return [...mergedRemoteOrders, ...syntheticLocalOrders];
 }
 
 function subscribe(callback: () => void) {
@@ -249,6 +334,35 @@ function createLocalOrderFallback(input: CreateOrderInput): StoredOrder {
 export function generateRequestNumber() {
   ensureOrdersStoreLoaded();
   return createNextRequestNumber(readOrdersSnapshot());
+}
+
+function createAssetPrefix(itemName: string) {
+  const normalized = itemName.toLowerCase();
+  if (normalized.includes("mac")) return "MAC";
+  if (normalized.includes("monitor")) return "MON";
+  if (normalized.includes("keyboard")) return "KEY";
+  if (normalized.includes("dock")) return "DOC";
+  if (normalized.includes("printer")) return "PRI";
+  if (normalized.includes("router")) return "ROU";
+  if (normalized.includes("switch")) return "SWT";
+  const fallback = normalized.replace(/[^a-z0-9]/g, "").slice(0, 3).toUpperCase();
+  return fallback || "AST";
+}
+
+export function createAssetIds(itemName: string, receivedAt: string, quantity: number) {
+  const year = new Date(receivedAt).getFullYear() || new Date().getFullYear();
+  const sequence = cachedOrdersSnapshot
+    .flatMap((order) => order.assetIds)
+    .map((assetId) => {
+      const parts = assetId.split("-");
+      return parts[1] === String(year) ? Number(parts[2]) : 0;
+    })
+    .reduce((max, current) => Math.max(max, Number.isFinite(current) ? current : 0), 0);
+
+  return Array.from({ length: quantity }, (_, index) => {
+    const nextSequence = String(sequence + index + 1).padStart(3, "0");
+    return `${createAssetPrefix(itemName)}-${year}-${nextSequence}`;
+  });
 }
 
 export async function loadOrdersSnapshot() {
@@ -437,6 +551,7 @@ export async function receiveInventoryOrder(input: ReceiveOrderInput) {
         receivedNote: input.receivedNote,
         storageLocation: input.storageLocation,
         serialNumbers: input.serialNumbers,
+        assetIds: input.assetIds,
         updatedAt: new Date().toISOString(),
       });
       writeOrdersSnapshot([
@@ -465,6 +580,7 @@ export async function receiveInventoryOrder(input: ReceiveOrderInput) {
         receivedNote: "",
         storageLocation: "",
         serialNumbers: [],
+        assetIds: [],
         updatedAt,
       });
       const storedOrder = normalizeOrder({
@@ -478,6 +594,7 @@ export async function receiveInventoryOrder(input: ReceiveOrderInput) {
         receivedNote: input.receivedNote,
         storageLocation: input.storageLocation,
         serialNumbers: input.serialNumbers,
+        assetIds: input.assetIds,
         updatedAt,
       });
       writeOrdersSnapshot([
@@ -498,6 +615,7 @@ export async function receiveInventoryOrder(input: ReceiveOrderInput) {
       receivedNote: input.receivedNote,
       storageLocation: input.storageLocation,
       serialNumbers: input.serialNumbers,
+      assetIds: input.assetIds,
       updatedAt,
     });
   }

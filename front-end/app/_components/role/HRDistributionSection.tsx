@@ -140,9 +140,16 @@ export function HRDistributionSection() {
         <div className="mt-[14px] rounded-[8px] bg-[#f6f6f7] px-[12px] py-[12px] text-[11px] text-[#666]">
           {selectedOrder.items.map((item, index) => (
             <p key={`${item.catalogId}-${index}`}>
-              {item.name} · {item.quantity} {item.unit}
+              {item.name} - {item.quantity} {item.unit}
             </p>
           ))}
+          <div className="mt-3 space-y-1 border-t border-[#e5e7eb] pt-3">
+            {selectedOrder.assetIds.slice(0, 6).map((assetId, index) => (
+              <p key={assetId}>
+                {assetId} - {selectedOrder.serialNumbers[index] ?? "QR ready"}
+              </p>
+            ))}
+          </div>
         </div>
         <div className="mt-[16px] flex justify-end">
           <ActionButton

@@ -5,7 +5,7 @@ import { ReceiveConditionBadge } from "./ReceiveConditionBadge";
 import type { ReceiveRow } from "./receiveTypes";
 
 const GRID_CLASS =
-  "grid grid-cols-[40px_minmax(220px,1.5fr)_130px_130px_86px_110px_130px]";
+  "grid grid-cols-[40px_minmax(220px,1.4fr)_132px_130px_110px_92px_92px_130px_120px]";
 
 export function ReceiveTable({
   rows,
@@ -26,8 +26,10 @@ export function ReceiveTable({
           <div className="px-[8px] py-[10px]">Asset Name</div>
           <div className="px-[8px] py-[10px]">Expected Date</div>
           <div className="px-[8px] py-[10px]">Category</div>
-          <div className="px-[8px] py-[10px] text-center">Qty</div>
           <div className="px-[8px] py-[10px]">Status</div>
+          <div className="px-[8px] py-[10px] text-center">Qty</div>
+          <div className="px-[8px] py-[10px] text-center">Received</div>
+          <div className="px-[8px] py-[10px]">Purchase Cost</div>
           <div className="px-[8px] py-[10px] text-center">Action</div>
         </div>
 
@@ -58,23 +60,29 @@ export function ReceiveTable({
                 {row.category}
               </span>
             </div>
+            <div className="px-[8px] py-[16px]">
+              <ReceiveConditionBadge condition={row.condition} />
+            </div>
             <div className="px-[8px] py-[16px] text-center text-[#111827]">
               {row.quantity}
             </div>
-            <div className="px-[8px] py-[16px]">
-              <ReceiveConditionBadge condition={row.condition} />
+            <div className="px-[8px] py-[16px] text-center text-[#111827]">
+              {row.received}
+            </div>
+            <div className="px-[8px] py-[16px] text-[#111827]">
+              {formatCurrency(row.purchaseCost, row.currencyCode)}
             </div>
             <div className="flex items-center justify-center px-[8px] py-[10px]">
               <button
                 type="button"
-                onClick={() => onOpenRow(row.id)}
+                onClick={() => row.selectable && onOpenRow(row.id)}
                 className={`inline-flex h-[34px] items-center justify-center rounded-[8px] px-3 text-[12px] font-medium ${
                   row.selectable
                     ? "bg-[#101828] text-white"
                     : "border border-[#d0d5dd] bg-white text-[#98a2b3]"
                 }`}
               >
-                {row.selectable ? "Open" : "Stored"}
+                {row.selectable ? "Open" : "Received"}
               </button>
             </div>
           </div>

@@ -40,7 +40,6 @@ export function inferCategory(itemName: string) {
 
 export function getReceivedCount(order: StoredOrder, quantity: number) {
   if (order.status === "approved_finance") return 0;
-
   return quantity;
 }
 
@@ -72,7 +71,12 @@ export function buildReceiveRows(orders: StoredOrder[]): ReceiveRow[] {
       return {
         id: `${order.id}-${item.catalogId}-${itemIndex}`,
         orderId: order.id,
-        orderStatus: order.status === "received_inventory" ? "received_inventory" : "approved_finance",
+        orderStatus:
+          order.status === "assigned_hr"
+            ? "assigned_hr"
+            : order.status === "received_inventory"
+              ? "received_inventory"
+              : "approved_finance",
         requestNumber: order.requestNumber,
         index: currentIndex,
         assetName: item.name,

@@ -94,6 +94,7 @@ export type StoredOrder = {
   receivedNote: string;
   storageLocation: string;
   serialNumbers: string[];
+  assetIds: string[];
   assignedTo: string | null;
   assignedRole: string | null;
   assignedAt: string | null;
@@ -133,6 +134,7 @@ export type ReceiveOrderInput = {
   receivedNote: string;
   storageLocation: string;
   serialNumbers: string[];
+  assetIds: string[];
 };
 
 export type AssignOrderInput = {

@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
 import {
+  createAssetIds,
   formatCurrency,
   receiveInventoryOrder,
   useOrdersStore,
@@ -21,12 +21,16 @@ import {
 import type { ReceiveCondition } from "./receiveTypes";
 
 export function ReceiveSection() {
-  const router = useRouter();
-  const pathname = usePathname();
   const orders = useOrdersStore();
   const catalog = useCatalogStore();
   const receiveOrders = useMemo(
-    () => orders.filter((order) => order.status === "approved_finance"),
+    () =>
+      orders.filter(
+        (order) =>
+          order.status === "approved_finance" ||
+          order.status === "received_inventory" ||
+          order.status === "assigned_hr",
+      ),
     [orders],
   );
   const rows = useMemo(() => buildReceiveRows(receiveOrders), [receiveOrders]);
@@ -292,10 +296,14 @@ export function ReceiveSection() {
                       new Set([...completedRowIds, activeRow.id]),
                     );
                     setCompletedRowIds(nextCompletedRowIds);
-                    const order = receiveOrders.find(
+                    const order = orders.find(
                       (entry) => entry.id === activeRow.orderId,
                     );
                     if (order) {
+                      const resolvedQuantity = Math.max(
+                        1,
+                        Math.min(activeRow.quantity, Number(quantityReceived) || 1),
+                      );
                       await receiveInventoryOrder({
                         orderId: order.id,
                         catalogId:
@@ -305,10 +313,7 @@ export function ReceiveSection() {
                           )?.catalogId ??
                           activeRow.itemCode,
                         itemCode: activeRow.itemCode,
-                        quantityReceived: Math.max(
-                          1,
-                          Math.min(activeRow.quantity, Number(quantityReceived) || 1),
-                        ),
+                        quantityReceived: resolvedQuantity,
                         receivedAt: receivedDate,
                         receivedCondition:
                           receivedCondition === "good" ? "complete" : "issue",
@@ -320,10 +325,19 @@ export function ReceiveSection() {
                           generatedQrCodes.length > 0
                             ? generatedQrCodes.map((entry) => entry.serialNumber)
                             : buildSerialNumbers(order),
+                        assetIds: createAssetIds(
+                          activeRow.assetName,
+                          receivedDate,
+                          resolvedQuantity,
+                        ),
                       });
                     }
-
-                    router.push(`${pathname}?section=storage`);
+                    resetDetailState(
+                      setSelectedRowId,
+                      setUploadedImage,
+                      setScanValue,
+                      setScanResult,
+                    );
                   }}
                   className="inline-flex h-[42px] w-full items-center justify-center rounded-[10px] bg-[#101828] px-[16px] text-[14px] font-medium text-white disabled:opacity-40"
                 >
@@ -338,7 +352,11 @@ export function ReceiveSection() {
   }
 
   const approvedRows = filteredRows.filter((row) => row.selectable);
-  const totalCost = approvedRows.reduce((sum, row) => sum + row.purchaseCost, 0);
+  const receivedRows = filteredRows.filter((row) => !row.selectable);
+  const totalCost = filteredRows.reduce((sum, row) => sum + row.purchaseCost, 0);
+  const totalReceivedQuantity = filteredRows.reduce((sum, row) => sum + row.received, 0);
+  const summaryRequestLabel =
+    approvedRows[0]?.requestNumber ?? receivedRows[0]?.requestNumber ?? "-";
 
   return (
     <WorkspaceShell
@@ -350,15 +368,21 @@ export function ReceiveSection() {
     >
       <div className="flex min-h-[calc(100vh-180px)] flex-col">
         <div className="grid gap-[14px] md:grid-cols-4">
-          <SummaryCard label="Order ID" value={approvedRows[0]?.requestNumber ?? "-"} />
-          <SummaryCard label="Status" value="Approved" />
+          <SummaryCard label="Order ID" value={summaryRequestLabel} />
+          <SummaryCard
+            label="Status"
+            value={approvedRows.length > 0 ? "Approved" : "Received"}
+          />
           <SummaryCard
             label="Received"
-            value={`${completedRowIds.length}/${approvedRows.length || 0}`}
+            value={`${totalReceivedQuantity}/${filteredRows.reduce((sum, row) => sum + row.quantity, 0) || 0}`}
           />
           <SummaryCard
             label="Total Cost"
-            value={formatCurrency(totalCost, approvedRows[0]?.currencyCode ?? "USD")}
+            value={formatCurrency(
+              totalCost,
+              filteredRows[0]?.currencyCode ?? "USD",
+            )}
           />
         </div>
 
