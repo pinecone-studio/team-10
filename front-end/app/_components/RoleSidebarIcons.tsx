@@ -88,6 +88,31 @@ export function RoleSidebarIcon({
       </svg>
     );
   }
+  if (kind === "requests") {
+    return (
+      <svg viewBox="0 0 16 16" fill="none" className={common} aria-hidden="true">
+        <path d="M4 3.5h8a1 1 0 0 1 1 1v7.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.2" />
+        <path d="M5.5 6.25h5M5.5 8.5h5M5.5 10.75h3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === "support") {
+    return (
+      <svg viewBox="0 0 16 16" fill="none" className={common} aria-hidden="true">
+        <path d="M8 13.25a5.25 5.25 0 1 0 0-10.5 5.25 5.25 0 0 0 0 10.5Z" stroke="currentColor" strokeWidth="1.2" />
+        <path d="M6.35 6.15a1.85 1.85 0 1 1 3.2 1.25c-.85.82-1.3 1.2-1.3 2.1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M8 11.2h.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === "notifications") {
+    return (
+      <svg viewBox="0 0 16 16" fill="none" className={common} aria-hidden="true">
+        <path d="M8 2.75a2.5 2.5 0 0 0-2.5 2.5v1.1c0 .55-.2 1.07-.56 1.48L4 8.9v1.35h8V8.9l-.94-.97A2.18 2.18 0 0 1 10.5 6.35v-1.1A2.5 2.5 0 0 0 8 2.75Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M6.5 12.1a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      </svg>
+    );
+  }
   return (
     <svg viewBox="0 0 16 16" fill="none" className={common} aria-hidden="true">
       <path d="M4 4h8m-7 3h6m-5 3h4m-4 3h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />

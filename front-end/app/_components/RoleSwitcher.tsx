@@ -60,20 +60,20 @@ export function RoleSwitcher({
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="flex w-full min-w-0 items-center gap-3 rounded-[20px] bg-[#171d29] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] transition hover:bg-[#1b2331]"
+          className="flex h-[54px] w-full min-w-0 items-center gap-2 rounded-[8.4px] bg-[rgba(36,41,51,0.5)] px-[13px] py-[7px] text-left transition hover:bg-[rgba(44,51,63,0.7)]"
         >
-          <div className="relative flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[radial-gradient(circle_at_35%_30%,#19d3c5_0%,#142433_38%,#0d1019_68%,#090b12_100%)]">
-            <div className="absolute top-[9px] h-[21px] w-[25px] rounded-full bg-[linear-gradient(135deg,#8b3dff_0%,#ff5f3d_55%,#ffbb38_100%)]" />
-            <div className="absolute top-[19px] h-[22px] w-[20px] rounded-[45%] bg-[#ffb19d]" />
-            <div className="absolute top-[39px] h-[24px] w-[30px] rounded-t-[16px] bg-[linear-gradient(180deg,#5763d5_0%,#2f3571_100%)]" />
-            <div className="absolute top-[38px] left-[20px] h-[24px] w-[4px] rotate-[16deg] bg-white/80" />
-            <div className="absolute top-[38px] right-[20px] h-[24px] w-[4px] -rotate-[16deg] bg-white/80" />
+          <div className="relative flex h-10 w-[38px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[radial-gradient(circle_at_35%_30%,#19d3c5_0%,#142433_38%,#0d1019_68%,#090b12_100%)]">
+            <div className="absolute top-[5px] h-[14px] w-[17px] rounded-full bg-[linear-gradient(135deg,#8b3dff_0%,#ff5f3d_55%,#ffbb38_100%)]" />
+            <div className="absolute top-[12px] h-[14px] w-[13px] rounded-[45%] bg-[#ffb19d]" />
+            <div className="absolute top-[25px] h-[16px] w-[21px] rounded-t-[12px] bg-[linear-gradient(180deg,#5763d5_0%,#2f3571_100%)]" />
+            <div className="absolute top-[24px] left-[12px] h-[16px] w-[3px] rotate-[16deg] bg-white/80" />
+            <div className="absolute top-[24px] right-[12px] h-[16px] w-[3px] -rotate-[16deg] bg-white/80" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[18px] font-medium leading-tight tracking-[-0.03em] text-[#eef4ff]">
+            <p className="truncate text-[14px] font-medium leading-[17px] text-[#D8E8FF]">
               {displayName}
             </p>
-            <p className="mt-0.5 truncate text-[16px] leading-tight text-[#5d8de6]">
+            <p className="mt-1 truncate text-[12px] leading-[15px] text-[#5080C8]">
               {currentRole?.label ?? "Admin"}
             </p>
           </div>
