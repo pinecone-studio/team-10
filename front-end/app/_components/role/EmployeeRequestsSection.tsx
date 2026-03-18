@@ -11,10 +11,10 @@ const requestableAssets = [
   "Access Card Replacement",
 ] as const;
 
+type RequestableAsset = (typeof requestableAssets)[number];
+
 export function EmployeeRequestsSection() {
-  const [asset, setAsset] = useState<(typeof requestableAssets)[number]>(
-    requestableAssets[0],
-  );
+  const [asset, setAsset] = useState<RequestableAsset>(requestableAssets[0]);
   const [reason, setReason] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -34,7 +34,7 @@ export function EmployeeRequestsSection() {
             <span>Asset</span>
             <select
               value={asset}
-              onChange={(event) => setAsset(event.target.value as (typeof requestableAssets)[number])}
+              onChange={(event) => setAsset(event.target.value as RequestableAsset)}
               className="h-11 rounded-[12px] border border-[#D8E1EE] bg-white px-3 text-[14px] text-[#0F172A] outline-none"
             >
               {requestableAssets.map((item) => (
