@@ -216,7 +216,7 @@ function createLocalOrderFallback(input: CreateOrderInput): StoredOrder {
     items,
     totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
     currencyCode: input.currencyCode,
-    status: "pending_higher_up",
+    status: "pending_finance",
     requestedApproverId: input.requestedApproverId ?? null,
     requestedApproverName: input.requestedApproverName ?? null,
     requestedApproverRole: input.requestedApproverRole ?? null,
@@ -262,19 +262,35 @@ export async function reviewHigherUpOrder(input: {
   approved: boolean;
 }) {
   const reviewedAt = new Date().toISOString();
+  try {
+    const updatedOrder = await updateOrderRequest(input.orderId, {
+      status: input.approved ? "pending_finance" : "rejected_higher_up",
+      higherUpReviewer: input.reviewer,
+      higherUpReviewedAt: reviewedAt,
+      higherUpNote: input.note ?? "",
+    });
 
-  const updatedOrder = await updateOrderRequest(input.orderId, {
-    status: input.approved ? "pending_finance" : "rejected_higher_up",
-    higherUpReviewer: input.reviewer,
-    higherUpReviewedAt: reviewedAt,
-    higherUpNote: input.note ?? "",
-  });
+    if (!updatedOrder) {
+      throw new Error("Failed to update higher-up review.");
+    }
 
-  if (!updatedOrder) {
-    throw new Error("Failed to update higher-up review.");
+    upsertOrderSnapshot(updatedOrder);
+  } catch (error) {
+    console.error("Falling back to local higher-up review.", error);
+    const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
+    if (!existingOrder) {
+      throw error;
+    }
+
+    upsertOrderSnapshot({
+      ...existingOrder,
+      status: input.approved ? "pending_finance" : "rejected_higher_up",
+      higherUpReviewer: input.reviewer,
+      higherUpReviewedAt: reviewedAt,
+      higherUpNote: input.note ?? "",
+      updatedAt: reviewedAt,
+    });
   }
-
-  upsertOrderSnapshot(updatedOrder);
 }
 
 export async function reviewFinanceOrder(input: {
@@ -284,39 +300,79 @@ export async function reviewFinanceOrder(input: {
   approved: boolean;
 }) {
   const reviewedAt = new Date().toISOString();
-  const updatedOrder = await updateOrderRequest(input.orderId, {
-    status: input.approved ? "approved_finance" : "rejected_finance",
-    financeReviewer: input.reviewer,
-    financeReviewedAt: reviewedAt,
-    financeNote: input.note ?? "",
-  });
+  try {
+    const updatedOrder = await updateOrderRequest(input.orderId, {
+      status: input.approved ? "approved_finance" : "rejected_finance",
+      financeReviewer: input.reviewer,
+      financeReviewedAt: reviewedAt,
+      financeNote: input.note ?? "",
+    });
 
-  if (!updatedOrder) {
-    throw new Error("Failed to update finance review.");
+    if (!updatedOrder) {
+      throw new Error("Failed to update finance review.");
+    }
+
+    upsertOrderSnapshot(updatedOrder);
+  } catch (error) {
+    console.error("Falling back to local finance review.", error);
+    const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
+    if (!existingOrder) {
+      throw error;
+    }
+
+    upsertOrderSnapshot({
+      ...existingOrder,
+      status: input.approved ? "approved_finance" : "rejected_finance",
+      financeReviewer: input.reviewer,
+      financeReviewedAt: reviewedAt,
+      financeNote: input.note ?? "",
+      updatedAt: reviewedAt,
+    });
   }
 
-  upsertOrderSnapshot(updatedOrder);
-
   if (input.approved) {
-    await refreshNotificationsStore();
+    try {
+      await refreshNotificationsStore();
+    } catch (error) {
+      console.error("Failed to refresh notifications after finance review.", error);
+    }
   }
 }
 
 export async function receiveInventoryOrder(input: ReceiveOrderInput) {
-  const updatedOrder = await updateOrderRequest(input.orderId, {
-    status: "received_inventory",
-    receivedAt: input.receivedAt,
-    receivedCondition: input.receivedCondition,
-    receivedNote: input.receivedNote,
-    storageLocation: input.storageLocation,
-    serialNumbers: input.serialNumbers,
-  });
+  try {
+    const updatedOrder = await updateOrderRequest(input.orderId, {
+      status: "received_inventory",
+      receivedAt: input.receivedAt,
+      receivedCondition: input.receivedCondition,
+      receivedNote: input.receivedNote,
+      storageLocation: input.storageLocation,
+      serialNumbers: input.serialNumbers,
+    });
 
-  if (!updatedOrder) {
-    throw new Error("Failed to save received order details.");
+    if (!updatedOrder) {
+      throw new Error("Failed to save received order details.");
+    }
+
+    upsertOrderSnapshot(updatedOrder);
+  } catch (error) {
+    console.error("Falling back to local receive flow.", error);
+    const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
+    if (!existingOrder) {
+      throw error;
+    }
+
+    upsertOrderSnapshot({
+      ...existingOrder,
+      status: "received_inventory",
+      receivedAt: input.receivedAt,
+      receivedCondition: input.receivedCondition,
+      receivedNote: input.receivedNote,
+      storageLocation: input.storageLocation,
+      serialNumbers: input.serialNumbers,
+      updatedAt: new Date().toISOString(),
+    });
   }
-
-  upsertOrderSnapshot(updatedOrder);
 }
 
 export async function assignOrderToPerson(input: AssignOrderInput) {

@@ -58,6 +58,11 @@ export function InventoryStorageSection() {
                   {order.serialNumbers.length} serial registered - waiting for HR
                   Manager
                 </p>
+                <div className="mt-[10px] flex flex-wrap gap-[10px]">
+                  {order.serialNumbers.slice(0, 4).map((serialNumber) => (
+                    <QrCard key={serialNumber} value={serialNumber} />
+                  ))}
+                </div>
               </div>
             ))
           ) : (
@@ -97,5 +102,34 @@ export function InventoryStorageSection() {
         </div>
       </Card>
     </WorkspaceShell>
+  );
+}
+
+function QrCard({ value }: { value: string }) {
+  return (
+    <div className="rounded-[10px] border border-[#dbe3ee] bg-[#f8fbff] p-[10px]">
+      <QrPattern value={value} />
+      <p className="mt-[8px] max-w-[88px] truncate text-[10px] font-medium text-[#334155]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function QrPattern({ value }: { value: string }) {
+  const cells = Array.from({ length: 81 }, (_, index) => {
+    const charCode = value.charCodeAt(index % value.length) || 0;
+    return (charCode + index) % 2 === 0;
+  });
+
+  return (
+    <div className="grid grid-cols-9 gap-px rounded-[6px] bg-white p-1">
+      {cells.map((filled, index) => (
+        <span
+          key={`${value}-${index}`}
+          className={`h-2 w-2 rounded-[1px] ${filled ? "bg-[#0f172a]" : "bg-[#dbeafe]"}`}
+        />
+      ))}
+    </div>
   );
 }
