@@ -1,11 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  formatCurrency,
-  formatDisplayDate,
-  useOrdersStore,
-} from "../../_lib/order-store";
+import { formatCurrency, formatDisplayDate, useOrdersStore } from "../../_lib/order-store";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import { buildQrToken, inferCategory } from "../receive/receiveData";
 
@@ -136,7 +132,8 @@ export function InventoryStorageSection() {
     [filteredRows, storedOrders],
   );
 
-  const selectedRow = filteredRows.find((row) => row.id === selectedRowId) ?? null;
+  const selectedRow =
+    filteredRows.find((row) => row.id === selectedRowId) ?? null;
 
   if (selectedRow) {
     return (
@@ -252,7 +249,7 @@ export function InventoryStorageSection() {
   return (
     <WorkspaceShell
       title="Storage Assets"
-      subtitle="Manage inventory stock levels."
+      subtitle="Manage your inventory stock levels."
       backgroundClassName="bg-[linear-gradient(180deg,#dcebfb_0%,#eff7ff_58%,#ffffff_100%)]"
     >
       {filteredRows.length === 0 ? (
@@ -432,9 +429,7 @@ function ToneBadge({
           : "border-[#dbe4ee] bg-[#f8fafc] text-[#64748b]";
 
   return (
-    <span
-      className={`inline-flex rounded-full border px-2 py-[2px] text-[10px] ${styles}`}
-    >
+    <span className={`inline-flex rounded-full border px-2 py-[2px] text-[10px] ${styles}`}>
       {children}
     </span>
   );
@@ -456,9 +451,7 @@ function QrCard({ title, value }: { title: string; value: string }) {
           />
         ))}
       </div>
-      <p className="mt-2 truncate text-[11px] font-medium text-[#111827]">
-        {title}
-      </p>
+      <p className="mt-2 truncate text-[11px] font-medium text-[#111827]">{title}</p>
       <p className="mt-1 truncate text-[10px] text-[#64748b]">{value}</p>
     </div>
   );
