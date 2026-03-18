@@ -9,33 +9,83 @@ const ACTIONS = ["Dispose", "Census", "Missing", "Audit"] as const;
 const CATEGORIES = ["IT Equipment", "Office Equipment", "Mobile Devices", "Network Equipment", "Furniture", "Other Assets"] as const;
 const GRID = "grid grid-cols-[42px_96px_1.45fr_112px_116px_122px_108px_108px_110px_48px]";
 
+type StorageRow = {
+  id: string;
+  orderId: string;
+  requestNumber: string;
+  requester: string;
+  receivedAt: string | null;
+  storageLocation: string;
+  receivedCondition: "complete" | "issue" | null;
+  status: "received_inventory" | "assigned_hr";
+  itemName: string;
+  itemUnit: string;
+  unitPrice: number;
+  currencyCode: "USD" | "MNT" | "EUR";
+  category: string;
+  assetId: string;
+  serialNumber: string;
+  department: string;
+  orderTotal: number;
+};
+
 export function InventoryStorageSection() {
   const orders = useOrdersStore();
-  const storedOrders = useMemo(() => orders.filter((order) => order.status === "received_inventory" || order.status === "assigned_hr"), [orders]);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const selectedOrder = storedOrders.find((order) => order.id === selectedOrderId) ?? null;
-  const groups = storedOrders.map((order) => {
-    const assetIds = order.assetIds.length > 0 ? order.assetIds : order.serialNumbers.length > 0 ? order.serialNumbers : [order.id];
-    return {
-      order,
-      assetIds,
-      rows: assetIds.map((assetId, index) => ({
-        id: `${order.id}-${assetId}-${index}`,
-        assetId,
-        serialNumber: order.serialNumbers[index] ?? order.serialNumbers[0] ?? assetId,
-        item: order.items[0],
-        category: inferCategory(order.items[0]?.name ?? "Asset"),
-      })),
-    };
-  });
-  const totalRows = groups.reduce((sum, group) => sum + group.rows.length, 0);
+  const storedOrders = useMemo(
+    () => orders.filter((order) => order.status === "received_inventory" || order.status === "assigned_hr"),
+    [orders],
+  );
+  const rows = useMemo<StorageRow[]>(
+    () =>
+      storedOrders.flatMap((order) => {
+        const item = order.items[0];
+        const assetIds =
+          order.assetIds.length > 0
+            ? order.assetIds
+            : order.serialNumbers.length > 0
+              ? order.serialNumbers
+              : [order.id];
 
-  if (selectedOrder) {
-    const item = selectedOrder.items[0];
-    const assetIds = selectedOrder.assetIds.length > 0 ? selectedOrder.assetIds : selectedOrder.serialNumbers.length > 0 ? selectedOrder.serialNumbers : [selectedOrder.id];
+        return assetIds.map((assetId, index) => ({
+          id: `${order.id}-${assetId}-${index}`,
+          orderId: order.id,
+          requestNumber: order.requestNumber,
+          requester: order.requester,
+          receivedAt: order.receivedAt,
+          storageLocation: order.storageLocation || "Main warehouse / Intake",
+          receivedCondition: order.receivedCondition,
+          status:
+            order.status === "assigned_hr"
+              ? "assigned_hr"
+              : "received_inventory",
+          itemName: item?.name ?? "Asset",
+          itemUnit: item?.unit ?? "pcs",
+          unitPrice: item?.unitPrice ?? 0,
+          currencyCode: item?.currencyCode ?? "USD",
+          category: inferCategory(item?.name ?? "Asset"),
+          assetId,
+          serialNumber: order.serialNumbers[index] ?? order.serialNumbers[0] ?? assetId,
+          department: order.department,
+          orderTotal: order.totalAmount,
+        }));
+      }),
+    [storedOrders],
+  );
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const selectedRow = rows.find((row) => row.id === selectedRowId) ?? null;
+  const groups = storedOrders.map((order) => ({
+    orderId: order.id,
+    requestNumber: order.requestNumber,
+    requester: order.requester,
+    location: order.storageLocation || "Main warehouse / Intake",
+    orderTotal: order.totalAmount,
+    rows: rows.filter((row) => row.orderId === order.id),
+  }));
+
+  if (selectedRow) {
     return (
       <WorkspaceShell title="Storage" subtitle="Audit and control received inventory." backgroundClassName="bg-[linear-gradient(180deg,#e8f3ff_0%,#f7fbff_56%,#ffffff_100%)]">
-        <button type="button" onClick={() => setSelectedOrderId(null)} className="mb-4 text-[14px] font-medium text-[#334155]">{"<-"} Back to Storage Assets</button>
+        <button type="button" onClick={() => setSelectedRowId(null)} className="mb-4 text-[14px] font-medium text-[#334155]">{"<-"} Back to Storage Assets</button>
         <div className="grid gap-5 xl:grid-cols-[0.85fr_1.65fr]">
           <section className="overflow-hidden rounded-[18px] border border-[#d9e6f3] bg-white shadow-[0_18px_40px_rgba(148,163,184,0.12)]">
             <div className="border-b border-[#e6edf5] px-5 py-4 text-[24px] font-semibold text-[#0f172a]">Asset Detail</div>
@@ -43,40 +93,38 @@ export function InventoryStorageSection() {
               <div className="rounded-[14px] bg-[#eef5fc] p-4">
                 <div className="grid grid-cols-[72px_1fr] gap-3">
                   <div className="flex h-[88px] items-center justify-center rounded-[10px] border border-[#d8e6f3] bg-white text-[24px]">QR</div>
-                  <div className="flex h-[88px] items-center justify-center rounded-[10px] border border-[#d8e6f3] bg-[linear-gradient(135deg,#35a7ff_0%,#2563eb_52%,#8cd8ff_100%)] px-4 text-center text-[15px] font-semibold text-white">{item?.name ?? "Stored Item"}</div>
+                  <div className="flex h-[88px] items-center justify-center rounded-[10px] border border-[#d8e6f3] bg-[linear-gradient(135deg,#35a7ff_0%,#2563eb_52%,#8cd8ff_100%)] px-4 text-center text-[15px] font-semibold text-white">{selectedRow.itemName}</div>
                 </div>
-                <p className="mt-3 text-[11px] leading-5 text-[#475569]">{selectedOrder.receivedNote || "Received inventory item now tracked inside storage with generated local QR references."}</p>
+                <p className="mt-3 text-[11px] leading-5 text-[#475569]">Single asset view for {selectedRow.assetId}. QR and assignment should follow this exact asset only.</p>
               </div>
               <div className="divide-y divide-[#e8eef5] rounded-[12px] border border-[#e6edf5] bg-[#fcfdff]">
                 {[
-                  ["Asset ID", assetIds[0] ?? selectedOrder.id],
-                  ["Asset Name", item?.name ?? "-"],
-                  ["Department", selectedOrder.department],
-                  ["Location", selectedOrder.storageLocation || "Main warehouse / Intake"],
-                  ["Condition", selectedOrder.receivedCondition === "issue" ? "Damaged" : "Good"],
-                  ["Unit Cost", formatCurrency(item?.unitPrice ?? 0, item?.currencyCode ?? "USD")],
-                  ["Quantity", String(item?.quantity ?? 0)],
-                  ["Assigned", selectedOrder.status === "assigned_hr" ? "Yes" : "No"],
+                  ["Asset ID", selectedRow.assetId],
+                  ["Asset Name", selectedRow.itemName],
+                  ["Request ID", selectedRow.requestNumber],
+                  ["Department", selectedRow.department],
+                  ["Location", selectedRow.storageLocation],
+                  ["Condition", selectedRow.receivedCondition === "issue" ? "Damaged" : "Good"],
+                  ["Unit Cost", formatCurrency(selectedRow.unitPrice, selectedRow.currencyCode)],
+                  ["Assigned", selectedRow.status === "assigned_hr" ? "Yes" : "No"],
                 ].map(([label, value]) => <div key={label} className="flex items-center justify-between px-4 py-3 text-[13px]"><span className="text-[#64748b]">{label}</span><span className="font-medium text-[#111827]">{value}</span></div>)}
               </div>
             </div>
           </section>
           <section className="overflow-hidden rounded-[18px] border border-[#d9e6f3] bg-white shadow-[0_18px_40px_rgba(148,163,184,0.12)]">
-            <div className="border-b border-[#e6edf5] px-5 py-4 text-[24px] font-semibold text-[#0f172a]">Asset QR Batch</div>
+            <div className="border-b border-[#e6edf5] px-5 py-4 text-[24px] font-semibold text-[#0f172a]">Asset QR</div>
             <div className="space-y-5 p-5">
               <div className="grid gap-3 md:grid-cols-3">
-                <Field label="Request ID" value={selectedOrder.requestNumber} />
-                <Field label="Request Date" value={formatDisplayDate(selectedOrder.requestDate)} />
-                <Field label="Stored At" value={selectedOrder.storageLocation || "Warehouse B"} />
+                <Field label="Request ID" value={selectedRow.requestNumber} />
+                <Field label="Request Date" value={formatDisplayDate(selectedRow.receivedAt ?? "")} />
+                <Field label="Stored At" value={selectedRow.storageLocation} />
               </div>
               <div className="rounded-[14px] border border-[#e4ebf3] bg-white px-4 py-4 text-[13px] text-[#475569]">
-                <div className="flex justify-between"><span>Unit Cost</span><span>{formatCurrency(item?.unitPrice ?? 0, item?.currencyCode ?? "USD")}</span></div>
-                <div className="mt-2 flex justify-between"><span>Asset Count</span><span>{assetIds.length}</span></div>
-                <div className="mt-2 flex justify-between border-t border-[#edf2f7] pt-3 text-[20px] font-semibold text-[#111827]"><span>Order Total</span><span>{formatCurrency(selectedOrder.totalAmount, selectedOrder.currencyCode)}</span></div>
+                <div className="flex justify-between"><span>Unit Cost</span><span>{formatCurrency(selectedRow.unitPrice, selectedRow.currencyCode)}</span></div>
+                <div className="mt-2 flex justify-between"><span>Asset Count</span><span>1</span></div>
+                <div className="mt-2 flex justify-between border-t border-[#edf2f7] pt-3 text-[20px] font-semibold text-[#111827]"><span>Order Total</span><span>{formatCurrency(selectedRow.orderTotal, selectedRow.currencyCode)}</span></div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {assetIds.slice(0, 6).map((assetId, index) => <QrCard key={assetId} title={assetId} value={buildQrToken(selectedOrder.id, assetId, selectedOrder.serialNumbers[index] ?? assetId)} />)}
-              </div>
+              <QrCard title={selectedRow.assetId} value={buildQrToken(selectedRow.orderId, selectedRow.assetId, selectedRow.serialNumber)} />
             </div>
           </section>
         </div>
@@ -86,7 +134,7 @@ export function InventoryStorageSection() {
 
   return (
     <WorkspaceShell title="Storage Assets" subtitle="Manage your inventory stock levels" backgroundClassName="bg-[linear-gradient(180deg,#dcebfb_0%,#eff7ff_58%,#ffffff_100%)]">
-      {totalRows === 0 ? <EmptyState title="No stored goods yet" description="Received items will appear here right after the receive step." /> : (
+      {rows.length === 0 ? <EmptyState title="No stored goods yet" description="Received items will appear here right after the receive step." /> : (
         <div className="overflow-hidden rounded-[20px] border border-[#d7e5f3] bg-white shadow-[0_18px_42px_rgba(148,163,184,0.14)]">
           <div className="bg-[linear-gradient(180deg,#cfe3fb_0%,#d9ebff_26%,#eef6ff_68%,#ffffff_100%)] px-6 pt-6 pb-5">
             <div className="flex flex-wrap gap-2">
@@ -102,29 +150,29 @@ export function InventoryStorageSection() {
               <span>No</span><span>ID</span><span>Asset Name</span><span>Date</span><span>Category</span><span>Location</span><span>Condition</span><span>Status</span><span>Unit Cost</span><span />
             </div>
             {groups.map((group, groupIndex) => (
-              <div key={group.order.id} className="overflow-hidden rounded-[14px] border border-[#dbe7f3] bg-white shadow-[0_8px_22px_rgba(148,163,184,0.10)]">
+              <div key={group.orderId} className="overflow-hidden rounded-[14px] border border-[#dbe7f3] bg-white shadow-[0_8px_22px_rgba(148,163,184,0.10)]">
                 <div className="flex items-center justify-between border-b border-[#e8eef5] bg-[linear-gradient(180deg,#f8fbff_0%,#edf5ff_100%)] px-4 py-3">
                   <div>
-                    <p className="text-[13px] font-semibold text-[#0f172a]">{group.order.requestNumber}</p>
-                    <p className="mt-1 text-[11px] text-[#64748b]">{group.order.requester} | {group.rows.length} assets | {group.order.storageLocation || "Main warehouse / Intake"}</p>
+                    <p className="text-[13px] font-semibold text-[#0f172a]">{group.requestNumber}</p>
+                    <p className="mt-1 text-[11px] text-[#64748b]">{group.requester} | {group.rows.length} assets | {group.location}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[11px] text-[#94a3b8]">Order Total</p>
-                    <p className="text-[13px] font-semibold text-[#111827]">{formatCurrency(group.order.totalAmount, group.order.currencyCode)}</p>
+                    <p className="text-[13px] font-semibold text-[#111827]">{formatCurrency(group.orderTotal, group.rows[0]?.currencyCode ?? "USD")}</p>
                   </div>
                 </div>
                 <div className="divide-y divide-[#edf2f7]">
                   {group.rows.map((row, rowIndex) => (
-                    <button key={row.id} type="button" onClick={() => setSelectedOrderId(group.order.id)} className={`${GRID} w-full items-center px-3 py-3 text-left text-[11px] text-[#334155] hover:bg-[#f8fbff]`}>
+                    <button key={row.id} type="button" onClick={() => setSelectedRowId(row.id)} className={`${GRID} w-full items-center px-3 py-3 text-left text-[11px] text-[#334155] hover:bg-[#f8fbff]`}>
                       <span>{groupIndex * 100 + rowIndex + 1}</span>
                       <span>{row.assetId}</span>
-                      <span><span className="block font-medium text-[#111827]">{row.item?.name ?? "Asset"}</span><span className="mt-1 block text-[#94a3b8]">{group.order.requestNumber}</span></span>
-                      <span>{formatDisplayDate(group.order.receivedAt ?? group.order.requestDate)}</span>
+                      <span><span className="block font-medium text-[#111827]">{row.itemName}</span><span className="mt-1 block text-[#94a3b8]">{row.requestNumber}</span></span>
+                      <span>{formatDisplayDate(row.receivedAt ?? "")}</span>
                       <span><span className="inline-flex rounded-full border border-[#dbe3ee] bg-[#f8fafc] px-2 py-[2px] text-[10px]">{row.category}</span></span>
-                      <span>{group.order.storageLocation || "Warehouse A"}</span>
-                      <span><ToneBadge tone={group.order.receivedCondition === "issue" ? "warning" : "success"}>{group.order.receivedCondition === "issue" ? "Damaged" : "Good"}</ToneBadge></span>
-                      <span><ToneBadge tone={group.order.status === "assigned_hr" ? "info" : "neutral"}>{group.order.status === "assigned_hr" ? "Assigned" : "Available"}</ToneBadge></span>
-                      <span>{formatCurrency(row.item?.unitPrice ?? 0, row.item?.currencyCode ?? "USD")}</span>
+                      <span>{row.storageLocation}</span>
+                      <span><ToneBadge tone={row.receivedCondition === "issue" ? "warning" : "success"}>{row.receivedCondition === "issue" ? "Damaged" : "Good"}</ToneBadge></span>
+                      <span><ToneBadge tone={row.status === "assigned_hr" ? "info" : "neutral"}>{row.status === "assigned_hr" ? "Assigned" : "Available"}</ToneBadge></span>
+                      <span>{formatCurrency(row.unitPrice, row.currencyCode)}</span>
                       <span className="text-right text-[16px] text-[#94a3b8]">⋮</span>
                     </button>
                   ))}
@@ -132,7 +180,7 @@ export function InventoryStorageSection() {
               </div>
             ))}
             <div className="flex items-center justify-between px-1 pt-3 text-[10px] text-[#64748b]">
-              <span>0 of {totalRows} row(s) selected.</span>
+              <span>0 of {rows.length} row(s) selected.</span>
               <div className="flex items-center gap-4"><span>Rows per page 10</span><span>Page 1 of 1</span><span>{"< < > >"}</span></div>
             </div>
           </div>

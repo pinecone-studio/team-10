@@ -207,7 +207,15 @@ function preserveKnownItems(
 }
 
 function preserveLocalOrderDetails(nextOrder: StoredOrder, source: StoredOrder) {
-  const mergedOrder = preserveKnownItems(nextOrder, source);
+  const mergedOrder =
+    source.updatedAt > nextOrder.updatedAt
+      ? normalizeOrder({
+          ...nextOrder,
+          items: source.items,
+          totalAmount: source.totalAmount,
+          currencyCode: source.currencyCode,
+        })
+      : preserveKnownItems(nextOrder, source);
 
   return normalizeOrder({
     ...mergedOrder,
@@ -476,6 +484,169 @@ export async function reviewFinanceOrder(input: {
       await refreshNotificationsStore();
     } catch (error) {
       console.error("Failed to refresh notifications after finance review.", error);
+    }
+  }
+}
+
+function createFinanceItemKey(item: OrderItem, index: number) {
+  return `${item.catalogId}-${item.code}-${index}`;
+}
+
+function createSplitOrderSnapshot(
+  order: StoredOrder,
+  items: OrderItem[],
+  status: OrderStatus,
+  reviewedAt: string,
+  reviewer: string,
+  note: string,
+) {
+  return normalizeOrder({
+    ...order,
+    id: `${order.id}-${status}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    items,
+    totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
+    status,
+    financeReviewer: reviewer,
+    financeReviewedAt: reviewedAt,
+    financeNote: note,
+    updatedAt: reviewedAt,
+  });
+}
+
+export async function reviewFinanceOrderItems(input: {
+  orderId: string;
+  reviewer: string;
+  note?: string;
+  approvedItemKeys: string[];
+  rejectedItemKeys?: string[];
+}) {
+  const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
+  if (!existingOrder) {
+    throw new Error("Order not found.");
+  }
+
+  const reviewedAt = new Date().toISOString();
+  const approvedKeys = new Set(input.approvedItemKeys);
+  const rejectedKeys = new Set(input.rejectedItemKeys ?? []);
+  const approvedItems: OrderItem[] = [];
+  const rejectedItems: OrderItem[] = [];
+  const pendingItems: OrderItem[] = [];
+
+  existingOrder.items.forEach((item, index) => {
+    const itemKey = createFinanceItemKey(item, index);
+    if (approvedKeys.has(itemKey)) {
+      approvedItems.push(item);
+      return;
+    }
+    if (rejectedKeys.has(itemKey)) {
+      rejectedItems.push(item);
+      return;
+    }
+    pendingItems.push(item);
+  });
+
+  if (approvedItems.length === 0 && rejectedItems.length === 0) {
+    return;
+  }
+
+  const nextSnapshots: StoredOrder[] = [];
+  const note = input.note ?? "";
+  const isFullApproval = approvedItems.length > 0 && pendingItems.length === 0;
+  const isFullRejection = rejectedItems.length > 0 && pendingItems.length === 0;
+
+  if (approvedItems.length > 0) {
+    nextSnapshots.push(
+      createSplitOrderSnapshot(
+        existingOrder,
+        approvedItems,
+        "approved_finance",
+        reviewedAt,
+        input.reviewer,
+        note,
+      ),
+    );
+  }
+
+  if (rejectedItems.length > 0) {
+    nextSnapshots.push(
+      createSplitOrderSnapshot(
+        existingOrder,
+        rejectedItems,
+        "rejected_finance",
+        reviewedAt,
+        input.reviewer,
+        note,
+      ),
+    );
+  }
+
+  let pendingSnapshot: StoredOrder | null =
+    pendingItems.length > 0
+      ? normalizeOrder({
+          ...existingOrder,
+          items: pendingItems,
+          totalAmount: pendingItems.reduce((sum, item) => sum + item.totalPrice, 0),
+          status: "pending_finance",
+          updatedAt: reviewedAt,
+        })
+      : null;
+
+  try {
+    if (pendingItems.length > 0) {
+      const updatedOrder = await updateOrderRequest(input.orderId, {
+        items: pendingItems,
+        totalAmount: pendingItems.reduce((sum, item) => sum + item.totalPrice, 0),
+        status: "pending_finance",
+      });
+
+      if (updatedOrder) {
+        pendingSnapshot = preserveKnownItems(updatedOrder, {
+            items: pendingItems,
+            totalAmount: pendingItems.reduce((sum, item) => sum + item.totalPrice, 0),
+            currencyCode: existingOrder.currencyCode,
+          });
+      }
+    } else if (isFullApproval || isFullRejection) {
+      const updatedOrder = await updateOrderRequest(input.orderId, {
+        status: isFullApproval ? "approved_finance" : "rejected_finance",
+        financeReviewer: input.reviewer,
+        financeReviewedAt: reviewedAt,
+        financeNote: note,
+      });
+
+      if (updatedOrder) {
+        writeOrdersSnapshot([
+          updatedOrder,
+          ...cachedOrdersSnapshot.filter((order) => order.id !== existingOrder.id),
+        ]);
+        if (isFullApproval) {
+          try {
+            await refreshNotificationsStore();
+          } catch (error) {
+            console.error("Failed to refresh notifications after finance item review.", error);
+          }
+        }
+        return;
+      }
+    }
+  } catch (error) {
+    console.error("Failed to sync partial finance review to backend.", error);
+  }
+
+  if (pendingSnapshot) {
+    nextSnapshots.push(pendingSnapshot);
+  }
+
+  writeOrdersSnapshot([
+    ...nextSnapshots,
+    ...cachedOrdersSnapshot.filter((order) => order.id !== existingOrder.id),
+  ]);
+
+  if (approvedItems.length > 0) {
+    try {
+      await refreshNotificationsStore();
+    } catch (error) {
+      console.error("Failed to refresh notifications after finance item review.", error);
     }
   }
 }
