@@ -75,14 +75,6 @@ export function RoleSidebarIcon({
       </svg>
     );
   }
-  if (kind === "broken") {
-    return (
-      <svg viewBox="0 0 16 16" fill="none" className={common} aria-hidden="true">
-        <path d="M4 3.5h8v4.25H9.25L8 9l-1.25-1.25H4zm1 7.25h6M6.5 8.5l-1 2.25m5-2.25 1 2.25" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
   return (
     <svg viewBox="0 0 16 16" fill="none" className={common} aria-hidden="true">
       <path d="M4 4h8m-7 3h6m-5 3h4m-4 3h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />

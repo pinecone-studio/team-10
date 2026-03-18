@@ -19,7 +19,11 @@ export default async function RolePage({ params, searchParams }: RolePageProps) 
 
   const roleMeta = getRoleMeta(role);
   const defaultSection = roleNavSections[role][0] ?? "order";
-  const section = (resolvedSearchParams?.section as SectionKey | undefined) ?? defaultSection;
+  const requestedSection = resolvedSearchParams?.section;
+  const section =
+    requestedSection && roleNavSections[role].includes(requestedSection as SectionKey)
+      ? (requestedSection as SectionKey)
+      : defaultSection;
 
   return (
     <main className="min-h-screen bg-[#efefef] text-slate-900">

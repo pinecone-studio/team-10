@@ -6,8 +6,7 @@ export type NavIcon =
   | "receive"
   | "storage"
   | "distribution"
-  | "dispose"
-  | "broken";
+  | "dispose";
 
 export type SectionKey =
   | "home"
@@ -15,8 +14,7 @@ export type SectionKey =
   | "receive"
   | "storage"
   | "distribution"
-  | "dispose"
-  | "broken";
+  | "dispose";
 
 export type NavItem = {
   label: string;
@@ -30,7 +28,6 @@ export const navItems: readonly NavItem[] = [
   { label: "ORDER", icon: "order", section: "order" },
   { label: "RECEIVE", icon: "receive", section: "receive" },
   { label: "STORAGE", icon: "storage", section: "storage" },
-  { label: "BROKEN OR MISSING ASSET", icon: "broken", section: "broken" },
   { label: "DISTRIBUTION", icon: "distribution", section: "distribution" },
   { label: "DISPOSE", icon: "dispose", section: "dispose" },
 ];
@@ -40,9 +37,9 @@ export const roleNavSections: Record<AppRole, readonly SectionKey[]> = {
   higherUpApprover: ["order"],
   inventoryHead: ["order", "receive", "storage"],
   finance: ["order"],
-  itAdmin: ["storage", "broken", "dispose"],
+  itAdmin: ["storage", "dispose"],
   hrManager: ["distribution", "dispose"],
-  systemAdmin: ["order", "receive", "storage", "broken", "distribution", "dispose"],
+  systemAdmin: ["order", "receive", "storage", "distribution", "dispose"],
 };
 
 export function getSectionHref(role: AppRole | undefined, section: SectionKey) {
