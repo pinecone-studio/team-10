@@ -12,7 +12,9 @@ const requestableAssets = [
 ] as const;
 
 export function EmployeeRequestsSection() {
-  const [asset, setAsset] = useState(requestableAssets[0]);
+  const [asset, setAsset] = useState<(typeof requestableAssets)[number]>(
+    requestableAssets[0],
+  );
   const [reason, setReason] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
 

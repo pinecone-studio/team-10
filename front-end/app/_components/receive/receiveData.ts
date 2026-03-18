@@ -3,13 +3,6 @@
 import type { StoredOrder } from "../../_lib/order-types";
 import type { ReceiveCondition, ReceiveRow } from "./receiveTypes";
 
-const RECEIVED_CONDITIONS: ReceiveCondition[] = [
-  "good",
-  "damaged",
-  "defective",
-  "missing",
-];
-
 export const ROWS_PER_PAGE_OPTIONS = [10, 20, 30] as const;
 
 export function inferCategory(itemName: string) {
@@ -45,20 +38,15 @@ export function inferCategory(itemName: string) {
   return "Other Assets";
 }
 
-export function getReceivedCount(order: StoredOrder, quantity: number, itemIndex: number) {
+export function getReceivedCount(order: StoredOrder, quantity: number) {
   if (order.status === "approved_finance") return 0;
-
-  if (order.receivedCondition === "issue") {
-    return Math.max(0, quantity - ((itemIndex % 3) + 1));
-  }
 
   return quantity;
 }
 
-function inferCondition(order: StoredOrder, itemIndex: number): ReceiveCondition {
+function inferCondition(order: StoredOrder): ReceiveCondition {
   if (order.status === "approved_finance") return "good";
-
-  return RECEIVED_CONDITIONS[(order.id.length + itemIndex) % RECEIVED_CONDITIONS.length]!;
+  return order.receivedCondition === "issue" ? "damaged" : "good";
 }
 
 export function buildSerialNumbers(order: StoredOrder) {
@@ -68,6 +56,10 @@ export function buildSerialNumbers(order: StoredOrder) {
       (_, serialIndex) => `${item.code}-${itemIndex + 1}${serialIndex + 1}`,
     ),
   );
+}
+
+export function buildQrToken(orderId: string, itemCode: string, serialNumber: string) {
+  return `QR-${orderId}-${itemCode}-${serialNumber}`;
 }
 
 export function buildReceiveRows(orders: StoredOrder[]): ReceiveRow[] {
@@ -87,9 +79,9 @@ export function buildReceiveRows(orders: StoredOrder[]): ReceiveRow[] {
         itemCode: item.code,
         expectedDate: order.deliveryDate,
         category: inferCategory(item.name),
-        condition: inferCondition(order, itemIndex),
+        condition: inferCondition(order),
         quantity: item.quantity,
-        received: getReceivedCount(order, item.quantity, itemIndex),
+        received: getReceivedCount(order, item.quantity),
         currencyCode: item.currencyCode,
         unitPrice: item.unitPrice,
         purchaseCost: item.totalPrice,

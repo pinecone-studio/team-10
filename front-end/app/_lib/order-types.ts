@@ -125,6 +125,9 @@ export type CreateOrderInput = {
 
 export type ReceiveOrderInput = {
   orderId: string;
+  catalogId: string;
+  itemCode: string;
+  quantityReceived: number;
   receivedAt: string;
   receivedCondition: ReceivedCondition;
   receivedNote: string;
