@@ -4,6 +4,9 @@ import { formatCurrency, formatDisplayDate } from "../../_lib/order-store";
 import { ReceiveConditionBadge } from "./ReceiveConditionBadge";
 import type { ReceiveRow } from "./receiveTypes";
 
+const GRID_CLASS =
+  "grid grid-cols-[40px_24px_minmax(220px,1.9fr)_148px_149px_108px_82px_82px_minmax(132px,1fr)_50px]";
+
 export function ReceiveTable({
   rows,
   selectedRowIds,
@@ -20,8 +23,8 @@ export function ReceiveTable({
   return (
     <div className="mt-[18px]">
       <div className="overflow-hidden rounded-[12px] border border-[#dcdfe4] bg-white">
-        <div className="grid grid-cols-[40px_24px_minmax(220px,1.9fr)_148px_149px_108px_82px_82px_minmax(132px,1fr)_50px] items-center border-b border-[#e6e8ec] bg-[#f8f8f8] text-[14px] font-medium text-[#111827]">
-          <div className="px-[10px] py-[10px]">№</div>
+        <div className={`${GRID_CLASS} items-center border-b border-[#e6e8ec] bg-[#f8f8f8] text-[14px] font-medium text-[#111827]`}>
+          <div className="px-[10px] py-[10px]">No.</div>
           <div className="flex items-center justify-center">
             <input
               type="checkbox"
@@ -31,7 +34,7 @@ export function ReceiveTable({
               className="size-[16px] rounded-[4px] border border-[#d0d5dd] accent-[#101828]"
             />
           </div>
-          <div className="px-[8px] py-[10px]">Asset Name</div>
+          <div className="px-[12px] py-[10px]">Asset Name</div>
           <div className="px-[8px] py-[10px]">Expected Date</div>
           <div className="px-[8px] py-[10px]">Category</div>
           <div className="px-[8px] py-[10px]">Status</div>
@@ -47,7 +50,7 @@ export function ReceiveTable({
           return (
             <div
               key={row.id}
-              className="grid grid-cols-[40px_24px_minmax(220px,1.9fr)_148px_149px_108px_82px_82px_minmax(132px,1fr)_50px] items-center border-b border-[#e6e8ec] text-[14px] text-[#111827] last:border-b-0"
+              className={`${GRID_CLASS} items-center border-b border-[#e6e8ec] text-[14px] text-[#111827] last:border-b-0`}
             >
               <div className="px-[10px] py-[16px] text-[#344054]">{row.index}</div>
               <div className="flex items-center justify-center">
@@ -60,8 +63,12 @@ export function ReceiveTable({
                   className="size-[16px] rounded-[4px] border border-[#d0d5dd] accent-[#101828] disabled:opacity-40"
                 />
               </div>
-              <div className="truncate px-[8px] py-[16px] text-[14px] text-[#101828]">{row.assetName}</div>
-              <div className="px-[8px] py-[16px] text-[#111827]">{formatDisplayDate(row.requestDate)}</div>
+              <div className="px-[12px] py-[16px] text-[14px] text-[#101828]">
+                {row.assetName}
+              </div>
+              <div className="px-[8px] py-[16px] text-[#111827]">
+                {formatDisplayDate(row.requestDate)}
+              </div>
               <div className="px-[8px] py-[16px]">
                 <span className="inline-flex min-h-[22px] items-center rounded-[999px] border border-[#dcdfe4] bg-[#fcfcfd] px-[8px] text-[12px] text-[#777777]">
                   {row.category}
@@ -72,7 +79,9 @@ export function ReceiveTable({
               </div>
               <div className="px-[8px] py-[16px] text-center text-[#111827]">{row.quantity}</div>
               <div className="px-[8px] py-[16px] text-center text-[#111827]">{row.received}</div>
-              <div className="px-[8px] py-[16px] text-right text-[#111827]">{formatCurrency(row.purchaseCost)}</div>
+              <div className="px-[8px] py-[16px] text-right text-[#111827]">
+                {formatCurrency(row.purchaseCost)}
+              </div>
               <div className="flex items-center justify-center py-[10px]">
                 <button
                   type="button"

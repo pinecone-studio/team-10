@@ -24,7 +24,7 @@ const CONDITION_STYLES: Record<
   missing: {
     label: "Missing",
     textClassName: "text-[#667085]",
-    iconClassName: "text-[#98a2b3]",
+    iconClassName: "text-[#64748b]",
   },
 };
 
@@ -115,25 +115,14 @@ function ConditionIcon({ condition }: { condition: ReceiveCondition }) {
   return (
     <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
       <path
-        d="M4.4 4.4L9.6 9.6"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-      <path
-        d="M9.6 4.4L4.4 9.6"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-      <path
-        d="M3.1 2.8H10.9V11.2H3.1V2.8Z"
+        d="M7 1.6L12.2 10.8C12.3668 11.0951 12.3664 11.457 12.1988 11.7518C12.0312 12.0466 11.7177 12.2289 11.3783 12.2292H2.62167C2.28227 12.2289 1.96878 12.0466 1.80118 11.7518C1.63358 11.457 1.63318 11.0951 1.8 10.8L7 1.6Z"
         stroke="currentColor"
         strokeWidth="1.1"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeDasharray="1.8 1.8"
       />
+      <path d="M7 5.2V7.8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M7 10.05H7.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
