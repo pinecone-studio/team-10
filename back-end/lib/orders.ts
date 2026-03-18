@@ -13,12 +13,14 @@ import {
   receivedConditionValues,
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
+import { syncReceiveArtifacts } from "./order-fulfillment.ts";
 import {
   parseIntegerId,
   resolveDepartmentId,
   resolveOfficeId,
   resolveUserId,
 } from "./reference-resolvers.ts";
+import { ensureFinanceUser, ensureInventoryHeadUser } from "./system-users.ts";
 
 type DbOrderStatus = (typeof orderStatusValues)[number];
 type DbApprovalQueue = (typeof approvalQueueValues)[number];
@@ -726,6 +728,76 @@ async function createFinanceApprovalNotificationIfMissing(
     .run();
 }
 
+async function createFinanceQueueNotificationIfMissing(
+  db: AppDb,
+  orderId: number,
+  orderName: string,
+) {
+  const financeUserId = await ensureFinanceUser(db);
+  const [existingNotification] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.userId, financeUserId),
+        eq(notifications.type, "financeReviewRequired"),
+        eq(notifications.entityType, "order"),
+        eq(notifications.entityId, String(orderId)),
+      ),
+    )
+    .limit(1);
+
+  if (existingNotification) return;
+
+  await db
+    .insert(notifications)
+    .values({
+      userId: financeUserId,
+      type: "financeReviewRequired",
+      title: "Order waiting for Finance review",
+      message: `${orderName} is ready for Finance approval.`,
+      entityType: "order",
+      entityId: String(orderId),
+      isRead: false,
+    })
+    .run();
+}
+
+async function createInventoryReadyNotificationIfMissing(
+  db: AppDb,
+  orderId: number,
+  orderName: string,
+) {
+  const inventoryHeadUserId = await ensureInventoryHeadUser(db);
+  const [existingNotification] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.userId, inventoryHeadUserId),
+        eq(notifications.type, "inventoryReceiveRequired"),
+        eq(notifications.entityType, "order"),
+        eq(notifications.entityId, String(orderId)),
+      ),
+    )
+    .limit(1);
+
+  if (existingNotification) return;
+
+  await db
+    .insert(notifications)
+    .values({
+      userId: inventoryHeadUserId,
+      type: "inventoryReceiveRequired",
+      title: "Approved goods are ready to receive",
+      message: `${orderName} has been approved by Finance and is ready for Inventory intake.`,
+      entityType: "order",
+      entityId: String(orderId),
+      isRead: false,
+    })
+    .run();
+}
+
 async function getOrderRowById(
   db: AppDb,
   id: string,
@@ -791,6 +863,12 @@ export async function createOrder(
     requestDate,
     input.requestNumber,
   );
+  const approvalTarget = parseApprovalTarget(input.approvalTarget);
+  const initialStatus =
+    input.status ??
+    (approvalTarget === "finance"
+      ? "pendingFinanceApproval"
+      : "pendingHigherUpApproval");
   const currencyCode = parseCurrencyCode(
     input.currencyCode,
     parseCurrencyCode(normalizedItems[0]?.currencyCode, "MNT"),
@@ -810,8 +888,8 @@ export async function createOrder(
         input.whyOrdered?.trim() ||
         input.approvalMessage?.trim() ||
         "Requested from the inventory order workspace.",
-      status: parseOrderStatus(input.status, "pendingHigherUpApproval"),
-      approvalTarget: parseApprovalTarget(input.approvalTarget),
+      status: parseOrderStatus(initialStatus, "pendingHigherUpApproval"),
+      approvalTarget,
       expectedArrivalAt: input.deliveryDate ?? null,
       totalCost:
         input.totalAmount ??
@@ -832,6 +910,14 @@ export async function createOrder(
   const createdOrder = await getOrderById(db, String(row.id));
   if (!createdOrder) {
     throw new Error("Failed to load created order.");
+  }
+
+  if (approvalTarget === "finance") {
+    await createFinanceQueueNotificationIfMissing(
+      db,
+      row.id,
+      createdOrder.orderName,
+    );
   }
 
   return createdOrder;
@@ -1014,6 +1100,13 @@ export async function updateOrder(
   }
 
   const nextDbStatus = updates.status ?? existingOrder.status;
+  const nextOrderName = updates.orderName ?? existingOrder.orderName;
+  if (
+    nextDbStatus === "pendingFinanceApproval" &&
+    existingOrder.status !== "pendingFinanceApproval"
+  ) {
+    await createFinanceQueueNotificationIfMissing(db, numericId, nextOrderName);
+  }
   if (
     nextDbStatus === "financeApproved" &&
     existingOrder.status !== "financeApproved"
@@ -1022,8 +1115,32 @@ export async function updateOrder(
       db,
       numericId,
       existingOrder.userId,
-      updates.orderName ?? existingOrder.orderName,
+      nextOrderName,
     );
+    await createInventoryReadyNotificationIfMissing(db, numericId, nextOrderName);
+  }
+
+  if (
+    nextDbStatus === "received" &&
+    existingOrder.status !== "received"
+  ) {
+    await syncReceiveArtifacts(db, {
+      orderId: numericId,
+      officeId: updates.officeId ?? existingOrder.officeId,
+      receivedByUserId: updates.userId ?? existingOrder.userId,
+      receivedAt:
+        updates.receivedAt ??
+        existingOrder.receivedAt ??
+        new Date().toISOString(),
+      receivedNote: updates.receivedNote ?? existingOrder.receivedNote,
+      receivedCondition:
+        updates.receivedCondition ?? existingOrder.receivedCondition,
+      storageLocation:
+        updates.storageLocation ?? existingOrder.storageLocation,
+      serialNumbers:
+        input.serialNumbers ??
+        parseStringArray(existingOrder.serialNumbersJson),
+    });
   }
 
   return getOrderById(db, id);
