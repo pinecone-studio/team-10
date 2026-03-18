@@ -1,3 +1,5 @@
+export * from "./asset/getAssetByIdOrQrCode.ts";
+export * from "./asset/getStorageAssets.ts";
 export * from "./catalog/getCatalogCategories.ts";
 export * from "./catalog/getCatalogItemTypes.ts";
 export * from "./catalog/getCatalogProducts.ts";
