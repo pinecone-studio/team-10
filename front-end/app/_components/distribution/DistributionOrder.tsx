@@ -1,4 +1,6 @@
+import CallendarIcon from "./icons/CallendarIcon";
 import DeliveredIcon from "./icons/DeliveredIcon";
+import EyeIcon from "./icons/EyeIcon";
 import PendingIcon from "./icons/PendingIcon";
 import SignedIcon from "./icons/SignedIcon";
 import TransitIcon from "./icons/TransitIcon";
@@ -46,77 +48,9 @@ const distributionRows = [
   },
 ] as const;
 
-function CalendarIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      className="h-[14px] w-[14px]"
-    >
-      <path
-        d="M4.66667 1.16666V3.49999"
-        stroke="#737373"
-        strokeWidth="1.16667"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9.33333 1.16666V3.49999"
-        stroke="#737373"
-        strokeWidth="1.16667"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M1.75 5.83334H12.25"
-        stroke="#737373"
-        strokeWidth="1.16667"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M2.33333 2.33334H11.6667C12.311 2.33334 12.8333 2.85567 12.8333 3.50001V11.6667C12.8333 12.311 12.311 12.8333 11.6667 12.8333H2.33333C1.68899 12.8333 1.16666 12.311 1.16666 11.6667V3.50001C1.16666 2.85567 1.68899 2.33334 2.33333 2.33334Z"
-        stroke="#737373"
-        strokeWidth="1.16667"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      className="h-4 w-4"
-    >
-      <path
-        d="M1.33334 8C2.22207 5.17189 4.85457 3.33334 8.00001 3.33334C11.1454 3.33334 13.7779 5.17189 14.6667 8C13.7779 10.8281 11.1454 12.6667 8.00001 12.6667C4.85457 12.6667 2.22207 10.8281 1.33334 8Z"
-        stroke="#0A0A0A"
-        strokeWidth="1.33333"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 9.66666C8.92047 9.66666 9.66667 8.92047 9.66667 7.99999C9.66667 7.07952 8.92047 6.33333 8 6.33333C7.07953 6.33333 6.33333 7.07952 6.33333 7.99999C6.33333 8.92047 7.07953 9.66666 8 9.66666Z"
-        stroke="#0A0A0A"
-        strokeWidth="1.33333"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function StatusBadge(props: { status: (typeof distributionRows)[number]["status"] }) {
+function StatusBadge(props: {
+  status: (typeof distributionRows)[number]["status"];
+}) {
   if (props.status === "Delivered") {
     return (
       <span className="inline-flex h-[38px] items-center gap-1 rounded-[14px] border border-[#A4F4CF] bg-[#D0FAE5] px-4 text-[12px] font-medium leading-4 text-[#006045]">
@@ -212,7 +146,7 @@ export default function DistributionOrder() {
                     {row.items}
                   </div>
                   <div className="flex items-center gap-1 px-4 py-5 text-[14px] font-normal leading-5 text-[#0A0A0A]">
-                    <CalendarIcon />
+                    <CallendarIcon />
                     <span>{row.date}</span>
                   </div>
                   <div className="px-4 py-[11px]">
