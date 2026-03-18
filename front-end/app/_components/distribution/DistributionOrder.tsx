@@ -96,9 +96,9 @@ function StatusBadge(props: {
 
 export default function DistributionOrder() {
   return (
-    <div className="flex w-full flex-col items-start rounded-[12px] border border-[#E2E8F0] bg-white px-4 py-6">
-      <div className="flex w-full flex-col items-start rounded-[14px] border border-[#E5E5E5] bg-white px-0 pt-4 pb-6">
-        <div className="w-full overflow-x-auto px-6">
+    <div className="px-6 pb-6">
+      <div className="w-full rounded-[14px] border border-[#E2E8F0] bg-white p-5">
+        <div className="w-full overflow-x-auto">
           <div className="min-w-[1051px]">
             <div className="grid grid-cols-[1.5fr_2.4fr_1.3fr_1.6fr_0.9fr_1.2fr_1.3fr_0.7fr] border-b border-[#E5E7EB]">
               {[
@@ -113,7 +113,7 @@ export default function DistributionOrder() {
               ].map((heading, index) => (
                 <div
                   key={heading}
-                  className={`px-4 py-[18px] text-[14px] font-medium leading-5 text-[#0A0A0A] ${index === 7 ? "text-right" : ""}`}
+                  className={`px-4 py-4 text-[14px] font-medium leading-5 text-[#0A0A0A] ${index === 7 ? "text-right" : ""}`}
                 >
                   {heading}
                 </div>
@@ -125,10 +125,10 @@ export default function DistributionOrder() {
                   key={row.id}
                   className="grid grid-cols-[1.5fr_2.4fr_1.3fr_1.6fr_0.9fr_1.2fr_1.3fr_0.7fr] items-center border-b border-[#E5E7EB] last:border-b-0"
                 >
-                  <div className="px-4 py-5 font-mono text-[14px] font-medium leading-5 text-[#0A0A0A]">
+                  <div className="px-4 py-4 font-mono text-[14px] font-medium leading-5 text-[#0A0A0A]">
                     {row.id}
                   </div>
-                  <div className="flex items-center gap-3 px-4 py-[18px]">
+                  <div className="flex items-center gap-3 px-4 py-4">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F5F5F5] text-[12px] font-normal leading-4 text-[#0A0A0A]">
                       {row.initials}
                     </div>
@@ -136,26 +136,26 @@ export default function DistributionOrder() {
                       {row.recipient}
                     </span>
                   </div>
-                  <div className="px-4 py-5 text-[14px] font-normal leading-5 text-[#737373]">
+                  <div className="px-4 py-4 text-[14px] font-normal leading-5 text-[#737373]">
                     {row.department}
                   </div>
-                  <div className="px-4 py-5 text-[14px] font-normal leading-5 text-[#737373]">
+                  <div className="px-4 py-4 text-[14px] font-normal leading-5 text-[#737373]">
                     {row.location}
                   </div>
-                  <div className="px-4 py-5 text-[14px] font-normal leading-5 text-[#0A0A0A]">
+                  <div className="px-4 py-4 text-[14px] font-normal leading-5 text-[#0A0A0A]">
                     {row.items}
                   </div>
-                  <div className="flex items-center gap-1 px-4 py-5 text-[14px] font-normal leading-5 text-[#0A0A0A]">
+                  <div className="flex items-center gap-1 px-4 py-4 text-[14px] font-normal leading-5 text-[#0A0A0A]">
                     <CallendarIcon />
                     <span>{row.date}</span>
                   </div>
-                  <div className="px-4 py-[11px]">
+                  <div className="px-4 py-3">
                     <StatusBadge status={row.status} />
                   </div>
-                  <div className="flex justify-end px-4 py-5">
+                  <div className="flex justify-end px-4 py-4">
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 items-center justify-center text-[#0A0A0A]"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-transparent text-[#0A0A0A] transition hover:border-[#E2E8F0] hover:bg-[#F8FAFC]"
                     >
                       <EyeIcon />
                     </button>

@@ -58,9 +58,9 @@ export default function DistributionSearchFilter({
   const [selected, setSelected] = useState("All status");
 
   return (
-    <div className="flex w-full flex-col items-start gap-[10px] self-stretch">
-      <div className="flex w-full flex-col items-start gap-[30px] self-stretch rounded-[12px] border border-[#E2E8F0] bg-white px-4 py-6">
-        <div className="flex w-full flex-col items-start rounded-[14px] border border-[#E5E5E5] bg-white px-4 pt-8 pb-10">
+    <div className="flex w-full flex-col gap-4 px-6 pb-6">
+      <div className="flex w-full flex-col gap-5 rounded-[14px] border border-[#E2E8F0] bg-white p-5">
+        <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center">
           <div className="flex h-9 w-full items-center gap-4 self-stretch">
             <div className="relative flex h-9 flex-1 items-start self-stretch">
               <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2">
@@ -81,7 +81,7 @@ export default function DistributionSearchFilter({
                 className="h-9 w-full rounded-[8px] border border-[#E5E5E5] bg-[rgba(255,255,255,0.002)] py-2 pr-3 pl-10 text-[14px] font-normal leading-[18px] text-[#0A0A0A] shadow-[0_1px_2px_rgba(0,0,0,0.05)] outline-none placeholder:text-[#737373]"
               />
             </div>
-            <div className="relative w-48">
+            <div className="relative w-full lg:w-48">
               <button
                 type="button"
                 onClick={() => setOpen(!open)}
@@ -127,7 +127,7 @@ export default function DistributionSearchFilter({
             </div>
           </div>
         </div>
-        <div className="flex items-start gap-[30px]">
+        <div className="flex flex-wrap items-center gap-6 border-t border-[#E2E8F0] pt-4">
           <button
             type="button"
             onClick={() => onTabChange?.("distributions")}

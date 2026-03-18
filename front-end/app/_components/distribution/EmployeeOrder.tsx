@@ -1,7 +1,10 @@
+"use client";
+
+import { useState } from "react";
+
 import DeliveredIcon from "./icons/DeliveredIcon";
 import PendingIcon from "./icons/PendingIcon";
 import LaptopIcon from "./icons/LaptopIcon";
-import RefreshIcon from "./icons/RefreshIcon";
 
 const employeeRequests = [
   {
@@ -58,19 +61,34 @@ function RequestStatusBadge(props: {
 }
 
 export default function EmployeeOrder() {
+  const [notice, setNotice] = useState<string | null>(null);
+
+  function handleAction(employee: string, action: "assign" | "dismiss") {
+    setNotice(
+      action === "assign"
+        ? `${employee} request assigned successfully.`
+        : `${employee} request dismissed successfully.`,
+    );
+  }
+
   return (
-    <div className="flex w-full flex-col items-start gap-[10px]">
+    <div className="flex w-full flex-col gap-4 px-6 pb-6">
+      {notice ? (
+        <div className="rounded-[12px] border border-[#86EFAC] bg-[#F0FDF4] px-4 py-3 text-[14px] font-medium text-[#166534]">
+          {notice}
+        </div>
+      ) : null}
       {employeeRequests.map((request) => (
         <div
           key={request.id}
-          className="flex w-full items-start justify-between rounded-[12px] border border-[#E2E8F0] bg-white px-4 py-6"
+          className="flex w-full items-start justify-between gap-4 rounded-[14px] border border-[#E2E8F0] bg-white px-5 py-5"
         >
-          <div className="flex flex-1 items-start gap-5">
+          <div className="flex min-w-0 flex-1 items-start gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-[8px] bg-[#F1F5F9]">
               <LaptopIcon />
             </div>
-            <div className="flex flex-1 flex-col gap-4">
-              <div className="flex items-center gap-[6px]">
+            <div className="flex min-w-0 flex-1 flex-col gap-4">
+              <div className="flex flex-wrap items-center gap-[6px]">
                 <p className="text-[18px] font-semibold leading-7 text-[#0A0A0A]">
                   {request.employee}
                 </p>
@@ -91,12 +109,22 @@ export default function EmployeeOrder() {
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#E2E8F0] bg-white"
-          >
-            <RefreshIcon />
-          </button>
+          <div className="flex shrink-0 items-center gap-2 self-end">
+            <button
+              type="button"
+              onClick={() => handleAction(request.employee, "dismiss")}
+              className="inline-flex h-10 items-center justify-center rounded-[8px] border border-[#E2E8F0] bg-white px-4 text-[14px] font-medium leading-6 text-[#334155] transition hover:bg-[#F8FAFC]"
+            >
+              Dismiss
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAction(request.employee, "assign")}
+              className="inline-flex h-10 items-center justify-center rounded-[8px] bg-[#0F172A] px-4 text-[14px] font-medium leading-6 text-white transition hover:bg-[#1E293B]"
+            >
+              Assign
+            </button>
+          </div>
         </div>
       ))}
     </div>

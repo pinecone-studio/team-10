@@ -5,10 +5,10 @@ import TransitIcon from "./icons/TransitIcon";
 
 export default function DistributionDashboard() {
   return (
-    <div className="flex flex-col items-start self-stretch pt-6 pr-15 pb-6 pl-15 border-t border-slate-200 border-b  bg-white">
-      <div className="flex justify-center items-start gap-4 self-stretch w-full">
-        <div className="flex flex-col items-start flex-1 self-stretch px-4 py-10 rounded-[14px] border border-slate-200 bg-white w-full">
-          <div className="flex items-center gap-4 self-stretch bg-white w-full">
+    <div className="bg-white px-6 py-6">
+      <div className="grid w-full gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="flex min-h-[116px] w-full flex-col justify-center rounded-[14px] border border-slate-200 bg-white px-5 py-6">
+          <div className="flex w-full items-center gap-4">
             <div className="flex w-12 h-12 justify-center items-center rounded-[10px] bg-orange-100">
               <PendingIcon />
             </div>
@@ -22,8 +22,8 @@ export default function DistributionDashboard() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col items-start flex-1 self-stretch px-4 py-10 rounded-[14px] border border-slate-200 bg-white w-full">
-          <div className="flex items-center gap-4 self-stretch bg-white w-full">
+        <div className="flex min-h-[116px] w-full flex-col justify-center rounded-[14px] border border-slate-200 bg-white px-5 py-6">
+          <div className="flex w-full items-center gap-4">
             <div className="flex w-12 h-12 justify-center items-center rounded-[10px] bg-[#DBEAFE]">
               <TransitIcon />
             </div>
@@ -37,8 +37,8 @@ export default function DistributionDashboard() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col items-start flex-1 self-stretch px-4 py-10 rounded-[14px] border border-slate-200 bg-white w-full">
-          <div className="flex items-center gap-4 self-stretch bg-white w-full">
+        <div className="flex min-h-[116px] w-full flex-col justify-center rounded-[14px] border border-slate-200 bg-white px-5 py-6">
+          <div className="flex w-full items-center gap-4">
             <div className="flex w-12 h-12 justify-center items-center rounded-[10px] bg-[#DCFCE7]">
               <DeliveredIcon />
             </div>
@@ -52,8 +52,8 @@ export default function DistributionDashboard() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col items-start flex-1 self-stretch px-4 py-10 rounded-[14px] border border-slate-200 bg-white w-full">
-          <div className="flex items-center gap-4 self-stretch bg-white w-full">
+        <div className="flex min-h-[116px] w-full flex-col justify-center rounded-[14px] border border-slate-200 bg-white px-5 py-6">
+          <div className="flex w-full items-center gap-4">
             <div className="flex w-12 h-12 justify-center items-center rounded-[10px] bg-[#F3E8FF]">
               <SignedIcon />
             </div>
