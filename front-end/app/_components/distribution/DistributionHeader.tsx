@@ -22,14 +22,14 @@ export default function DistributionHeader() {
                 <path
                   d="M7.5 3.125V11.875"
                   stroke="white"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
                 <path
                   d="M3.125 7.5H11.875"
                   stroke="white"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </svg>
               <p className="text-white font-inter text-sm font-medium leading-6 tracking-normal">
