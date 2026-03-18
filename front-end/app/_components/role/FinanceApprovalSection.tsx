@@ -5,7 +5,7 @@ import { ActionButton, Card, EmptyState, Stat, WorkspaceShell } from "../shared/
 
 export function FinanceApprovalSection() {
   const orders = useOrdersStore();
-  const pendingOrders = orders.filter((order) => order.status === "pending_finance");
+  const pendingOrders = orders.filter((order) => order.status === "pending_finance" || order.status === "pending_higher_up");
   const processedOrders = orders.filter((order) => order.financeReviewedAt).slice(0, 4);
 
   return (
@@ -20,7 +20,7 @@ export function FinanceApprovalSection() {
                 <Stat label="Department" value={order.department} />
                 <Stat label="Delivery date" value={formatDisplayDate(order.deliveryDate)} />
               </div>
-              <div className="mt-[12px] grid grid-cols-3 gap-[12px]"><Stat label="Higher-up reviewer" value={order.higherUpReviewer ?? "Any Higher-ups"} /><Stat label="Approved at" value={order.higherUpReviewedAt ? formatDisplayDate(order.higherUpReviewedAt.slice(0, 10)) : "-"} /><Stat label="Total amount" value={formatCurrency(order.totalAmount, order.currencyCode)} accent /></div>
+              <div className="mt-[12px] grid grid-cols-3 gap-[12px]"><Stat label="Higher-up reviewer" value={order.higherUpReviewer ?? "Direct to Finance"} /><Stat label="Approved at" value={order.higherUpReviewedAt ? formatDisplayDate(order.higherUpReviewedAt.slice(0, 10)) : "-"} /><Stat label="Total amount" value={formatCurrency(order.totalAmount, order.currencyCode)} accent /></div>
               <div className="mt-[14px] rounded-[8px] bg-[#f6f6f7] px-[12px] py-[12px]">{order.items.map((item, index) => <div key={`${order.id}-${item.catalogId}-${index}`} className="grid grid-cols-[1.2fr_0.8fr_0.6fr_0.8fr_0.8fr] gap-[10px] py-[4px] text-[11px] text-[#5f5f5f]"><span>{item.name}</span><span>{item.code}</span><span>{item.quantity}</span><span>{formatCurrency(item.unitPrice, item.currencyCode)}</span><span>{formatCurrency(item.totalPrice, item.currencyCode)}</span></div>)}</div>
               <div className="mt-[16px] flex gap-[10px]"><ActionButton variant="green" onClick={() => reviewFinanceOrder({ orderId: order.id, reviewer: "Finance", approved: true })}>Approve</ActionButton><ActionButton variant="light" onClick={() => reviewFinanceOrder({ orderId: order.id, reviewer: "Finance", approved: false })}>Reject</ActionButton></div>
             </div>

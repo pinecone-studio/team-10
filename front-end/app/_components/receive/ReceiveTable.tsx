@@ -5,108 +5,80 @@ import { ReceiveConditionBadge } from "./ReceiveConditionBadge";
 import type { ReceiveRow } from "./receiveTypes";
 
 const GRID_CLASS =
-  "grid grid-cols-[40px_24px_minmax(220px,1.9fr)_148px_149px_108px_82px_82px_minmax(132px,1fr)_50px]";
+  "grid grid-cols-[40px_minmax(220px,1.5fr)_130px_130px_86px_110px_130px]";
 
 export function ReceiveTable({
   rows,
-  selectedRowIds,
-  allPageRowsSelected,
-  onToggleAllPageRows,
-  onToggleRow,
+  activeRowId,
+  onOpenRow,
 }: {
   rows: ReceiveRow[];
-  selectedRowIds: string[];
-  allPageRowsSelected: boolean;
-  onToggleAllPageRows: (checked: boolean) => void;
-  onToggleRow: (rowId: string, checked: boolean) => void;
+  activeRowId: string | null;
+  onOpenRow: (rowId: string) => void;
 }) {
   return (
     <div className="mt-[18px]">
       <div className="overflow-hidden rounded-[12px] border border-[#dcdfe4] bg-white">
-        <div className={`${GRID_CLASS} items-center border-b border-[#e6e8ec] bg-[#f8f8f8] text-[14px] font-medium text-[#111827]`}>
-          <div className="px-[10px] py-[10px]">No.</div>
-          <div className="flex items-center justify-center">
-            <input
-              type="checkbox"
-              checked={allPageRowsSelected}
-              aria-label="Select page rows"
-              onChange={(event) => onToggleAllPageRows(event.target.checked)}
-              className="size-[16px] rounded-[4px] border border-[#d0d5dd] accent-[#101828]"
-            />
-          </div>
-          <div className="px-[12px] py-[10px]">Asset Name</div>
+        <div
+          className={`${GRID_CLASS} items-center border-b border-[#e6e8ec] bg-[#f8f8f8] text-[14px] font-medium text-[#111827]`}
+        >
+          <div className="px-[10px] py-[10px]">No</div>
+          <div className="px-[8px] py-[10px]">Asset Name</div>
           <div className="px-[8px] py-[10px]">Expected Date</div>
           <div className="px-[8px] py-[10px]">Category</div>
+          <div className="px-[8px] py-[10px] text-center">Qty</div>
           <div className="px-[8px] py-[10px]">Status</div>
-          <div className="px-[8px] py-[10px] text-center">Quantity</div>
-          <div className="px-[8px] py-[10px] text-center">Received</div>
-          <div className="px-[8px] py-[10px] text-right">Purchase Cost</div>
-          <div className="py-[10px]" />
+          <div className="px-[8px] py-[10px] text-center">Action</div>
         </div>
 
-        {rows.map((row) => {
-          const isSelected = selectedRowIds.includes(row.id);
-
-          return (
-            <div
-              key={row.id}
-              className={`${GRID_CLASS} items-center border-b border-[#e6e8ec] text-[14px] text-[#111827] last:border-b-0`}
-            >
-              <div className="px-[10px] py-[16px] text-[#344054]">{row.index}</div>
-              <div className="flex items-center justify-center">
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  disabled={!row.selectable}
-                  aria-label={`Select ${row.assetName}`}
-                  onChange={(event) => onToggleRow(row.id, event.target.checked)}
-                  className="size-[16px] rounded-[4px] border border-[#d0d5dd] accent-[#101828] disabled:opacity-40"
-                />
-              </div>
-              <div className="px-[12px] py-[16px] text-[14px] text-[#101828]">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            className={`${GRID_CLASS} items-center border-b border-[#e6e8ec] text-[14px] text-[#111827] last:border-b-0 ${
+              activeRowId === row.id ? "bg-[#f8fbff]" : "bg-white"
+            }`}
+          >
+            <div className="px-[10px] py-[16px] text-[#344054]">
+              {row.index}
+            </div>
+            <div className="px-[8px] py-[16px]">
+              <div className="truncate text-[14px] text-[#101828]">
                 {row.assetName}
               </div>
-              <div className="px-[8px] py-[16px] text-[#111827]">
-                {formatDisplayDate(row.requestDate)}
-              </div>
-              <div className="px-[8px] py-[16px]">
-                <span className="inline-flex min-h-[22px] items-center rounded-[999px] border border-[#dcdfe4] bg-[#fcfcfd] px-[8px] text-[12px] text-[#777777]">
-                  {row.category}
-                </span>
-              </div>
-              <div className="px-[8px] py-[16px]">
-                <ReceiveConditionBadge condition={row.condition} />
-              </div>
-              <div className="px-[8px] py-[16px] text-center text-[#111827]">{row.quantity}</div>
-              <div className="px-[8px] py-[16px] text-center text-[#111827]">{row.received}</div>
-              <div className="px-[8px] py-[16px] text-right text-[#111827]">
-                {formatCurrency(row.purchaseCost)}
-              </div>
-              <div className="flex items-center justify-center py-[10px]">
-                <button
-                  type="button"
-                  aria-label={`More actions for ${row.assetName}`}
-                  className="inline-flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-[#667085] transition hover:bg-[#f9fafb]"
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path
-                      d="M8 3.33331C8.36819 3.33331 8.66667 3.03484 8.66667 2.66665C8.66667 2.29846 8.36819 1.99998 8 1.99998C7.63181 1.99998 7.33334 2.29846 7.33334 2.66665C7.33334 3.03484 7.63181 3.33331 8 3.33331Z"
-                      fill="currentColor"
-                    />
-                    <path
-                      d="M8 8.66665C8.36819 8.66665 8.66667 8.36817 8.66667 7.99998C8.66667 7.63179 8.36819 7.33331 8 7.33331C7.63181 7.33331 7.33334 7.63179 7.33334 7.99998C7.33334 8.36817 7.63181 8.66665 8 8.66665Z"
-                      fill="currentColor"
-                    />
-                    <path
-                      d="M8 14C8.36819 14 8.66667 13.7015 8.66667 13.3333C8.66667 12.9651 8.36819 12.6666 8 12.6666C7.63181 12.6666 7.33334 12.9651 7.33334 13.3333C7.33334 13.7015 7.63181 14 8 14Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </button>
+              <div className="mt-1 text-[11px] text-[#667085]">
+                {row.requestNumber} - {row.itemCode} -{" "}
+                {formatCurrency(row.purchaseCost, row.currencyCode)}
               </div>
             </div>
-          );
-        })}
+            <div className="px-[8px] py-[16px] text-[#111827]">
+              {formatDisplayDate(row.expectedDate)}
+            </div>
+            <div className="px-[8px] py-[16px]">
+              <span className="inline-flex min-h-[22px] items-center rounded-[999px] border border-[#dcdfe4] bg-[#fcfcfd] px-[8px] text-[12px] text-[#777777]">
+                {row.category}
+              </span>
+            </div>
+            <div className="px-[8px] py-[16px] text-center text-[#111827]">
+              {row.quantity}
+            </div>
+            <div className="px-[8px] py-[16px]">
+              <ReceiveConditionBadge condition={row.condition} />
+            </div>
+            <div className="flex items-center justify-center px-[8px] py-[10px]">
+              <button
+                type="button"
+                onClick={() => onOpenRow(row.id)}
+                className={`inline-flex h-[34px] items-center justify-center rounded-[8px] px-3 text-[12px] font-medium ${
+                  row.selectable
+                    ? "bg-[#101828] text-white"
+                    : "border border-[#d0d5dd] bg-white text-[#98a2b3]"
+                }`}
+              >
+                {row.selectable ? "Open" : "Stored"}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

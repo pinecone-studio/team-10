@@ -2,7 +2,7 @@
 
 import { StepActiveIcon, StepInactiveIcon } from "./OrderCreateIcons";
 
-const steps = ["Create Order", "Approval", "Submit"] as const;
+const steps = ["Create Order"] as const;
 
 export function OrderCreateStepper() {
   return (
