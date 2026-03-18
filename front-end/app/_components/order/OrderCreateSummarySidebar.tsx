@@ -1,11 +1,9 @@
 "use client";
 
-import Image from "next/image";
+import { useState } from "react";
 import { formatCurrency } from "../../_lib/order-store";
 import type { OrderCreateViewProps } from "./OrderCreateView.types";
-import { ChevronDownIcon } from "./OrderCreateIcons";
-import { Field, Select, TextArea } from "./OrderFormFields";
-import { getHigherUpApproverOptions } from "./orderApprovers";
+import { Field, TextArea } from "./OrderFormFields";
 import { createTotalRows } from "./orderCreateUtils";
 
 export function OrderCreateSummarySidebar(
@@ -21,7 +19,7 @@ export function OrderCreateSummarySidebar(
     | "onSubmit"
   >,
 ) {
-  const approvers = getHigherUpApproverOptions(props.draftOrder.department);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const { subtotal, tax, grandTotal } = createTotalRows(props.draftItems);
   const currencyCode = props.draftItems[0]?.currencyCode ?? "MNT";
 
@@ -69,36 +67,6 @@ export function OrderCreateSummarySidebar(
             </span>
           </div>
         </div>
-        <Field label="Approvers">
-          <div className="relative">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
-              <Image
-                src="/order.svg"
-                alt=""
-                width={16}
-                height={16}
-                className="h-4 w-4"
-              />
-            </span>
-            <Select
-              value={props.draftOrder.requestedApproverId}
-              onChange={(event) =>
-                props.onOrderChange("requestedApproverId", event.target.value)
-              }
-              className="appearance-none pl-11 pr-10 text-[12px]"
-            >
-              <option value="">Add Approver</option>
-              {approvers.map((approver) => (
-                <option key={approver.id} value={approver.id}>
-                  {approver.fullName} - {approver.positionLabel}
-                </option>
-              ))}
-            </Select>
-            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
-              <ChevronDownIcon />
-            </span>
-          </div>
-        </Field>
         <Field label="Notes">
           <TextArea
             value={props.permissionMessage}
@@ -116,12 +84,43 @@ export function OrderCreateSummarySidebar(
         ) : null}
         <button
           type="button"
-          onClick={() => void props.onSubmit()}
+          onClick={() => setIsConfirmOpen(true)}
           disabled={!props.canSubmitDraft}
           className="inline-flex h-9 w-full items-center justify-center rounded-[6px] bg-black text-[14px] font-medium text-white transition duration-150 hover:bg-[#1f2937] active:scale-[0.98] active:bg-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black disabled:active:scale-100"
         >
           Send for Approval
         </button>
+        {isConfirmOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+            <div className="w-full max-w-[320px] rounded-[12px] bg-white p-5 shadow-[0_20px_45px_rgba(15,23,42,0.18)]">
+              <h4 className="text-[16px] font-semibold text-[#020618]">
+                Are you sure?
+              </h4>
+              <p className="mt-2 text-[13px] leading-5 text-[#62748e]">
+                This order will be sent for approval and you will return to Order History.
+              </p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmOpen(false)}
+                  className="inline-flex h-9 items-center justify-center rounded-[6px] border border-[#dbe3ee] px-4 text-[13px] font-medium text-[#0f172a] transition hover:bg-[#f8fafc]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsConfirmOpen(false);
+                    await props.onSubmit();
+                  }}
+                  className="inline-flex h-9 items-center justify-center rounded-[6px] bg-black px-4 text-[13px] font-medium text-white transition hover:bg-[#1f2937]"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </aside>
   );
