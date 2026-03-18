@@ -9,7 +9,6 @@ import {
 import {
   ActionButton,
   Card,
-  EmptyState,
   Stat,
   WorkspaceShell,
 } from "../shared/WorkspacePrimitives";
@@ -19,6 +18,7 @@ import DistributionSearchFilter from "../distribution/DistributionSearchFilter";
 import DistributionOrder from "../distribution/DistributionOrder";
 import AvailableOrder from "../distribution/AvailableOrder";
 import EmployeeOrder from "../distribution/EmployeeOrder";
+import PendingRetrievalPanel from "../distribution/PendingRetrievalPanel";
 
 const assignees = [
   { name: "Bat-Erdene", role: "Employee" },
@@ -28,7 +28,7 @@ const assignees = [
 
 export function HRDistributionSection() {
   const [activeTab, setActiveTab] = useState<
-    "distributions" | "available-assets" | "employee-requests"
+    "distributions" | "available-assets" | "employee-requests" | "pending-retrieval"
   >("distributions");
   const orders = useOrdersStore();
   const readyOrders = orders.filter(
@@ -57,6 +57,7 @@ export function HRDistributionSection() {
         {activeTab === "distributions" ? <DistributionOrder /> : null}
         {activeTab === "available-assets" ? <AvailableOrder /> : null}
         {activeTab === "employee-requests" ? <EmployeeOrder /> : null}
+        {activeTab === "pending-retrieval" ? <PendingRetrievalPanel /> : null}
       </div>
     );
   }

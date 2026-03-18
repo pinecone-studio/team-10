@@ -7,6 +7,7 @@ import { EmployeeAssetsSection } from "./role/EmployeeAssetsSection";
 import { FinanceApprovalSection } from "./role/FinanceApprovalSection";
 import { HigherUpApprovalSection } from "./role/HigherUpApprovalSection";
 import { HRDistributionSection } from "./role/HRDistributionSection";
+import { HigherUpTerminateSection } from "./role/HigherUpTerminateSection";
 import { InventoryReceiveSection } from "./role/InventoryReceiveSection";
 import { InventoryStorageSection } from "./role/InventoryStorageSection";
 import { PlaceholderSection } from "./role/PlaceholderSection";
@@ -14,6 +15,7 @@ import { PlaceholderSection } from "./role/PlaceholderSection";
 export function RoleWorkspace({ role, roleLabel, section }: { role: AppRole; roleLabel: string; section: SectionKey }) {
   if (section === "order" && (role === "systemAdmin" || role === "inventoryHead")) return <OrderWorkspace role={role} roleLabel={roleLabel} />;
   if (role === "higherUpApprover" && section === "order") return <HigherUpApprovalSection />;
+  if ((role === "higherUpApprover" || role === "systemAdmin") && section === "terminate") return <HigherUpTerminateSection />;
   if (role === "finance" && section === "order") return <FinanceApprovalSection />;
   if ((role === "inventoryHead" || role === "systemAdmin") && section === "receive") return <InventoryReceiveSection />;
   if (role === "inventoryHead" && section === "storage") return <InventoryStorageSection />;
