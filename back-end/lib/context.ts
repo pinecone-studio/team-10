@@ -1,4 +1,6 @@
-import { getDatabase, type AppDb } from "./db.ts";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { createDatabase, getDatabase, type AppDb } from "./db.ts";
+import type { D1DatabaseLike } from "./d1.ts";
 
 export type RuntimeConfig = {
   appUrl: string;
@@ -60,8 +62,33 @@ export async function createGraphQLContext(
   request: Request,
   options: GraphQLContextOptions = {},
 ): Promise<GraphQLContext> {
+  let resolvedDb = options.db;
+
+  if (!resolvedDb) {
+    try {
+      const cloudflareContext = await getCloudflareContext({ async: true });
+      const bindingDatabase = (
+        cloudflareContext.env as Record<string, unknown>
+      ).DB as { prepare?: unknown; batch?: unknown } | undefined;
+
+      if (
+        bindingDatabase &&
+        typeof bindingDatabase === "object" &&
+        "prepare" in bindingDatabase &&
+        typeof bindingDatabase.prepare === "function" &&
+        "batch" in bindingDatabase &&
+        typeof bindingDatabase.batch === "function"
+      ) {
+        resolvedDb = createDatabase(bindingDatabase as D1DatabaseLike);
+      }
+    } catch {
+      resolvedDb = undefined;
+    }
+  }
+
   return createGraphQLContextValue({
     ...options,
+    db: resolvedDb ?? getDatabase(),
     currentUserId:
       options.currentUserId ?? request.headers.get("x-user-id"),
     requestIpAddress:

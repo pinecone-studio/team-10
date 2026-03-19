@@ -496,59 +496,6 @@ function mapFallbackOrderItems(items: OrderLineItemInput[]): OrderLineItemRecord
   });
 }
 
-function buildFallbackOrderRecord(input: CreateOrderInput): OrderRecord {
-  const createdAt = new Date().toISOString();
-  const requestDate = input.requestDate?.trim() || createdAt.slice(0, 10);
-  const requestNumber =
-    input.requestNumber?.trim().toUpperCase() ||
-    `REQ-${requestDate.replaceAll("-", "")}-${String(Date.now() % 1000).padStart(3, "0")}`;
-  const items = mapFallbackOrderItems(input.items ?? []);
-  const totalAmount =
-    input.totalAmount ??
-    items.reduce((sum, item) => sum + item.totalPrice, 0);
-
-  return {
-    id: `fallback-${Date.now()}`,
-    orderName: input.orderName.trim() || "Order",
-    whyOrdered: input.whyOrdered?.trim() ?? "",
-    expectedArrivalAt: input.deliveryDate ?? null,
-    totalCost: totalAmount,
-    requestNumber,
-    requestDate,
-    department: input.department?.trim() || "IT Office",
-    requester: input.requester?.trim() || "",
-    deliveryDate: input.deliveryDate ?? requestDate,
-    approvalTarget: mapInputApprovalTargetToFront(input.approvalTarget),
-    items,
-    totalAmount,
-    currencyCode: "USD",
-    status: mapInputStatusToFront(input.status),
-    requestedApproverId: input.requestedApproverId?.trim() || null,
-    requestedApproverName: input.requestedApproverName?.trim() || null,
-    requestedApproverRole: input.requestedApproverRole?.trim() || null,
-    approvalMessage: input.approvalMessage?.trim() ?? "",
-    higherUpReviewer: null,
-    higherUpReviewedAt: null,
-    higherUpNote: "",
-    financeReviewer: null,
-    financeReviewedAt: null,
-    financeNote: "",
-    receivedAt: null,
-    receivedCondition: null,
-    receivedNote: "",
-    storageLocation: "",
-    serialNumbers: [],
-    assignedTo: null,
-    assignedRole: null,
-    assignedAt: null,
-    userId: input.userId?.trim() || "1",
-    officeId: input.officeId?.trim() || "1",
-    departmentId: input.departmentId?.trim() || null,
-    createdAt,
-    updatedAt: createdAt,
-  };
-}
-
 async function listOrderItemsByOrderIds(
   db: AppDb,
   orderIds: number[],
@@ -861,8 +808,8 @@ export async function listOrders(db: AppDb): Promise<OrderRecord[]> {
 
     return rows.map((row) => mapOrder(row, itemsByOrderId.get(row.id) ?? []));
   } catch (error) {
-    console.warn("listOrders fallback triggered.", error);
-    return [];
+    console.error("listOrders failed.", error);
+    throw error;
   }
 }
 
@@ -877,8 +824,8 @@ export async function getOrderById(
     const itemsByOrderId = await listOrderItemsByOrderIds(db, [row.id]);
     return mapOrder(row, itemsByOrderId.get(row.id) ?? []);
   } catch (error) {
-    console.warn(`getOrderById fallback triggered for order ${id}.`, error);
-    return null;
+    console.error(`getOrderById failed for order ${id}.`, error);
+    throw error;
   }
 }
 
@@ -945,8 +892,8 @@ export async function createOrder(
 
     return createdOrder;
   } catch (error) {
-    console.warn("createOrder fallback triggered.", error);
-    return buildFallbackOrderRecord(input);
+    console.error("createOrder failed.", error);
+    throw error;
   }
 }
 
@@ -1128,8 +1075,8 @@ export async function updateOrder(
 
     return getOrderById(db, id);
   } catch (error) {
-    console.warn(`updateOrder fallback triggered for ${id}.`, error);
-    return null;
+    console.error(`updateOrder failed for ${id}.`, error);
+    throw error;
   }
 }
 
@@ -1144,7 +1091,7 @@ export async function deleteOrder(db: AppDb, id: string): Promise<boolean> {
 
     return rows.length > 0;
   } catch (error) {
-    console.warn(`deleteOrder fallback triggered for ${id}.`, error);
-    return false;
+    console.error(`deleteOrder failed for ${id}.`, error);
+    throw error;
   }
 }

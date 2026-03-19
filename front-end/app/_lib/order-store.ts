@@ -335,7 +335,13 @@ function mergeRemoteOrdersWithLocal(remoteOrders: StoredOrder[], localOrders: St
       : remoteOrder;
   });
 
-  return mergedRemoteOrders;
+  const localOnlyOrders = localOrders.filter(
+    (localOrder) =>
+      !isPersistedOrderId(localOrder.id) &&
+      !remoteOrders.some((remoteOrder) => remoteOrder.id === localOrder.id),
+  );
+
+  return [...mergedRemoteOrders, ...localOnlyOrders];
 }
 
 function subscribe(callback: () => void) {
