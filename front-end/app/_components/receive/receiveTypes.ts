@@ -8,6 +8,8 @@ export type ReceiveCondition =
   | "defective"
   | "missing";
 
+export type ReceiveStatusFilterValue = ReceiveCondition | "all";
+
 export type ReceiveRow = {
   id: string;
   orderId: string;

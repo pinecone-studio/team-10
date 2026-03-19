@@ -87,11 +87,13 @@ export function OrderHistoryTable(props: {
   onOpenDetail: (orderId: string) => void;
   onDeleteOrder: (orderId: string) => void | Promise<void>;
 }) {
+  const hasOrders = props.orders.length > 0;
+
   return (
-    <section className="rounded-[12px] border border-[#e2e8f0] bg-white px-4 py-6">
-      <div className="overflow-x-auto">
-        <div className="min-w-[920px]">
-          <div className="grid grid-cols-[100px_1.35fr_1.2fr_120px_130px_120px_130px] items-center rounded-[6px] border border-[#e3e4e8] bg-[#f1f5f9] px-6 py-6 text-[14px] font-medium text-[#475569]">
+    <section className={`flex min-h-0 flex-col overflow-hidden rounded-[20px] border border-[#e2efff] bg-white px-4 py-5 shadow-[0_14px_34px_rgba(125,170,232,0.12),0_6px_16px_rgba(15,23,42,0.05)] ${hasOrders ? "h-[760px]" : "shrink-0"}`}>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex h-full min-w-[920px] min-h-0 flex-col">
+          <div className="grid grid-cols-[100px_1.35fr_1.2fr_120px_130px_120px_130px] items-center rounded-[10px] border border-[#e3efff] bg-[#eef6ff] px-6 py-5 text-[14px] font-medium text-[#475569]">
             <span className="inline-flex items-center gap-1">
           <span>Order ID</span>
           <SortIcon />
@@ -109,8 +111,8 @@ export function OrderHistoryTable(props: {
           <SortIcon />
         </span>
           </div>
-          <div className="mt-5 space-y-[6px]">
-            {props.orders.length > 0 ? (
+          <div className={`mt-5 min-h-0 ${hasOrders ? "flex-1 overflow-y-auto overflow-x-auto pr-1" : ""}`}>
+            {hasOrders ? (
               props.orders.map((order) => (
                 <div
                   key={order.id}
@@ -163,7 +165,7 @@ export function OrderHistoryTable(props: {
                 </div>
               ))
             ) : (
-              <div className="rounded-[6px] border border-[#e3e4e8] px-6 py-16 text-center text-[14px] text-[#94a3b8]">
+              <div className="flex min-h-[240px] items-center justify-center rounded-[14px] border border-[#dbeafb] bg-[rgba(255,255,255,0.72)] px-6 py-28 text-center text-[14px] text-[#94a3b8]">
                 No orders found.
               </div>
             )}

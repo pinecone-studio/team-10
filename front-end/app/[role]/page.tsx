@@ -26,10 +26,10 @@ export default async function RolePage({ params, searchParams }: RolePageProps) 
       : defaultSection;
 
   return (
-    <main className="h-screen overflow-hidden bg-[#efefef] text-slate-900">
+    <main className="h-screen overflow-hidden bg-[#eef5fb] text-slate-900">
       <section className="flex h-full items-stretch overflow-hidden">
         <RoleSidebar role={role} currentSection={section} />
-        <div className="min-w-0 flex-1 overflow-y-auto">
+        <div className="min-w-0 flex-1 overflow-y-auto bg-[#eef5fb]">
           <RoleWorkspace role={role} roleLabel={roleMeta.label} section={section} />
         </div>
       </section>

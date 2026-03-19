@@ -10,7 +10,7 @@ export function ReceiveToolbar({
   onQuickCreate: () => void | Promise<void>;
 }) {
   return (
-    <div className="mt-[18px] flex items-center justify-between gap-[16px]">
+    <div className="mt-[8px] flex items-center justify-between gap-[16px]">
       <label className="flex h-[36px] w-full max-w-[232px] items-center overflow-hidden rounded-[8px] border border-[#d0d5dd] bg-white">
         <input
           value={search}

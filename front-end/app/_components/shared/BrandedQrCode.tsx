@@ -52,9 +52,11 @@ export function BrandedQrCode({
   }, [size, value]);
 
   return (
-    <div className={`rounded-2xl bg-white p-3 shadow-[0_12px_24px_rgba(148,163,184,0.12)] ${className}`}>
+    <div
+      className={`rounded-[16px] bg-white p-3 shadow-[0_12px_24px_rgba(148,163,184,0.12)] ${className}`}
+    >
       <div
-        className="relative mx-auto overflow-hidden rounded-xl bg-[#eef4ff]"
+        className="relative mx-auto overflow-hidden rounded-[12px] bg-[#eef4ff]"
         style={{ width: size, height: size }}
       >
         {dataUrl ? (
@@ -89,7 +91,9 @@ export function BrandedQrCode({
         </p>
       ) : null}
       {showValue ? (
-        <p className="mt-1 truncate text-center text-[11px] text-[#64748b]">{value}</p>
+        <p className="mt-1 truncate text-center text-[11px] text-[#64748b]">
+          {value}
+        </p>
       ) : null}
     </div>
   );

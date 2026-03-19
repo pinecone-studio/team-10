@@ -25,7 +25,7 @@ export function OrderHistoryView(props: {
   const counts = useMemo(() => buildCounts(props.allOrders), [props.allOrders]);
 
   return (
-    <div className="min-h-[calc(100vh-60px)] space-y-0 bg-[#f8fafc]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[radial-gradient(ellipse_at_52%_22%,rgba(191,219,254,0.72)_0%,rgba(191,219,254,0.34)_18%,rgba(191,219,254,0.12)_34%,rgba(191,219,254,0)_56%),radial-gradient(ellipse_at_85%_78%,rgba(186,230,253,0.34)_0%,rgba(186,230,253,0.18)_20%,rgba(186,230,253,0.08)_34%,rgba(186,230,253,0)_54%),radial-gradient(ellipse_at_72%_58%,rgba(191,219,254,0.18)_0%,rgba(191,219,254,0.09)_18%,rgba(191,219,254,0.03)_32%,rgba(191,219,254,0)_48%),linear-gradient(180deg,#ffffff_0%,#ffffff_14%,#f8fbff_30%,#f5faff_54%,#ffffff_100%)]">
       <OrderHistoryToolbar
         counts={counts}
         selectedFilter={props.selectedFilter}
@@ -41,8 +41,8 @@ export function OrderHistoryView(props: {
         onOpenCreate={props.onOpenCreate}
         onOpenDetail={props.onOpenDetail}
       />
-      <div className="px-0 pb-[40px] pt-6">
-        <div className="mx-auto w-full max-w-[1237px] px-[24px] lg:px-[44px]">
+      <div className="min-h-0 flex-1 overflow-hidden px-0 pt-7">
+        <div className="mx-auto flex h-full w-full max-w-[1237px] min-h-0 flex-col px-[44px] pb-[80px]">
           <OrderHistoryTable
             orders={visibleOrders}
             onOpenDetail={props.onOpenDetail}

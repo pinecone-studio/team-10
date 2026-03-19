@@ -26,9 +26,9 @@ export function WorkspaceShell({
   children: ReactNode;
 }) {
   return (
-    <div className={`flex-1 ${backgroundClassName} ${outerClassName}`}>
+    <div className={`flex h-full min-h-0 flex-col ${backgroundClassName} ${outerClassName}`}>
       <div
-        className={`flex h-full w-full flex-col gap-[18px] ${contentAlignment === "left" ? "mr-auto ml-0" : "mx-auto"} ${contentWidthClassName} ${contentPaddingClassName}`}
+        className={`flex h-full min-h-0 w-full flex-col gap-[18px] ${contentAlignment === "left" ? "mr-auto ml-0" : "mx-auto"} ${contentWidthClassName} ${contentPaddingClassName}`}
       >
         {hideHeader ? null : (
           <div className="flex items-start justify-between gap-4">
