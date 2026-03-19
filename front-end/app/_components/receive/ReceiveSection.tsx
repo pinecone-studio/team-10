@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { buildIntakeMetadataNote } from "../../_lib/intake-metadata";
 import {
   createDemoReceivableOrder,
   createAssetIds,
@@ -10,6 +11,8 @@ import {
 } from "../../_lib/order-store";
 import { useCatalogStore } from "../../_lib/catalog-store";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
+import { ReceiveAssetClassificationFields } from "./ReceiveAssetClassificationFields";
+import { buildReceiveCatalogOptions } from "./receiveCatalogOptions";
 import { ReceivePagination } from "./ReceivePagination";
 import { ReceiveTable } from "./ReceiveTable";
 import { ReceiveToolbar } from "./ReceiveToolbar";
@@ -41,18 +44,22 @@ export function ReceiveSection() {
   const [rowsPerPage, setRowsPerPage] =
     useState<(typeof ROWS_PER_PAGE_OPTIONS)[number]>(10);
   const [page, setPage] = useState(1);
-  const [receivedDate, setReceivedDate] = useState("");
+  const [receivedDate, setReceivedDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
   const [receivedCondition, setReceivedCondition] =
     useState<ReceiveCondition>("good");
   const [quantityReceived, setQuantityReceived] = useState("1");
   const [receivedNote, setReceivedNote] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [customTypesByCategory, setCustomTypesByCategory] = useState<Record<string, string[]>>(
+    {},
+  );
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [scanValue, setScanValue] = useState("");
   const [scanResult, setScanResult] = useState<"idle" | "success" | "error">("idle");
-
-  useEffect(() => {
-    setReceivedDate(new Date().toISOString().slice(0, 10));
-  }, []);
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -85,6 +92,24 @@ export function ReceiveSection() {
         : null,
     [activeRow, catalog.products],
   );
+  const catalogOptions = useMemo(() => buildReceiveCatalogOptions(catalog), [catalog]);
+  const categoryOptions = useMemo(
+    () =>
+      [...new Set([...catalogOptions.categories, ...customCategories])].sort((left, right) =>
+        left.localeCompare(right),
+      ),
+    [catalogOptions.categories, customCategories],
+  );
+  const typeOptions = useMemo(() => {
+    if (!selectedCategory) return [];
+
+    return [
+      ...new Set([
+        ...(catalogOptions.typesByCategory[selectedCategory] ?? []),
+        ...(customTypesByCategory[selectedCategory] ?? []),
+      ]),
+    ].sort((left, right) => left.localeCompare(right));
+  }, [catalogOptions.typesByCategory, customTypesByCategory, selectedCategory]);
   const generatedQrCodes = useMemo(() => {
     if (!activeRow) return [];
     const count = Math.max(1, Math.min(activeRow.quantity, Number(quantityReceived) || 1));
@@ -97,12 +122,58 @@ export function ReceiveSection() {
     });
   }, [activeRow, quantityReceived]);
 
+  function applyClassificationDefaults(row: (typeof rows)[number]) {
+    const matchedProduct =
+      catalog.products.find(
+        (product) =>
+          product.code === row.itemCode ||
+          product.name.toLowerCase() === row.assetName.toLowerCase(),
+      ) ?? null;
+    const matchedCategoryName =
+      matchedProduct
+        ? catalog.categories.find((category) => category.id === matchedProduct.categoryId)?.name ?? ""
+        : row.category;
+    const matchedTypeName =
+      matchedProduct
+        ? catalog.itemTypes.find((itemType) => itemType.id === matchedProduct.itemTypeId)?.name ?? ""
+        : "";
+
+    const resolvedCategory = matchedCategoryName || row.category || "";
+    setSelectedCategory(resolvedCategory);
+    setSelectedType(matchedTypeName);
+  }
+
+  function handleAddCategory(value: string) {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) return;
+
+    setCustomCategories((current) =>
+      current.includes(trimmedValue) ? current : [...current, trimmedValue],
+    );
+    setSelectedCategory(trimmedValue);
+    setSelectedType("");
+  }
+
+  function handleAddType(value: string) {
+    const trimmedValue = value.trim();
+    if (!trimmedValue || !selectedCategory) return;
+
+    setCustomTypesByCategory((current) => {
+      const existingTypes = current[selectedCategory] ?? [];
+      return existingTypes.includes(trimmedValue)
+        ? current
+        : { ...current, [selectedCategory]: [...existingTypes, trimmedValue] };
+    });
+    setSelectedType(trimmedValue);
+  }
+
   function fillReceiveDemo(row: (typeof rows)[number]) {
     setSelectedRowId(row.id);
     setReceivedDate(new Date().toISOString().slice(0, 10));
     setReceivedCondition("good");
     setQuantityReceived(`${Math.max(1, row.quantity)}`);
     setReceivedNote(`Demo intake for ${row.assetName}.`);
+    applyClassificationDefaults(row);
     setUploadedImage(null);
     setScanValue("");
     setScanResult("idle");
@@ -150,7 +221,16 @@ export function ReceiveSection() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => resetDetailState(setSelectedRowId, setUploadedImage, setScanValue, setScanResult)}
+              onClick={() =>
+                resetDetailState(
+                  setSelectedRowId,
+                  setSelectedCategory,
+                  setSelectedType,
+                  setUploadedImage,
+                  setScanValue,
+                  setScanResult,
+                )
+              }
               className="inline-flex w-fit items-center gap-2 text-[14px] font-medium text-[#344054]"
             >
               <span aria-hidden="true">{"<-"}</span>
@@ -289,6 +369,20 @@ export function ReceiveSection() {
                     className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none"
                   />
                 </Field>
+                <ReceiveAssetClassificationFields
+                  department={activeRow.department}
+                  categoryOptions={categoryOptions}
+                  typeOptions={typeOptions}
+                  selectedCategory={selectedCategory}
+                  selectedType={selectedType}
+                  onCategoryChange={(value) => {
+                    setSelectedCategory(value);
+                    setSelectedType("");
+                  }}
+                  onTypeChange={setSelectedType}
+                  onAddCategory={handleAddCategory}
+                  onAddType={handleAddType}
+                />
                 <Field label="Notes">
                   <textarea
                     value={receivedNote}
@@ -367,9 +461,14 @@ export function ReceiveSection() {
                         receivedAt: receivedDate,
                         receivedCondition:
                           receivedCondition === "good" ? "complete" : "issue",
-                        receivedNote:
-                          receivedNote.trim() ||
-                          `Received ${activeRow.assetName} and completed intake.`,
+                        receivedNote: buildIntakeMetadataNote({
+                          note:
+                            receivedNote.trim() ||
+                            `Received ${activeRow.assetName} and completed intake.`,
+                          department: activeRow.department,
+                          category: selectedCategory,
+                          itemType: selectedType,
+                        }),
                         storageLocation: "Main warehouse / Intake",
                         serialNumbers:
                           generatedQrCodes.length > 0
@@ -384,6 +483,8 @@ export function ReceiveSection() {
                     }
                     resetDetailState(
                       setSelectedRowId,
+                      setSelectedCategory,
+                      setSelectedType,
                       setUploadedImage,
                       setScanValue,
                       setScanResult,
@@ -470,6 +571,9 @@ export function ReceiveSection() {
             setQuantityReceived(`${row?.quantity ?? 1}`);
             setReceivedCondition("good");
             setReceivedNote("");
+            if (row) {
+              applyClassificationDefaults(row);
+            }
             setUploadedImage(null);
             setScanValue("");
             setScanResult("idle");
@@ -552,11 +656,15 @@ function QrPreview({ value }: { value: string }) {
 
 function resetDetailState(
   setSelectedRowId: (value: string | null) => void,
+  setSelectedCategory: (value: string) => void,
+  setSelectedType: (value: string) => void,
   setUploadedImage: (value: string | null) => void,
   setScanValue: (value: string) => void,
   setScanResult: (value: "idle" | "success" | "error") => void,
 ) {
   setSelectedRowId(null);
+  setSelectedCategory("");
+  setSelectedType("");
   setUploadedImage(null);
   setScanValue("");
   setScanResult("idle");
