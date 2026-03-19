@@ -57,10 +57,18 @@ export type AssignmentAcknowledgmentPreviewDto = {
   tokenConsumedAt: string | null;
 };
 
+export type AssignmentAcknowledgmentPdfDto = {
+  fileName: string;
+  contentType: string;
+  base64: string;
+};
+
 export type SignAssignmentAcknowledgmentResultDto = {
   acknowledgmentId: string;
   pdfObjectKey: string | null;
   pdfFileName: string | null;
+  pdfContentType: string;
+  pdfBase64: string;
   status: string;
   signedAt: string | null;
   distribution: DistributionRecordDto;
@@ -142,6 +150,16 @@ const assignmentAcknowledgmentQuery = gql`
   }
 `;
 
+const assignmentAcknowledgmentPdfQuery = gql`
+  query AssignmentAcknowledgmentPdf($token: String!) {
+    assignmentAcknowledgmentPdf(token: $token) {
+      fileName
+      contentType
+      base64
+    }
+  }
+`;
+
 const distributionsQuery = gql`
   ${distributionFields}
   query AssetDistributions($includeReturned: Boolean) {
@@ -182,6 +200,8 @@ const signAcknowledgmentMutation = gql`
       acknowledgmentId
       pdfObjectKey
       pdfFileName
+      pdfContentType
+      pdfBase64
       status
       signedAt
       distribution {
@@ -244,6 +264,18 @@ export async function fetchAssignmentAcknowledgmentRequest(token: string) {
   });
 
   return data?.assignmentAcknowledgment ?? null;
+}
+
+export async function fetchAssignmentAcknowledgmentPdfRequest(token: string) {
+  const { data } = await apolloClient.query<{
+    assignmentAcknowledgmentPdf: AssignmentAcknowledgmentPdfDto;
+  }>({
+    query: assignmentAcknowledgmentPdfQuery,
+    variables: { token },
+    fetchPolicy: "no-cache",
+  });
+
+  return data?.assignmentAcknowledgmentPdf ?? null;
 }
 
 export async function assignAssetDistributionRequest(input: {

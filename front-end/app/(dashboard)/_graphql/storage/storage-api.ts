@@ -40,6 +40,10 @@ export type AssetLabelPdfDto = {
   assetCount: number;
 };
 
+function wait(durationMs: number) {
+  return new Promise((resolve) => setTimeout(resolve, durationMs));
+}
+
 function inferStorageCategory(itemName: string) {
   const normalized = itemName.toLowerCase();
 
@@ -226,6 +230,12 @@ const storageAssetsQuery = gql`
   }
 `;
 
+const storageLocationsQuery = gql`
+  query StorageLocations {
+    storageLocations
+  }
+`;
+
 const assetDetailQuery = gql`
   ${storageAssetDetailFields}
 
@@ -255,9 +265,34 @@ export async function fetchStorageAssetsRequest() {
     });
 
     return data?.storageAssets ?? [];
+  } catch (firstError) {
+    await wait(350);
+    const { data } = await apolloClient.query<{ storageAssets: StorageAssetDto[] }>({
+      query: storageAssetsQuery,
+      fetchPolicy: "no-cache",
+    });
+
+    if (!data?.storageAssets) {
+      throw firstError instanceof Error
+        ? firstError
+        : new Error("Failed to load storage assets.");
+    }
+
+    return data.storageAssets;
+  }
+}
+
+export async function fetchStorageLocationsRequest() {
+  try {
+    const { data } = await apolloClient.query<{ storageLocations: string[] }>({
+      query: storageLocationsQuery,
+      fetchPolicy: "no-cache",
+    });
+
+    return data?.storageLocations ?? [];
   } catch (error) {
-    console.warn("Falling back to local storage assets.", error);
-    return buildLocalStorageAssets();
+    console.warn("Storage location list request failed. Using empty location list.", error);
+    return [];
   }
 }
 

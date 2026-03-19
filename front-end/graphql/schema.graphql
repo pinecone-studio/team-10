@@ -179,6 +179,7 @@ type Query {
   receive(id: ID!): Receive
   receives: [Receive!]!
   storageAssets: [StorageAsset!]!
+  storageLocations: [String!]!
 }
 
 type Receive {

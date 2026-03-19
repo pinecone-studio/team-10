@@ -553,7 +553,7 @@ Table receiveItems {
   }
 }
 
-Table storage [note: 'Canonical locations table. Includes physical storage locations (warehouse/shelf/cabinet/etc.) and employee custody locations (locker records).'] {
+Table storage [note: 'Canonical locations table. Stores actual physical places only (warehouse/shelf/cabinet/room). Current assignee must come from assetDistributions.employeeId, not storageName.'] {
   id integer [pk, increment]
   storageName text [not null, unique]
   storageType storageTypeEnum [not null]

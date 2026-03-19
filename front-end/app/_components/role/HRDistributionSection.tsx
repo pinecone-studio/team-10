@@ -20,6 +20,7 @@ import {
   buildAssignedItems,
   buildAvailableItems,
   buildHistoryMap,
+  buildPendingAcknowledgmentItems,
   draftFor,
   matchesAssetQuery,
   type RetrievalDraft,
@@ -27,13 +28,19 @@ import {
 import { WorkspaceShell } from "../shared/WorkspacePrimitives";
 
 const RECIPIENT_ROLE_OPTIONS = ["Employee", "Department Lead", "IT Admin"] as const;
-const ASSIGNABLE_ASSET_STATUSES = new Set(["inStorage", "available", "received"]);
+const ASSIGNABLE_ASSET_STATUSES = new Set([
+  "inStorage",
+  "available",
+  "received",
+]);
 
 export function HRDistributionSection() {
   const [storageAssets, setStorageAssets] = useState<StorageAssetDto[]>([]);
   const [records, setRecords] = useState<DistributionRecordDto[]>([]);
   const [employees, setEmployees] = useState<EmployeeDirectoryEntryDto[]>([]);
-  const [activeView, setActiveView] = useState<"available" | "assigned" | "pending">("available");
+  const [activeView, setActiveView] = useState<
+    "available" | "assigned" | "pending" | "pendingAcknowledgment"
+  >("available");
   const [searchValue, setSearchValue] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All categories");
   const [selectedType, setSelectedType] = useState("All types");
@@ -81,14 +88,29 @@ export function HRDistributionSection() {
   );
 
   const historyMap = useMemo(() => buildHistoryMap(records), [records]);
+  const pendingHandoverAssetIds = useMemo(
+    () =>
+      new Set(
+        records
+          .filter((record) => record.status === "pendingHandover")
+          .map((record) => record.assetId),
+      ),
+    [records],
+  );
   const availableBase = useMemo(
     () =>
       buildAvailableItems(storageAssets, historyMap).filter(
-        (asset) => ASSIGNABLE_ASSET_STATUSES.has(asset.assetStatus),
+        (asset) =>
+          ASSIGNABLE_ASSET_STATUSES.has(asset.assetStatus) &&
+          !pendingHandoverAssetIds.has(asset.id),
       ),
-    [historyMap, storageAssets],
+    [historyMap, pendingHandoverAssetIds, storageAssets],
   );
   const assignedBase = useMemo(() => buildAssignedItems(records), [records]);
+  const pendingAcknowledgmentBase = useMemo(
+    () => buildPendingAcknowledgmentItems(records),
+    [records],
+  );
   const categoryOptions = useMemo(
     () => ["All categories", ...Array.from(new Set(availableBase.map((asset) => asset.category)))],
     [availableBase],
@@ -114,6 +136,7 @@ export function HRDistributionSection() {
 
   const available = availableBase.filter(matchesFilters);
   const assigned = assignedBase.filter(matchesFilters);
+  const pendingAcknowledgment = pendingAcknowledgmentBase.filter(matchesFilters);
   const pending = assigned.filter(
     (asset) =>
       asset.holder === (selectedEmployee?.fullName ?? "") &&
@@ -121,47 +144,66 @@ export function HRDistributionSection() {
   );
 
   async function assign(asset: (typeof available)[number]) {
-    if (!selectedEmployee) {
-      setNotice("No employee selected.");
-      return;
-    }
+    try {
+      if (asset.assetStatus === "pendingAssignment") {
+        setNotice(
+          `Asset ${asset.assetCode} is pending employee acknowledgment and cannot be reassigned yet.`,
+        );
+        return;
+      }
 
-    const result = await assignAssetDistributionRequest({
-      assetId: asset.id,
-      employeeName: selectedEmployee.fullName,
-      recipientRole: selectedRecipientRole,
-    });
-    setNotice(
-      result?.note
-        ? `Assignment initiated. ${result.note}`
-        : `Assignment initiated for ${selectedEmployee.fullName}. Acknowledgment email sent if configured.`,
-    );
-    await reload();
+      if (!selectedEmployee) {
+        setNotice("No employee selected.");
+        return;
+      }
+
+      const result = await assignAssetDistributionRequest({
+        assetId: asset.id,
+        employeeName: selectedEmployee.fullName,
+        recipientRole: selectedRecipientRole,
+      });
+      setNotice(
+        result?.note
+          ? `Assignment initiated. ${result.note}`
+          : `Assignment initiated for ${selectedEmployee.fullName}. Acknowledgment email sent if configured.`,
+      );
+      await reload();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Failed to assign asset.");
+    }
   }
 
   async function retrieve(asset: (typeof assigned)[number]) {
-    const draft = draftFor(retrievalDrafts[asset.id]);
-    if (!asset.distributionId) return;
-    await returnAssetDistributionRequest({
-      distributionId: asset.distributionId,
-      storageLocation: "Main warehouse / Intake",
-      returnCondition: draft.condition,
-      returnPower: draft.power,
-      note: draft.notes,
-    });
-    await reload();
+    try {
+      const draft = draftFor(retrievalDrafts[asset.id]);
+      if (!asset.distributionId) return;
+      await returnAssetDistributionRequest({
+        distributionId: asset.distributionId,
+        storageLocation: "Main warehouse / Intake",
+        returnCondition: draft.condition,
+        returnPower: draft.power,
+        note: draft.notes,
+      });
+      await reload();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Failed to retrieve asset.");
+    }
   }
 
   async function sendNotification() {
-    const targets = pending.map((asset) => asset.distributionId).filter(Boolean) as string[];
-    await Promise.all(
-      targets.map((distributionId) => sendDistributionNotificationRequest(distributionId)),
-    );
-    setNotice(
-      targets.length > 0
-        ? `Notification sent to ${selectedEmployee?.fullName ?? "employee"}`
-        : `No active distribution for ${selectedEmployee?.fullName ?? "employee"}`,
-    );
+    try {
+      const targets = pending.map((asset) => asset.distributionId).filter(Boolean) as string[];
+      await Promise.all(
+        targets.map((distributionId) => sendDistributionNotificationRequest(distributionId)),
+      );
+      setNotice(
+        targets.length > 0
+          ? `Notification sent to ${selectedEmployee?.fullName ?? "employee"}`
+          : `No active distribution for ${selectedEmployee?.fullName ?? "employee"}`,
+      );
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Failed to send notification.");
+    }
   }
 
   const controls = (
@@ -171,6 +213,7 @@ export function HRDistributionSection() {
       <label className="grid gap-1 text-[12px] text-[#475569]"><span>Category</span><select value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); setSelectedType("All types"); }} className="h-10 rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none">{categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
       <label className="grid gap-1 text-[12px] text-[#475569]"><span>Type</span><select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="h-10 rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none">{typeOptions.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
       <label className="grid gap-1 text-[12px] text-[#475569] md:col-span-2 xl:col-span-2"><span>Search</span><input value={searchValue} onChange={(e) => setSearchValue(e.target.value)} placeholder="Asset, serial, storage..." className="h-10 rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none" /></label>
+      {notice ? <p className="text-[12px] text-[#166534] md:col-span-2 xl:col-span-3">{notice}</p> : null}
     </div>
   );
 
@@ -194,6 +237,7 @@ export function HRDistributionSection() {
         <div className="border-b border-[#edf2f7] px-4 py-3">
           <div className="inline-flex rounded-[12px] bg-[#f1f5f9] p-1">
             <button type="button" onClick={() => setActiveView("available")} className={`rounded-[10px] px-4 py-2 text-[13px] font-medium ${activeView === "available" ? "bg-white text-[#0f172a] shadow-sm" : "text-[#64748b]"}`}>Available items ({available.length})</button>
+            <button type="button" onClick={() => setActiveView("pendingAcknowledgment")} className={`rounded-[10px] px-4 py-2 text-[13px] font-medium ${activeView === "pendingAcknowledgment" ? "bg-white text-[#0f172a] shadow-sm" : "text-[#64748b]"}`}>Pending acknowledgment ({pendingAcknowledgment.length})</button>
             <button type="button" onClick={() => setActiveView("assigned")} className={`rounded-[10px] px-4 py-2 text-[13px] font-medium ${activeView === "assigned" ? "bg-white text-[#0f172a] shadow-sm" : "text-[#64748b]"}`}>Assigned items ({assigned.length})</button>
             <button type="button" onClick={() => setActiveView("pending")} className={`rounded-[10px] px-4 py-2 text-[13px] font-medium ${activeView === "pending" ? "bg-white text-[#0f172a] shadow-sm" : "text-[#64748b]"}`}>Pending retrieval ({pending.length})</button>
           </div>
@@ -201,6 +245,8 @@ export function HRDistributionSection() {
         <div className="px-4 py-4">
           {activeView === "available" ? (
             <HRDistributionAssetPanel title={`Available items (${available.length})`} description="Assets currently in storage and ready to assign." items={available} actionLabel="Assign" onAction={(asset) => void assign(asset)} controls={controls} openAssetId={openAssetId} onToggleOpen={setOpenAssetId} />
+          ) : activeView === "pendingAcknowledgment" ? (
+            <HRDistributionAssetPanel title={`Pending acknowledgment (${pendingAcknowledgment.length})`} description="Assets already requested and waiting for employee signature. They cannot be reassigned until acknowledgment is completed or cancelled." items={pendingAcknowledgment} actionLabel="Open" onAction={() => {}} openAssetId={openAssetId} onToggleOpen={setOpenAssetId} />
           ) : activeView === "assigned" ? (
             <HRDistributionAssetPanel title={`Assigned items (${assigned.length})`} description="Assets currently assigned to employees." items={assigned} actionLabel="Open" onAction={() => {}} openAssetId={openAssetId} onToggleOpen={setOpenAssetId} />
           ) : (

@@ -5,6 +5,7 @@ import type { D1DatabaseLike } from "./d1.ts";
 export type RuntimeConfig = {
   appUrl: string;
   assignmentJwtSecret: string;
+  assignmentJwtVerificationSecrets: string[];
   smtpService: string | null;
   smtpHost: string | null;
   smtpPort: number | null;
@@ -34,6 +35,22 @@ type GraphQLContextOptions = {
   requestIpAddress?: string | null;
 };
 
+function uniqueNonEmptySecrets(values: Array<string | null | undefined>) {
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (!trimmed || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    normalized.push(trimmed);
+  }
+
+  return normalized;
+}
+
 export function createGraphQLContextValue(
   options: GraphQLContextOptions = {},
 ): GraphQLContext {
@@ -42,11 +59,23 @@ export function createGraphQLContextValue(
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     process.env.APP_URL?.trim() ||
     "http://localhost:3000";
+  const legacyAssignmentJwtSecrets = (
+    process.env.ASSET_ASSIGNMENT_JWT_LEGACY_SECRETS ?? ""
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const assignmentJwtVerificationSecrets = uniqueNonEmptySecrets([
+    process.env.ASSET_ASSIGNMENT_JWT_SECRET,
+    process.env.JWT_TOKEN,
+    process.env.JWToken,
+    ...legacyAssignmentJwtSecrets,
+    process.env.CLOUDFLARE_API_TOKEN,
+    process.env.CLOUDFLARE_D1_API_TOKEN,
+    "development-assignment-secret",
+  ]);
   const assignmentJwtSecret =
-    process.env.ASSET_ASSIGNMENT_JWT_SECRET?.trim() ||
-    process.env.CLOUDFLARE_API_TOKEN?.trim() ||
-    process.env.CLOUDFLARE_D1_API_TOKEN?.trim() ||
-    "development-assignment-secret";
+    assignmentJwtVerificationSecrets[0] ?? "development-assignment-secret";
 
   return {
     db: options.db ?? getDatabase(),
@@ -54,6 +83,7 @@ export function createGraphQLContextValue(
     runtimeConfig: {
       appUrl,
       assignmentJwtSecret,
+      assignmentJwtVerificationSecrets,
       smtpService: process.env.SMTP_SERVICE?.trim() || null,
       smtpHost: process.env.SMTP_HOST?.trim() || null,
       smtpPort: process.env.SMTP_PORT?.trim()
@@ -81,14 +111,18 @@ export async function createGraphQLContext(
   options: GraphQLContextOptions = {},
 ): Promise<GraphQLContext> {
   let resolvedDb = options.db;
-  const hasRuntimeHttpDatabaseConfig = Boolean(
-    process.env.CLOUDFLARE_ACCOUNT_ID?.trim() &&
-      process.env.CLOUDFLARE_D1_DATABASE_ID?.trim() &&
-      (process.env.CLOUDFLARE_D1_API_TOKEN?.trim() ||
-        process.env.CLOUDFLARE_API_TOKEN?.trim()),
-  );
 
-  if (!resolvedDb && !hasRuntimeHttpDatabaseConfig) {
+  // Prefer explicit .env-backed runtime D1 so local/dev and remote data stay consistent.
+  if (!resolvedDb) {
+    try {
+      resolvedDb = getDatabase();
+    } catch {
+      resolvedDb = undefined;
+    }
+  }
+
+  // Fall back to Cloudflare binding only when runtime HTTP D1 config is unavailable.
+  if (!resolvedDb) {
     try {
       const cloudflareContext = await getCloudflareContext({ async: true });
       const bindingDatabase = (

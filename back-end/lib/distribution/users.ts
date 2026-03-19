@@ -102,37 +102,3 @@ export async function resolveStorageId(db: AppDb, storageName?: string | null) {
 
   return createdStorage.id;
 }
-
-export async function resolveEmployeeStorageLocationId(
-  db: AppDb,
-  employeeName: string,
-) {
-  const normalizedEmployeeName = employeeName.trim();
-
-  if (!normalizedEmployeeName) {
-    throw new Error("Employee name is required to resolve employee location.");
-  }
-
-  const locationName = `Employee / ${normalizedEmployeeName}`;
-
-  const [existingStorage] = await db
-    .select({ id: storage.id })
-    .from(storage)
-    .where(eq(storage.storageName, locationName))
-    .limit(1);
-
-  if (existingStorage) {
-    return existingStorage.id;
-  }
-
-  const [createdStorage] = await db
-    .insert(storage)
-    .values({
-      storageName: locationName,
-      storageType: "locker",
-      description: "Auto-created employee custody location",
-    })
-    .returning({ id: storage.id });
-
-  return createdStorage.id;
-}

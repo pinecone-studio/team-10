@@ -1,4 +1,4 @@
-import PDFDocument from "pdfkit";
+import PDFDocument from "pdfkit/js/pdfkit.standalone.js";
 import QRCode from "qrcode";
 import { asc, eq, inArray } from "drizzle-orm";
 import { assets, receiveItems, receives, storage } from "../database/schema.ts";

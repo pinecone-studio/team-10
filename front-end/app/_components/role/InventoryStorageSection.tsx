@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   downloadAssetLabelsPdfRequest,
   fetchStorageAssetsRequest,
+  fetchStorageLocationsRequest,
   type StorageAssetDto,
 } from "@/app/(dashboard)/_graphql/storage/storage-api";
 import { downloadBase64File } from "@/app/_lib/download-base64";
@@ -69,6 +70,7 @@ type CensusSession = {
 export function InventoryStorageSection() {
   const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
   const [assets, setAssets] = useState<StorageAssetDto[]>([]);
+  const [storageLocations, setStorageLocations] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [selectedCategory, setSelectedCategory] =
     useState<(typeof CATEGORIES)[number]>("All Categories");
@@ -106,9 +108,13 @@ export function InventoryStorageSection() {
       setErrorMessage(null);
 
       try {
-        const nextAssets = await fetchStorageAssetsRequest();
+        const [nextAssets, nextStorageLocations] = await Promise.all([
+          fetchStorageAssetsRequest(),
+          fetchStorageLocationsRequest(),
+        ]);
         if (!isMounted) return;
         setAssets(nextAssets);
+        setStorageLocations(nextStorageLocations);
         setSessionHistory(createInitialCensusHistory(nextAssets));
       } catch (error) {
         if (!isMounted) return;
@@ -184,8 +190,16 @@ export function InventoryStorageSection() {
   }, [searchedAssets, selectedCategory]);
 
   const locationOptions = useMemo(
-    () => ["All Locations", ...Array.from(new Set(searchedAssets.map((asset) => asset.storageName)))],
-    [searchedAssets],
+    () => [
+      "All Locations",
+      ...Array.from(
+        new Set([
+          ...storageLocations,
+          ...searchedAssets.map((asset) => asset.storageName).filter(Boolean),
+        ]),
+      ).sort((left, right) => left.localeCompare(right)),
+    ],
+    [searchedAssets, storageLocations],
   );
 
   const visibleAssets = useMemo(() => {
@@ -888,8 +902,11 @@ export function InventoryStorageSection() {
                           </div>
                         </td>
                         <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <div className="flex items-center">
-                            <StorageStatusBadge value={normalizeStorageStatus(asset.assetStatus)} />
+                          <div className="flex w-[170px] items-center">
+                            <StorageStatusBadge
+                              value={normalizeStorageStatus(asset.assetStatus)}
+                              fixedWidth
+                            />
                           </div>
                         </td>
                         <td className="border-t border-[#edf2f7] px-2 py-3 text-right align-middle">

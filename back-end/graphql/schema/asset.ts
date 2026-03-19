@@ -47,6 +47,7 @@ export const AssetTypeDefs = `
 
   type Query {
     storageAssets: [StorageAsset!]!
+    storageLocations: [String!]!
     asset(id: ID, qrCode: String): StorageAsset
     assetLabelPdf(assetCodes: [String!]!): AssetLabelPdf!
     assetAuditHistory(assetId: ID!): [AssetAuditEntry!]!

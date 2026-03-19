@@ -1,8 +1,9 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import PDFDocument from "pdfkit";
-import { and, eq } from "drizzle-orm";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import PDFDocument from "pdfkit/js/pdfkit.standalone.js";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import {
   assetAssignmentAcknowledgments,
+  assetAssignmentRequests,
   assetDistributions,
   assets,
   notifications,
@@ -13,7 +14,6 @@ import type { AppDb } from "../db.ts";
 import { sendOperationalEmail, type EmailDeliveryStatus } from "../email.ts";
 import { createSignedJwt, verifySignedJwt } from "../jwt.ts";
 import { getDistributionById, type DistributionRecord } from "./shared.ts";
-import { resolveEmployeeStorageLocationId } from "./users.ts";
 
 type AssignmentAckJwtPayload = {
   sub: string;
@@ -59,9 +59,17 @@ export type AssignmentAcknowledgmentSignRecord = {
   acknowledgmentId: string;
   pdfObjectKey: string | null;
   pdfFileName: string | null;
+  pdfContentType: string;
+  pdfBase64: string;
   status: string;
   signedAt: string | null;
   distribution: DistributionRecord;
+};
+
+export type AssignmentAcknowledgmentPdfRecord = {
+  fileName: string;
+  contentType: string;
+  base64: string;
 };
 
 type PendingAcknowledgmentRow = {
@@ -76,13 +84,85 @@ type PendingAcknowledgmentRow = {
   employeeEmail: string;
   recipientRole: string | null;
   jwtId: string;
-  expiresAt: string;
-  status: string;
+  expiresAt: string | null;
+  status: string | null;
   tokenConsumedAt: string | null;
   signedAt: string | null;
   distributionId: number | null;
   distributionStatus: string | null;
 };
+
+function looksLikeUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
+}
+
+function resolveAcknowledgmentEmployeeName(
+  recipientName: string | null | undefined,
+  fallbackEmployeeName: string | null | undefined,
+) {
+  const normalizedRecipient = recipientName?.trim() ?? "";
+  if (normalizedRecipient && normalizedRecipient.toLowerCase() !== "employee") {
+    return normalizedRecipient;
+  }
+
+  const normalizedFallback = fallbackEmployeeName?.trim() ?? "";
+  if (normalizedFallback) {
+    return normalizedFallback;
+  }
+
+  return normalizedRecipient || "Employee";
+}
+
+function resolveAcknowledgmentEmployeeEmail(
+  recipientEmail: string | null | undefined,
+  fallbackEmployeeEmail: string | null | undefined,
+) {
+  const normalizedRecipient = recipientEmail?.trim() ?? "";
+  if (
+    normalizedRecipient &&
+    normalizedRecipient.includes("@") &&
+    !looksLikeUuid(normalizedRecipient)
+  ) {
+    return normalizedRecipient;
+  }
+
+  const normalizedFallback = fallbackEmployeeEmail?.trim() ?? "";
+  if (
+    normalizedFallback &&
+    normalizedFallback.includes("@") &&
+    !looksLikeUuid(normalizedFallback)
+  ) {
+    return normalizedFallback;
+  }
+
+  return normalizedRecipient || normalizedFallback || "";
+}
+
+function resolvePdfEmployeeFields(input: {
+  employeeName: string;
+  employeeEmail: string;
+}) {
+  const normalizedName = input.employeeName.trim();
+  const normalizedEmail = input.employeeEmail.trim();
+  const nameLooksLikeEmail =
+    normalizedName.includes("@") && !looksLikeUuid(normalizedName);
+  const emailLooksLikeEmail =
+    normalizedEmail.includes("@") && !looksLikeUuid(normalizedEmail);
+
+  if (nameLooksLikeEmail && !emailLooksLikeEmail) {
+    return {
+      employeeName: normalizedEmail || normalizedName,
+      employeeEmail: normalizedName,
+    };
+  }
+
+  return {
+    employeeName: normalizedName || normalizedEmail,
+    employeeEmail: normalizedEmail || normalizedName,
+  };
+}
 
 function normalizeAppUrl(value: string) {
   return value.endsWith("/") ? value.slice(0, -1) : value;
@@ -159,9 +239,11 @@ async function loadAcknowledgmentByJwtId(db: AppDb, jwtId: string) {
       assetCode: assets.assetCode,
       assetName: assets.assetName,
       category: assets.category,
-      employeeId: users.id,
-      employeeName: users.fullName,
-      employeeEmail: users.email,
+      employeeId: assetAssignmentAcknowledgments.employeeId,
+      recipientName: assetAssignmentAcknowledgments.recipientName,
+      recipientEmail: assetAssignmentAcknowledgments.recipientEmail,
+      fallbackEmployeeName: users.fullName,
+      fallbackEmployeeEmail: users.email,
       recipientRole: assetAssignmentAcknowledgments.recipientRole,
       jwtId: assetAssignmentAcknowledgments.jwtId,
       expiresAt: assetAssignmentAcknowledgments.expiresAt,
@@ -176,7 +258,7 @@ async function loadAcknowledgmentByJwtId(db: AppDb, jwtId: string) {
       assets,
       eq(assetAssignmentAcknowledgments.assetId, assets.id),
     )
-    .innerJoin(
+    .leftJoin(
       users,
       eq(assetAssignmentAcknowledgments.employeeId, users.id),
     )
@@ -190,14 +272,185 @@ async function loadAcknowledgmentByJwtId(db: AppDb, jwtId: string) {
     .where(eq(assetAssignmentAcknowledgments.jwtId, jwtId))
     .limit(1);
 
-  return acknowledgment as PendingAcknowledgmentRow | undefined;
+  if (!acknowledgment) {
+    return undefined;
+  }
+
+  const normalizedAcknowledgment = {
+    ...acknowledgment,
+    employeeName: resolveAcknowledgmentEmployeeName(
+      acknowledgment.recipientName,
+      acknowledgment.fallbackEmployeeName,
+    ),
+    employeeEmail: resolveAcknowledgmentEmployeeEmail(
+      acknowledgment.recipientEmail,
+      acknowledgment.fallbackEmployeeEmail,
+    ),
+  };
+
+  if (normalizedAcknowledgment.distributionId) {
+    return normalizedAcknowledgment as PendingAcknowledgmentRow;
+  }
+
+  const [fallbackDistribution] = await db
+    .select({
+      id: assetDistributions.id,
+      status: assetDistributions.status,
+    })
+    .from(assetDistributions)
+    .where(
+      and(
+        eq(assetDistributions.assetId, normalizedAcknowledgment.assetId),
+        eq(assetDistributions.employeeId, normalizedAcknowledgment.employeeId),
+      ),
+    )
+    .orderBy(desc(assetDistributions.distributedAt), desc(assetDistributions.id))
+    .limit(1);
+
+  if (!fallbackDistribution) {
+    return normalizedAcknowledgment as PendingAcknowledgmentRow;
+  }
+
+  return {
+    ...normalizedAcknowledgment,
+    distributionId: fallbackDistribution.id,
+    distributionStatus: fallbackDistribution.status,
+  } as PendingAcknowledgmentRow;
+}
+
+async function recoverMissingDistributionForAcknowledgment(
+  db: AppDb,
+  acknowledgment: PendingAcknowledgmentRow,
+) {
+  const [assignmentRequest] = await db
+    .select({
+      reviewedByUserId: assetAssignmentRequests.reviewedByUserId,
+    })
+    .from(assetAssignmentRequests)
+    .where(eq(assetAssignmentRequests.id, acknowledgment.assignmentRequestId))
+    .limit(1);
+
+  const distributedByUserId =
+    assignmentRequest?.reviewedByUserId ?? acknowledgment.employeeId;
+  const now = new Date().toISOString();
+
+  await db
+    .insert(assetDistributions)
+    .values({
+      assignmentRequestId: acknowledgment.assignmentRequestId,
+      assetId: acknowledgment.assetId,
+      employeeId: acknowledgment.employeeId,
+      distributedByUserId,
+      distributedAt: now,
+      recipientRole: acknowledgment.recipientRole ?? "Employee",
+      status: "pendingHandover",
+      note: "Recovered pending handover distribution from acknowledgment link.",
+    })
+    .onConflictDoNothing({ target: assetDistributions.assignmentRequestId })
+    .run();
+
+  const [distribution] = await db
+    .select({
+      id: assetDistributions.id,
+      status: assetDistributions.status,
+    })
+    .from(assetDistributions)
+    .where(eq(assetDistributions.assignmentRequestId, acknowledgment.assignmentRequestId))
+    .orderBy(desc(assetDistributions.id))
+    .limit(1);
+
+  return distribution ?? null;
+}
+
+async function loadOrRecoverDistributionForAcknowledgment(
+  db: AppDb,
+  acknowledgment: PendingAcknowledgmentRow,
+) {
+  if (acknowledgment.distributionId) {
+    return {
+      id: acknowledgment.distributionId,
+      status: acknowledgment.distributionStatus,
+    };
+  }
+
+  const recovered = await recoverMissingDistributionForAcknowledgment(
+    db,
+    acknowledgment,
+  );
+
+  if (!recovered) {
+    return null;
+  }
+
+  return recovered;
+}
+
+function resolveAcknowledgmentExpiresAt(
+  expiresAtFromRecord: string | null | undefined,
+  payloadExp: number | undefined,
+) {
+  const normalizedRecord = expiresAtFromRecord?.trim() ?? "";
+  if (normalizedRecord) {
+    return normalizedRecord;
+  }
+
+  if (typeof payloadExp === "number" && Number.isFinite(payloadExp)) {
+    return new Date(payloadExp * 1000).toISOString();
+  }
+
+  return new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+}
+
+function resolveAcknowledgmentStatus(input: {
+  status: string | null | undefined;
+  tokenConsumedAt: string | null;
+  signedAt: string | null;
+  expiresAt: string;
+}) {
+  const normalizedStatus = (input.status ?? "").trim().toLowerCase();
+  if (["pending", "confirmed", "expired", "void"].includes(normalizedStatus)) {
+    return normalizedStatus;
+  }
+
+  if (input.tokenConsumedAt || input.signedAt) {
+    return "confirmed";
+  }
+
+  const expiresAtMs = Date.parse(input.expiresAt);
+  if (!Number.isNaN(expiresAtMs) && expiresAtMs <= Date.now()) {
+    return "expired";
+  }
+
+  return "pending";
+}
+
+async function verifyAssignmentAcknowledgmentJwt(
+  runtimeConfig: RuntimeConfig,
+  token: string,
+) {
+  const verificationSecrets =
+    runtimeConfig.assignmentJwtVerificationSecrets?.length > 0
+      ? runtimeConfig.assignmentJwtVerificationSecrets
+      : [runtimeConfig.assignmentJwtSecret];
+  let lastError: Error | null = null;
+
+  for (const secret of verificationSecrets) {
+    try {
+      return await verifySignedJwt<AssignmentAckJwtPayload>(token, secret);
+    } catch (error) {
+      lastError =
+        error instanceof Error ? error : new Error("JWT token verification failed.");
+    }
+  }
+
+  throw lastError ?? new Error("JWT token verification failed.");
 }
 
 function ensurePendingAcknowledgment(
   acknowledgment: PendingAcknowledgmentRow,
   payload: AssignmentAckJwtPayload,
 ) {
-  const normalizeNumericClaim = (value: unknown) => {
+  const normalizeNumericValue = (value: unknown) => {
     if (typeof value === "number" && Number.isFinite(value)) {
       return value;
     }
@@ -212,40 +465,76 @@ function ensurePendingAcknowledgment(
     return null;
   };
 
+  const verifyNumericClaim = (
+    label: string,
+    claimValue: unknown,
+    recordValue: unknown,
+  ) => {
+    const normalizedClaim = normalizeNumericValue(claimValue);
+    const normalizedRecord = normalizeNumericValue(recordValue);
+
+    if (normalizedClaim === null || normalizedRecord === null) {
+      return;
+    }
+
+    if (normalizedClaim !== normalizedRecord) {
+      console.warn(
+        `Assignment acknowledgment ${label} mismatch for jwtId ${acknowledgment.jwtId}. token=${normalizedClaim}, record=${normalizedRecord}.`,
+      );
+    }
+  };
+
   if (payload.sub !== "asset-assignment-ack") {
     throw new Error("Assignment acknowledgment token subject is invalid.");
   }
 
-  const payloadAckId = normalizeNumericClaim(payload.ackId);
-  if (payloadAckId !== null && acknowledgment.acknowledgmentId !== payloadAckId) {
-    throw new Error("Assignment acknowledgment token does not match record.");
-  }
-
-  const payloadAssignmentRequestId = normalizeNumericClaim(payload.assignmentRequestId);
-  if (
-    payloadAssignmentRequestId !== null &&
-    acknowledgment.assignmentRequestId !== payloadAssignmentRequestId
-  ) {
-    throw new Error("Assignment acknowledgment request id mismatch.");
-  }
-
-  const payloadEmployeeId = normalizeNumericClaim(payload.employeeId);
-  if (payloadEmployeeId !== null && acknowledgment.employeeId !== payloadEmployeeId) {
-    throw new Error("Assignment acknowledgment employee mismatch.");
-  }
+  verifyNumericClaim("ackId", payload.ackId, acknowledgment.acknowledgmentId);
+  verifyNumericClaim(
+    "assignmentRequestId",
+    payload.assignmentRequestId,
+    acknowledgment.assignmentRequestId,
+  );
+  verifyNumericClaim("employeeId", payload.employeeId, acknowledgment.employeeId);
 
   if (acknowledgment.tokenConsumedAt) {
     throw new Error("This acknowledgment link has already been used.");
   }
 
-  if (acknowledgment.status !== "pending") {
+  const normalizedStatus = String(acknowledgment.status ?? "")
+    .trim()
+    .toLowerCase();
+  const isPendingStatus =
+    normalizedStatus === "pending" ||
+    normalizedStatus === "" ||
+    normalizedStatus === "null";
+
+  if (!isPendingStatus) {
     throw new Error(
       `Acknowledgment cannot be signed from status '${acknowledgment.status}'.`,
     );
   }
 
-  const expiresAtMs = Date.parse(acknowledgment.expiresAt);
-  if (Number.isNaN(expiresAtMs) || expiresAtMs <= Date.now()) {
+  const parseIsoMs = (value: unknown) => {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+  const dbExpiresAtMs = parseIsoMs(acknowledgment.expiresAt);
+  const tokenExpiresAtMs =
+    typeof payload.exp === "number" && Number.isFinite(payload.exp)
+      ? payload.exp * 1000
+      : null;
+  const effectiveExpiresAtMs =
+    dbExpiresAtMs === null
+      ? tokenExpiresAtMs
+      : tokenExpiresAtMs === null
+        ? dbExpiresAtMs
+        : Math.max(dbExpiresAtMs, tokenExpiresAtMs);
+
+  if (effectiveExpiresAtMs !== null && effectiveExpiresAtMs <= Date.now()) {
     throw new Error("This acknowledgment link has expired.");
   }
 }
@@ -261,6 +550,10 @@ async function renderAcknowledgmentPdf(input: {
   signatureText: string;
   signedAt: string;
 }) {
+  const resolvedEmployee = resolvePdfEmployeeFields({
+    employeeName: input.employeeName,
+    employeeEmail: input.employeeEmail,
+  });
   const document = new PDFDocument({
     size: "A4",
     margin: 42,
@@ -298,8 +591,8 @@ async function renderAcknowledgmentPdf(input: {
     .font("Helvetica")
     .fontSize(11)
     .fillColor("#334155")
-    .text(`Name: ${input.employeeName}`)
-    .text(`Email: ${input.employeeEmail}`)
+    .text(`Employee: ${resolvedEmployee.employeeName}`)
+    .text(`Email: ${resolvedEmployee.employeeEmail}`)
     .text(`Role: ${input.recipientRole}`);
 
   document.moveDown(1);
@@ -315,7 +608,7 @@ async function renderAcknowledgmentPdf(input: {
     .fillColor("#334155")
     .text(`Asset Name: ${input.assetName}`)
     .text(`Asset Code: ${input.assetCode}`)
-    .text(`Category: ${input.category}`);
+    .text(`Asset Category: ${input.category}`);
 
   document.moveDown(1);
   document
@@ -380,7 +673,7 @@ async function uploadAcknowledgmentPdfToR2(
 async function notifyRolesOnAcknowledgmentConfirmation(
   db: AppDb,
   input: {
-    employeeId: number;
+    employeeId: number | string;
     employeeName: string;
     assetCode: string;
     distributionId: number;
@@ -404,9 +697,17 @@ async function notifyRolesOnAcknowledgmentConfirmation(
       ...departmentHeads.map((user) => user.id),
     ]),
   ];
+  const normalizedRecipientIds = await normalizeNotificationRecipientIds(
+    db,
+    recipientIds,
+  );
+
+  if (normalizedRecipientIds.length === 0) {
+    return;
+  }
 
   await Promise.all(
-    recipientIds.map((userId) =>
+    normalizedRecipientIds.map((userId) =>
       db
         .insert(notifications)
         .values({
@@ -421,6 +722,62 @@ async function notifyRolesOnAcknowledgmentConfirmation(
         .run(),
     ),
   );
+}
+
+async function normalizeNotificationRecipientIds(
+  db: AppDb,
+  recipients: Array<number | string | null | undefined>,
+) {
+  const numericIds = new Set<number>();
+  const emails = new Set<string>();
+
+  for (const recipient of recipients) {
+    if (typeof recipient === "number" && Number.isInteger(recipient)) {
+      numericIds.add(recipient);
+      continue;
+    }
+
+    if (typeof recipient !== "string") {
+      continue;
+    }
+
+    const trimmed = recipient.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const parsed = Number(trimmed);
+    if (Number.isInteger(parsed)) {
+      numericIds.add(parsed);
+      continue;
+    }
+
+    if (trimmed.includes("@")) {
+      emails.add(trimmed.toLowerCase());
+    }
+  }
+
+  if (emails.size > 0) {
+    const emailRows = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(inArray(users.email, Array.from(emails)));
+
+    for (const row of emailRows) {
+      numericIds.add(row.id);
+    }
+  }
+
+  if (numericIds.size === 0) {
+    return [] as number[];
+  }
+
+  const existingRows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(inArray(users.id, Array.from(numericIds)));
+
+  return [...new Set(existingRows.map((row) => row.id))];
 }
 
 export async function createAssignmentAcknowledgment(
@@ -507,10 +864,7 @@ export async function getAssignmentAcknowledgmentPreviewByToken(
   token: string,
 ): Promise<AssignmentAcknowledgmentPreviewRecord> {
   try {
-    const payload = await verifySignedJwt<AssignmentAckJwtPayload>(
-      token,
-      runtimeConfig.assignmentJwtSecret,
-    );
+    const payload = await verifyAssignmentAcknowledgmentJwt(runtimeConfig, token);
     const acknowledgment = await loadAcknowledgmentByJwtId(db, payload.jti);
 
     if (!acknowledgment) {
@@ -518,6 +872,10 @@ export async function getAssignmentAcknowledgmentPreviewByToken(
     }
 
     ensurePendingAcknowledgment(acknowledgment, payload);
+    const resolvedExpiresAt = resolveAcknowledgmentExpiresAt(
+      acknowledgment.expiresAt,
+      payload.exp,
+    );
 
     return {
       acknowledgmentId: String(acknowledgment.acknowledgmentId),
@@ -530,8 +888,13 @@ export async function getAssignmentAcknowledgmentPreviewByToken(
       employeeName: acknowledgment.employeeName,
       employeeEmail: acknowledgment.employeeEmail,
       recipientRole: acknowledgment.recipientRole ?? "Employee",
-      expiresAt: acknowledgment.expiresAt,
-      status: acknowledgment.status,
+      expiresAt: resolvedExpiresAt,
+      status: resolveAcknowledgmentStatus({
+        status: acknowledgment.status,
+        tokenConsumedAt: acknowledgment.tokenConsumedAt,
+        signedAt: acknowledgment.signedAt,
+        expiresAt: resolvedExpiresAt,
+      }),
       signedAt: acknowledgment.signedAt,
       tokenConsumedAt: acknowledgment.tokenConsumedAt,
     };
@@ -541,6 +904,68 @@ export async function getAssignmentAcknowledgmentPreviewByToken(
         ? error.message
         : "Unknown assignment acknowledgment preview error.";
     throw new Error(`Failed to fetch assignment acknowledgment: ${message}`);
+  }
+}
+
+export async function getAssignmentAcknowledgmentPdfByToken(
+  db: AppDb,
+  runtimeConfig: RuntimeConfig,
+  token: string,
+): Promise<AssignmentAcknowledgmentPdfRecord> {
+  try {
+    const payload = await verifyAssignmentAcknowledgmentJwt(runtimeConfig, token);
+    const [acknowledgment] = await db
+      .select({
+        acknowledgmentId: assetAssignmentAcknowledgments.id,
+        status: assetAssignmentAcknowledgments.status,
+        pdfObjectKey: assetAssignmentAcknowledgments.pdfObjectKey,
+        pdfFileName: assetAssignmentAcknowledgments.pdfFileName,
+      })
+      .from(assetAssignmentAcknowledgments)
+      .where(eq(assetAssignmentAcknowledgments.jwtId, payload.jti))
+      .limit(1);
+
+    if (!acknowledgment) {
+      throw new Error("Assignment acknowledgment was not found.");
+    }
+
+    const normalizedStatus = (acknowledgment.status ?? "").trim().toLowerCase();
+    if (normalizedStatus !== "confirmed") {
+      throw new Error(
+        `Signed acknowledgment PDF is not available from status '${acknowledgment.status ?? "unknown"}'.`,
+      );
+    }
+
+    if (!acknowledgment.pdfObjectKey) {
+      throw new Error("Signed acknowledgment PDF object key is missing.");
+    }
+
+    const client = createR2Client(runtimeConfig);
+    const response = await client.send(
+      new GetObjectCommand({
+        Bucket: runtimeConfig.r2BucketName!,
+        Key: acknowledgment.pdfObjectKey,
+      }),
+    );
+    const bytes = await response.Body?.transformToByteArray();
+
+    if (!bytes || bytes.length === 0) {
+      throw new Error("Signed acknowledgment PDF content is empty.");
+    }
+
+    return {
+      fileName:
+        acknowledgment.pdfFileName?.trim() ||
+        `assignment-acknowledgment-${acknowledgment.acknowledgmentId}.pdf`,
+      contentType: response.ContentType || "application/pdf",
+      base64: Buffer.from(bytes).toString("base64"),
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unknown assignment acknowledgment PDF load error.";
+    throw new Error(`Failed to load assignment acknowledgment PDF: ${message}`);
   }
 }
 
@@ -565,9 +990,9 @@ export async function signAssignmentAcknowledgment(
       throw new Error("Signature text is required.");
     }
 
-    const payload = await verifySignedJwt<AssignmentAckJwtPayload>(
+    const payload = await verifyAssignmentAcknowledgmentJwt(
+      runtimeConfig,
       input.token,
-      runtimeConfig.assignmentJwtSecret,
     );
     const acknowledgment = await loadAcknowledgmentByJwtId(db, payload.jti);
 
@@ -576,25 +1001,56 @@ export async function signAssignmentAcknowledgment(
     }
 
     ensurePendingAcknowledgment(acknowledgment, payload);
+    const distributionRef = await loadOrRecoverDistributionForAcknowledgment(
+      db,
+      acknowledgment,
+    );
 
-    if (!acknowledgment.distributionId) {
+    if (!distributionRef) {
       throw new Error("Related distribution record was not found.");
     }
 
-    if (acknowledgment.distributionStatus !== "pendingHandover") {
-      throw new Error(
-        "Only pending handover distributions can be confirmed by acknowledgment.",
-      );
+    const [distributionContext] = await db
+      .select({
+        id: assetDistributions.id,
+        assetId: assetDistributions.assetId,
+        employeeId: assetDistributions.employeeId,
+        status: assetDistributions.status,
+        employeeName: users.fullName,
+        employeeEmail: users.email,
+        assetName: assets.assetName,
+        assetCode: assets.assetCode,
+        category: assets.category,
+      })
+      .from(assetDistributions)
+      .innerJoin(users, eq(assetDistributions.employeeId, users.id))
+      .innerJoin(assets, eq(assetDistributions.assetId, assets.id))
+      .where(eq(assetDistributions.id, distributionRef.id))
+      .limit(1);
+
+    if (!distributionContext) {
+      throw new Error("Related distribution record details were not found.");
+    }
+
+    if (distributionContext.status !== "pendingHandover") {
+      await db
+        .update(assetDistributions)
+        .set({
+          status: "pendingHandover",
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(assetDistributions.id, distributionRef.id))
+        .run();
     }
 
     const signedAt = new Date().toISOString();
     const pdfBuffer = await renderAcknowledgmentPdf({
-      employeeName: acknowledgment.employeeName,
-      employeeEmail: acknowledgment.employeeEmail,
+      employeeName: distributionContext.employeeName,
+      employeeEmail: distributionContext.employeeEmail,
       recipientRole: acknowledgment.recipientRole ?? "Employee",
-      assetName: acknowledgment.assetName,
-      assetCode: acknowledgment.assetCode,
-      category: acknowledgment.category,
+      assetName: distributionContext.assetName,
+      assetCode: distributionContext.assetCode,
+      category: distributionContext.category,
       signerName,
       signatureText,
       signedAt,
@@ -603,11 +1059,6 @@ export async function signAssignmentAcknowledgment(
       acknowledgmentId: acknowledgment.acknowledgmentId,
       pdfBuffer,
     });
-    const employeeStorageLocationId = await resolveEmployeeStorageLocationId(
-      db,
-      acknowledgment.employeeName,
-    );
-
     await db
       .update(assetAssignmentAcknowledgments)
       .set({
@@ -631,27 +1082,33 @@ export async function signAssignmentAcknowledgment(
         status: "active",
         updatedAt: signedAt,
       })
-      .where(eq(assetDistributions.id, acknowledgment.distributionId))
+      .where(eq(assetDistributions.id, distributionRef.id))
       .run();
 
     await db
       .update(assets)
       .set({
         assetStatus: "assigned",
-        currentStorageId: employeeStorageLocationId,
         updatedAt: signedAt,
       })
-      .where(eq(assets.id, acknowledgment.assetId))
+      .where(eq(assets.id, distributionContext.assetId))
       .run();
 
-    await notifyRolesOnAcknowledgmentConfirmation(db, {
-      employeeId: acknowledgment.employeeId,
-      employeeName: acknowledgment.employeeName,
-      assetCode: acknowledgment.assetCode,
-      distributionId: acknowledgment.distributionId,
-    });
+    try {
+      await notifyRolesOnAcknowledgmentConfirmation(db, {
+        employeeId: distributionContext.employeeId,
+        employeeName: distributionContext.employeeName,
+        assetCode: distributionContext.assetCode,
+        distributionId: distributionRef.id,
+      });
+    } catch (notificationError) {
+      console.error(
+        "Assignment acknowledgment signed, but failed to notify recipients.",
+        notificationError,
+      );
+    }
 
-    const distribution = await getDistributionById(db, acknowledgment.distributionId);
+    const distribution = await getDistributionById(db, distributionRef.id);
     if (!distribution) {
       throw new Error(
         "Distribution could not be reloaded after signing acknowledgment.",
@@ -662,6 +1119,8 @@ export async function signAssignmentAcknowledgment(
       acknowledgmentId: String(acknowledgment.acknowledgmentId),
       pdfObjectKey: uploadedPdf.objectKey,
       pdfFileName: uploadedPdf.fileName,
+      pdfContentType: "application/pdf",
+      pdfBase64: pdfBuffer.toString("base64"),
       status: "confirmed",
       signedAt,
       distribution,

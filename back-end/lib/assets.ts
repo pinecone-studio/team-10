@@ -1,5 +1,7 @@
-import { asc, eq, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import {
+  assetAssignmentAcknowledgments,
+  assetAssignmentRequests,
   assetDistributions,
   assets,
   assetStatusValues,
@@ -10,7 +12,6 @@ import {
   receiveItems,
   receives,
   storage,
-  users,
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
 import { parseIntegerId } from "./reference-resolvers.ts";
@@ -30,12 +31,13 @@ type StorageAssetRow = {
   conditionStatus: string;
   assetStatus: string;
   assignedEmployeeName: string | null;
+  latestDistributionStatus: string | null;
   storageId: number | null;
   storageName: string | null;
   storageType: string | null;
-  receivedAt: string;
+  receivedAt: string | null;
   receiveNote: string | null;
-  orderId: number;
+  orderId: number | null;
   requestNumber: string | null;
   requestDate: string | null;
   requesterName: string | null;
@@ -95,12 +97,20 @@ const storageAssetSelection = {
     ORDER BY d.id DESC
     LIMIT 1
   )`.as("assignedEmployeeName"),
+  latestDistributionStatus: sql<string | null>`(
+    SELECT d.status
+    FROM asset_distributions d
+    WHERE d.asset_id = ${assets.id}
+      AND d.status IN ('active', 'pendingHandover')
+    ORDER BY d.id DESC
+    LIMIT 1
+  )`.as("latestDistributionStatus"),
   storageId: sql<number | null>`${storage.id}`.as("storageId"),
   storageName: sql<string | null>`${storage.storageName}`.as("storageName"),
   storageType: sql<string | null>`${storage.storageType}`.as("storageType"),
-  receivedAt: sql<string>`${receives.receivedAt}`.as("receivedAt"),
+  receivedAt: sql<string | null>`${receives.receivedAt}`.as("receivedAt"),
   receiveNote: sql<string | null>`${receiveItems.note}`.as("receiveNote"),
-  orderId: sql<number>`${orders.id}`.as("orderId"),
+  orderId: sql<number | null>`${orders.id}`.as("orderId"),
   requestNumber: sql<string | null>`${orders.requestNumber}`.as("requestNumber"),
   requestDate: sql<string | null>`${orders.requestDate}`.as("requestDate"),
   requesterName: sql<string | null>`${orders.requesterName}`.as("requesterName"),
@@ -123,10 +133,16 @@ async function mapStorageAsset(
   row: StorageAssetRow,
   runtimeConfig?: RuntimeConfig,
 ): Promise<StorageAssetRecord> {
-  const fallbackRequestDate = row.requestDate ?? row.receivedAt.slice(0, 10);
+  const fallbackReceivedAt = row.receivedAt ?? row.createdAt;
+  const fallbackRequestDate = row.requestDate ?? fallbackReceivedAt.slice(0, 10);
   const fallbackRequestNumber = `REQ-${fallbackRequestDate.replaceAll("-", "")}-${String(
-    row.orderId,
+    row.orderId ?? row.id,
   ).padStart(3, "0")}`;
+  const normalizedAssetStatus =
+    row.assetStatus === "pendingAssignment" &&
+    row.latestDistributionStatus === "active"
+      ? "assigned"
+      : row.assetStatus;
   let assetImageDataUrl: string | null = null;
 
   if (runtimeConfig && row.assetImageObjectKey) {
@@ -151,14 +167,14 @@ async function mapStorageAsset(
     serialNumber: row.serialNumber,
     assetImageDataUrl,
     conditionStatus: row.conditionStatus,
-    assetStatus: row.assetStatus,
+    assetStatus: normalizedAssetStatus,
     assignedEmployeeName: row.assignedEmployeeName,
     storageId: row.storageId === null ? null : String(row.storageId),
     storageName: getStorageNameFallback(row),
     storageType: row.storageType,
-    receivedAt: row.receivedAt,
+    receivedAt: fallbackReceivedAt,
     receiveNote: row.receiveNote,
-    orderId: String(row.orderId),
+    orderId: String(row.orderId ?? row.id),
     requestNumber: row.requestNumber ?? fallbackRequestNumber,
     requestDate: fallbackRequestDate,
     requester: row.requesterName ?? "",
@@ -174,9 +190,9 @@ function buildStorageAssetsBaseQuery(db: AppDb) {
   return db
     .select(storageAssetSelection)
     .from(assets)
-    .innerJoin(receiveItems, eq(assets.receiveItemId, receiveItems.id))
-    .innerJoin(receives, eq(receiveItems.receiveId, receives.id))
-    .innerJoin(orders, eq(receives.orderId, orders.id))
+    .leftJoin(receiveItems, eq(assets.receiveItemId, receiveItems.id))
+    .leftJoin(receives, eq(receiveItems.receiveId, receives.id))
+    .leftJoin(orders, eq(receives.orderId, orders.id))
     .leftJoin(departments, eq(orders.departmentId, departments.id))
     .leftJoin(storage, eq(assets.currentStorageId, storage.id))
     .leftJoin(orderItems, eq(receiveItems.orderItemId, orderItems.id));
@@ -193,6 +209,24 @@ export async function listStorageAssets(
     return Promise.all(rows.map((row) => mapStorageAsset(row, runtimeConfig)));
   } catch (error) {
     console.warn("listStorageAssets fallback triggered.", error);
+    return [];
+  }
+}
+
+export async function listStorageLocationNames(db: AppDb): Promise<string[]> {
+  try {
+    const rows = await db
+      .select({
+        storageName: storage.storageName,
+      })
+      .from(storage)
+      .orderBy(asc(storage.storageName), asc(storage.id));
+
+    return rows
+      .map((row) => row.storageName.trim())
+      .filter((storageName) => storageName.length > 0);
+  } catch (error) {
+    console.warn("listStorageLocationNames fallback triggered.", error);
     return [];
   }
 }
@@ -266,12 +300,15 @@ export async function updateStorageAsset(
 ): Promise<StorageAssetRecord> {
   try {
     const assetId = parseIntegerId("Asset id", input.id);
+    const now = new Date().toISOString();
     const updates: Record<string, string> = {
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     };
+    let nextAssetStatus: string | null = null;
 
     if (input.assetStatus !== undefined && input.assetStatus !== null) {
-      updates.assetStatus = parseAssetStatus(input.assetStatus);
+      nextAssetStatus = parseAssetStatus(input.assetStatus);
+      updates.assetStatus = nextAssetStatus;
     }
 
     if (input.conditionStatus !== undefined && input.conditionStatus !== null) {
@@ -280,6 +317,81 @@ export async function updateStorageAsset(
 
     if (Object.keys(updates).length === 1) {
       throw new Error("Provide at least one asset field to update.");
+    }
+
+    if (nextAssetStatus && ["available", "inStorage", "received"].includes(nextAssetStatus)) {
+      const [pendingDistributionRows, pendingAcknowledgmentRows] = await Promise.all([
+        db
+          .select({
+            assignmentRequestId: assetDistributions.assignmentRequestId,
+          })
+          .from(assetDistributions)
+          .where(
+            and(
+              eq(assetDistributions.assetId, assetId),
+              eq(assetDistributions.status, "pendingHandover"),
+            ),
+          ),
+        db
+          .select({
+            assignmentRequestId: assetAssignmentAcknowledgments.assignmentRequestId,
+          })
+          .from(assetAssignmentAcknowledgments)
+          .where(
+            and(
+              eq(assetAssignmentAcknowledgments.assetId, assetId),
+              eq(assetAssignmentAcknowledgments.status, "pending"),
+            ),
+          ),
+      ]);
+
+      await Promise.all([
+        db
+          .update(assetDistributions)
+          .set({
+            status: "cancelled",
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(assetDistributions.assetId, assetId),
+              eq(assetDistributions.status, "pendingHandover"),
+            ),
+          )
+          .run(),
+        db
+          .update(assetAssignmentAcknowledgments)
+          .set({
+            status: "void",
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(assetAssignmentAcknowledgments.assetId, assetId),
+              eq(assetAssignmentAcknowledgments.status, "pending"),
+            ),
+          )
+          .run(),
+      ]);
+
+      const relatedAssignmentRequestIds = [
+        ...new Set(
+          [...pendingDistributionRows, ...pendingAcknowledgmentRows]
+            .map((row) => row.assignmentRequestId)
+            .filter((value): value is number => typeof value === "number"),
+        ),
+      ];
+
+      if (relatedAssignmentRequestIds.length > 0) {
+        await db
+          .update(assetAssignmentRequests)
+          .set({
+            status: "cancelled",
+            updatedAt: now,
+          })
+          .where(inArray(assetAssignmentRequests.id, relatedAssignmentRequestIds))
+          .run();
+      }
     }
 
     const updatedRows = await db

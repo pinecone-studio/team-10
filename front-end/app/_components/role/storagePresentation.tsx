@@ -86,9 +86,15 @@ export const STORAGE_CONDITION_OPTIONS: StorageOption[] = [
   },
 ];
 
-export function StorageStatusBadge({ value }: { value: string }) {
+export function StorageStatusBadge({
+  value,
+  fixedWidth = false,
+}: {
+  value: string;
+  fixedWidth?: boolean;
+}) {
   const option = getStorageOption(STORAGE_STATUS_OPTIONS, value);
-  return <StorageBadge option={option} kind="status" />;
+  return <StorageBadge option={option} kind="status" fixedWidth={fixedWidth} />;
 }
 
 export function StorageConditionBadge({ value }: { value: string }) {
@@ -265,16 +271,18 @@ function humanizeStorageValue(value: string) {
 function StorageBadge({
   option,
   kind = "status",
+  fixedWidth = false,
 }: {
   option: StorageOption;
   kind?: "status" | "condition";
+  fixedWidth?: boolean;
 }) {
   return (
     <span
       className={`inline-flex h-8 items-center gap-[6px] rounded-full border px-3 text-[12px] font-medium leading-none ${
         kind === "condition"
           ? `justify-start text-[#6b7280] ${option.toneClassName}`
-          : option.toneClassName
+          : `${fixedWidth ? "min-w-[170px] w-[170px] justify-center" : ""} ${option.toneClassName}`
       }`}
     >
       <span

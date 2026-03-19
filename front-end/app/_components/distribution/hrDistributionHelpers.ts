@@ -126,3 +126,25 @@ export function buildAssignedItems(records: DistributionRecordDto[]) {
       sessions: historyMap[record.assetId] ?? [],
     }));
 }
+
+export function buildPendingAcknowledgmentItems(records: DistributionRecordDto[]) {
+  const historyMap = buildHistoryMap(records);
+  return records
+    .filter((record) => record.status === "pendingHandover")
+    .map<DistributionItem>((record) => ({
+      id: record.assetId,
+      distributionId: record.id,
+      assetStatus: record.assetStatus,
+      assetName: record.assetName,
+      assetCode: record.assetCode,
+      serialNumber: record.serialNumber,
+      receivedAt: record.distributedAt,
+      storageName: record.currentStorageName ?? "Pending acknowledgment",
+      conditionStatus: record.conditionStatus,
+      category: record.category,
+      itemType: record.itemType,
+      holder: record.employeeName,
+      role: record.recipientRole,
+      sessions: historyMap[record.assetId] ?? [],
+    }));
+}
