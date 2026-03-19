@@ -220,7 +220,18 @@ function sortOrders(orders: StoredOrder[]) {
   });
 }
 
+function hydrateOrdersSnapshotFromStorage() {
+  if (typeof window === "undefined" || hasLoadedOrders) return;
+
+  const persistedOrders = readPersistedOrders();
+  if (persistedOrders.length === 0) return;
+
+  cachedOrdersSnapshot = sortOrders(persistedOrders);
+  hasLoadedOrders = true;
+}
+
 function readOrdersSnapshot() {
+  hydrateOrdersSnapshotFromStorage();
   return cachedOrdersSnapshot;
 }
 

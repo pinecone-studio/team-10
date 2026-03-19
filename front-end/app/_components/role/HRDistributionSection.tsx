@@ -5,6 +5,7 @@ import { formatDisplayDate } from "../../_lib/order-store";
 import { ActionButton, EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import DistributionHeader from "../distribution/DistributionHeader";
 const KEY = "ams-hr-asset-handoffs";
+const ASSETS_KEY = "ams-hr-distribution-assets";
 const roster = {
   Employee: ["Bat-Erdene", "Tsogoo", "Nomin-Erdene Bat"],
   "Department Lead": ["Nomin", "Tsolmon", "Oyungerel"],
@@ -14,7 +15,18 @@ type RoleName = keyof typeof roster; type AssetState = { holder: string | null; 
 function summarize(history: string[]) { const owner = [...history].reverse().map(splitEntry).find((item) => item.text.includes("->") && !item.text.includes("Inventory Head")), inspection = [...history].reverse().map(splitEntry).find((item) => item.text.startsWith("Inspection:")), [years = "-", condition = "-", power = "-", notes = "No notes"] = (inspection?.text.replace("Inspection: ", "") ?? "No inspection note").split(" | "); return { owner: owner?.text.split("->").at(-1)?.trim() ?? "No previous holder", years, condition, power, notes, at: inspection?.at ?? owner?.at ?? "-" }; }
 function sessions(history: string[]) { const result: { holder: string; assignedAt: string; years: string; condition: string; power: string; notes: string; returnedAt: string }[] = []; for (const raw of history) { const item = splitEntry(raw); if (item.text.includes("->") && !item.text.includes("Inventory Head")) { result.push({ holder: item.text.split("->").at(-1)?.trim() ?? "Unknown", assignedAt: item.at || "-", years: "-", condition: "-", power: "-", notes: "No notes", returnedAt: "-" }); continue; } if (item.text.startsWith("Inspection:")) { const current = result.at(-1); if (!current) continue; const [years = "-", condition = "-", power = "-", notes = "No notes"] = item.text.replace("Inspection: ", "").split(" | "); Object.assign(current, { years, condition, power, notes }); continue; } if (item.text.includes("Inventory Head") && result.length) result[result.length - 1]!.returnedAt = item.at || "-"; } return result.reverse(); }
 export function HRDistributionSection() {
-  const [assets, setAssets] = useState<StorageAssetDto[]>([]);
+  const [assets, setAssets] = useState<StorageAssetDto[]>(() => {
+    if (typeof window === "undefined") return [];
+
+    try {
+      const saved = window.localStorage.getItem(ASSETS_KEY);
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? (parsed as StorageAssetDto[]) : [];
+    } catch {
+      return [];
+    }
+  });
   const [assetState, setAssetState] = useState<Record<string, AssetState>>({});
   const [activeView, setActiveView] = useState<"available" | "assigned" | "pending">("available");
   const [searchValue, setSearchValue] = useState("");
@@ -25,7 +37,17 @@ export function HRDistributionSection() {
   const [openAssetId, setOpenAssetId] = useState<string | null>(null), [retrievalDrafts, setRetrievalDrafts] = useState<Record<string, RetrievalDraft>>({}), [notice, setNotice] = useState("");
   useEffect(() => {
     let live = true;
-    void fetchStorageAssetsRequest().then((data) => live && setAssets(data)).catch(() => live && setAssets([]));
+
+    void fetchStorageAssetsRequest()
+      .then((data) => {
+        if (!live) return;
+        setAssets(data);
+        try {
+          window.localStorage.setItem(ASSETS_KEY, JSON.stringify(data));
+        } catch {}
+      })
+      .catch(() => live && setAssets((current) => current));
+
     try {
       const saved = window.localStorage.getItem(KEY);
       if (saved) setAssetState(JSON.parse(saved));

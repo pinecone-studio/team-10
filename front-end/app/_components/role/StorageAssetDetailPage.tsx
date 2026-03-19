@@ -12,7 +12,6 @@ import {
 import { downloadBase64File } from "@/app/_lib/download-base64";
 import { formatCurrency, formatDisplayDate } from "@/app/_lib/order-store";
 import { buildRegisteredAssetScanUrl } from "@/app/_lib/qr-links";
-import { FrontendLoading } from "../shared/FrontendLoading";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import { BrandedQrCode } from "../shared/BrandedQrCode";
 import {
@@ -41,7 +40,7 @@ export function StorageAssetDetailPage({
   role: string;
 }) {
   const [asset, setAsset] = useState<StorageAssetDto | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [hasResolvedAsset, setHasResolvedAsset] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -56,7 +55,6 @@ export function StorageAssetDetailPage({
     let isMounted = true;
 
     void (async () => {
-      setIsLoading(true);
       setErrorMessage(null);
 
       try {
@@ -81,7 +79,7 @@ export function StorageAssetDetailPage({
         );
       } finally {
         if (isMounted) {
-          setIsLoading(false);
+          setHasResolvedAsset(true);
         }
       }
     })();
@@ -199,14 +197,7 @@ export function StorageAssetDetailPage({
 
       {errorMessage && !asset ? (
         <EmptyState title="Asset detail unavailable" description={errorMessage} />
-      ) : isLoading || !asset ? (
-        <FrontendLoading
-          compact
-          variant="asset-detail"
-          title="Loading asset detail"
-          description="Fetching the latest storage snapshot for this asset."
-        />
-      ) : (
+      ) : !hasResolvedAsset || !asset ? null : (
         <>
           <div className={showEmployeeView ? "" : "lg:hidden"}>
             <MobileAssetDetailView
