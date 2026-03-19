@@ -25,10 +25,18 @@ export const DistributionTypeDefs = `
     tokenConsumedAt: String
   }
 
+  type AssignmentAcknowledgmentPdf {
+    fileName: String!
+    contentType: String!
+    base64: String!
+  }
+
   type SignAssignmentAcknowledgmentResult {
     acknowledgmentId: ID!
     pdfObjectKey: String
     pdfFileName: String
+    pdfContentType: String!
+    pdfBase64: String!
     status: String!
     signedAt: String
     distribution: DistributionRecord!
@@ -78,6 +86,7 @@ export const DistributionTypeDefs = `
     assetDistributions(includeReturned: Boolean): [DistributionRecord!]!
     employeeDirectory(activeOnly: Boolean): [EmployeeDirectoryEntry!]!
     assignmentAcknowledgment(token: String!): AssignmentAcknowledgmentPreview!
+    assignmentAcknowledgmentPdf(token: String!): AssignmentAcknowledgmentPdf!
   }
 
   type Mutation {

@@ -127,6 +127,76 @@ async function ensureAssetAssignmentAcknowledgmentsTable() {
   console.log("ensured asset_assignment_acknowledgments table");
 }
 
+async function normalizeEmployeeStorageLocations() {
+  const [existingCanonicalStorage] = await execute(
+    "SELECT id FROM storage WHERE storage_name = 'Main warehouse / Intake' LIMIT 1",
+  );
+
+  let canonicalStorageId = Number(existingCanonicalStorage?.id ?? 0);
+
+  if (!canonicalStorageId) {
+    await execute(
+      "INSERT INTO storage (storage_name, storage_type, description, created_at, updated_at) VALUES ('Main warehouse / Intake', 'warehouse', 'Auto-created canonical intake location', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+    );
+
+    const [createdCanonicalStorage] = await execute(
+      "SELECT id FROM storage WHERE storage_name = 'Main warehouse / Intake' LIMIT 1",
+    );
+
+    canonicalStorageId = Number(createdCanonicalStorage?.id ?? 0);
+    if (!canonicalStorageId) {
+      throw new Error("Failed to create canonical intake storage location.");
+    }
+    console.log("created storage.main_warehouse_intake");
+  } else {
+    console.log("skip storage.main_warehouse_intake");
+  }
+
+  const [beforeCleanup] = await execute(
+    "SELECT COUNT(*) AS count FROM assets a INNER JOIN storage s ON s.id = a.current_storage_id WHERE s.storage_name LIKE 'Employee / %'",
+  );
+  const beforeCount = Number(beforeCleanup?.count ?? 0);
+
+  if (beforeCount === 0) {
+    console.log("skip assets.employee_location_cleanup");
+  } else {
+    await execute(
+      `UPDATE assets
+       SET current_storage_id = ${canonicalStorageId},
+           updated_at = CURRENT_TIMESTAMP
+       WHERE current_storage_id IN (
+         SELECT id
+         FROM storage
+         WHERE storage_name LIKE 'Employee / %'
+       )`,
+    );
+
+    const [afterCleanup] = await execute(
+      "SELECT COUNT(*) AS count FROM assets a INNER JOIN storage s ON s.id = a.current_storage_id WHERE s.storage_name LIKE 'Employee / %'",
+    );
+    const afterCount = Number(afterCleanup?.count ?? 0);
+    console.log(
+      `updated assets.employee_location_cleanup (${beforeCount} -> ${afterCount})`,
+    );
+  }
+
+  await execute(
+    "DELETE FROM storage WHERE storage_name LIKE 'Employee / %' AND id NOT IN (SELECT DISTINCT current_storage_id FROM assets WHERE current_storage_id IS NOT NULL)",
+  );
+
+  const [remainingEmployeeNamedLocations] = await execute(
+    "SELECT COUNT(*) AS count FROM storage WHERE storage_name LIKE 'Employee / %'",
+  );
+  const remainingCount = Number(remainingEmployeeNamedLocations?.count ?? 0);
+  if (remainingCount === 0) {
+    console.log("deleted storage.employee_named_locations");
+  } else {
+    console.log(
+      `skip storage.employee_named_locations (${remainingCount} row(s) still referenced)`,
+    );
+  }
+}
+
 async function run() {
   console.log("Applying safe remote migrations...");
   await ensureAssetAssignmentAcknowledgmentsTable();
@@ -388,6 +458,7 @@ async function run() {
     "return_power",
     "ALTER TABLE asset_distributions ADD COLUMN return_power TEXT",
   );
+  await normalizeEmployeeStorageLocations();
   await ensureNamuunEmail();
 
   console.log("Safe remote migrations completed.");

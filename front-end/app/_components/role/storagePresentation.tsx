@@ -26,6 +26,13 @@ export const STORAGE_STATUS_OPTIONS: StorageOption[] = [
     icon: <BriefcaseIcon />,
   },
   {
+    value: "pendingAssignment",
+    label: "Pending Assignment",
+    toneClassName: "border-[#d7e3f4] bg-[#f6f9fd] text-[#52637a]",
+    menuIconClassName: "text-[#64748b]",
+    icon: <ReturnIcon />,
+  },
+  {
     value: "inRepair",
     label: "In Repair",
     toneClassName: "border-[#ffd979] bg-[#fff4d2] text-[#c96a00]",

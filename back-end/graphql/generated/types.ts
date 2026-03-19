@@ -37,6 +37,13 @@ export type AssetLabelPdf = {
   fileName: Scalars['String']['output'];
 };
 
+export type AssignmentAcknowledgmentPdf = {
+  __typename?: 'AssignmentAcknowledgmentPdf';
+  base64: Scalars['String']['output'];
+  contentType: Scalars['String']['output'];
+  fileName: Scalars['String']['output'];
+};
+
 export type AssignmentAcknowledgmentPreview = {
   __typename?: 'AssignmentAcknowledgmentPreview';
   acknowledgmentId: Scalars['ID']['output'];
@@ -505,6 +512,7 @@ export type Query = {
   assetDistributions: Array<DistributionRecord>;
   assetLabelPdf: AssetLabelPdf;
   assignmentAcknowledgment: AssignmentAcknowledgmentPreview;
+  assignmentAcknowledgmentPdf: AssignmentAcknowledgmentPdf;
   catalogCategories: Array<CatalogCategory>;
   catalogItemTypes: Array<CatalogItemType>;
   catalogProduct?: Maybe<CatalogProduct>;
@@ -516,6 +524,7 @@ export type Query = {
   receive?: Maybe<Receive>;
   receives: Array<Receive>;
   storageAssets: Array<StorageAsset>;
+  storageLocations: Array<Scalars['String']['output']>;
 };
 
 
@@ -541,6 +550,11 @@ export type QueryAssetLabelPdfArgs = {
 
 
 export type QueryAssignmentAcknowledgmentArgs = {
+  token: Scalars['String']['input'];
+};
+
+
+export type QueryAssignmentAcknowledgmentPdfArgs = {
   token: Scalars['String']['input'];
 };
 
@@ -621,6 +635,8 @@ export type SignAssignmentAcknowledgmentResult = {
   __typename?: 'SignAssignmentAcknowledgmentResult';
   acknowledgmentId: Scalars['ID']['output'];
   distribution: DistributionRecord;
+  pdfBase64: Scalars['String']['output'];
+  pdfContentType: Scalars['String']['output'];
   pdfFileName?: Maybe<Scalars['String']['output']>;
   pdfObjectKey?: Maybe<Scalars['String']['output']>;
   signedAt?: Maybe<Scalars['String']['output']>;
@@ -633,6 +649,7 @@ export type StorageAsset = {
   assetImageDataUrl?: Maybe<Scalars['String']['output']>;
   assetName: Scalars['String']['output'];
   assetStatus: Scalars['String']['output'];
+  assignedEmployeeName?: Maybe<Scalars['String']['output']>;
   category: Scalars['String']['output'];
   conditionStatus: Scalars['String']['output'];
   createdAt: Scalars['String']['output'];
@@ -741,6 +758,7 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 export type ResolversTypes = {
   AssetAuditEntry: ResolverTypeWrapper<AssetAuditEntry>;
   AssetLabelPdf: ResolverTypeWrapper<AssetLabelPdf>;
+  AssignmentAcknowledgmentPdf: ResolverTypeWrapper<AssignmentAcknowledgmentPdf>;
   AssignmentAcknowledgmentPreview: ResolverTypeWrapper<AssignmentAcknowledgmentPreview>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   CatalogAttributeInput: CatalogAttributeInput;
@@ -774,6 +792,7 @@ export type ResolversTypes = {
 export type ResolversParentTypes = {
   AssetAuditEntry: AssetAuditEntry;
   AssetLabelPdf: AssetLabelPdf;
+  AssignmentAcknowledgmentPdf: AssignmentAcknowledgmentPdf;
   AssignmentAcknowledgmentPreview: AssignmentAcknowledgmentPreview;
   Boolean: Scalars['Boolean']['output'];
   CatalogAttributeInput: CatalogAttributeInput;
@@ -817,6 +836,13 @@ export type AssetAuditEntryResolvers<ContextType = GraphQLContext, ParentType ex
 
 export type AssetLabelPdfResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AssetLabelPdf'] = ResolversParentTypes['AssetLabelPdf']> = {
   assetCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  base64?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  contentType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  fileName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type AssignmentAcknowledgmentPdfResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AssignmentAcknowledgmentPdf'] = ResolversParentTypes['AssignmentAcknowledgmentPdf']> = {
   base64?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   contentType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   fileName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1043,6 +1069,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   assetDistributions?: Resolver<Array<ResolversTypes['DistributionRecord']>, ParentType, ContextType, Partial<QueryAssetDistributionsArgs>>;
   assetLabelPdf?: Resolver<ResolversTypes['AssetLabelPdf'], ParentType, ContextType, RequireFields<QueryAssetLabelPdfArgs, 'assetCodes'>>;
   assignmentAcknowledgment?: Resolver<ResolversTypes['AssignmentAcknowledgmentPreview'], ParentType, ContextType, RequireFields<QueryAssignmentAcknowledgmentArgs, 'token'>>;
+  assignmentAcknowledgmentPdf?: Resolver<ResolversTypes['AssignmentAcknowledgmentPdf'], ParentType, ContextType, RequireFields<QueryAssignmentAcknowledgmentPdfArgs, 'token'>>;
   catalogCategories?: Resolver<Array<ResolversTypes['CatalogCategory']>, ParentType, ContextType>;
   catalogItemTypes?: Resolver<Array<ResolversTypes['CatalogItemType']>, ParentType, ContextType, Partial<QueryCatalogItemTypesArgs>>;
   catalogProduct?: Resolver<Maybe<ResolversTypes['CatalogProduct']>, ParentType, ContextType, RequireFields<QueryCatalogProductArgs, 'id'>>;
@@ -1054,6 +1081,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   receive?: Resolver<Maybe<ResolversTypes['Receive']>, ParentType, ContextType, RequireFields<QueryReceiveArgs, 'id'>>;
   receives?: Resolver<Array<ResolversTypes['Receive']>, ParentType, ContextType>;
   storageAssets?: Resolver<Array<ResolversTypes['StorageAsset']>, ParentType, ContextType>;
+  storageLocations?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
 };
 
 export type ReceiveResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Receive'] = ResolversParentTypes['Receive']> = {
@@ -1095,6 +1123,8 @@ export type ReceivedAssetResolvers<ContextType = GraphQLContext, ParentType exte
 export type SignAssignmentAcknowledgmentResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['SignAssignmentAcknowledgmentResult'] = ResolversParentTypes['SignAssignmentAcknowledgmentResult']> = {
   acknowledgmentId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   distribution?: Resolver<ResolversTypes['DistributionRecord'], ParentType, ContextType>;
+  pdfBase64?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  pdfContentType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   pdfFileName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   pdfObjectKey?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   signedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -1107,6 +1137,7 @@ export type StorageAssetResolvers<ContextType = GraphQLContext, ParentType exten
   assetImageDataUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   assetName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   assetStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  assignedEmployeeName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   conditionStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1146,6 +1177,7 @@ export type TerminationResultResolvers<ContextType = GraphQLContext, ParentType 
 export type Resolvers<ContextType = GraphQLContext> = {
   AssetAuditEntry?: AssetAuditEntryResolvers<ContextType>;
   AssetLabelPdf?: AssetLabelPdfResolvers<ContextType>;
+  AssignmentAcknowledgmentPdf?: AssignmentAcknowledgmentPdfResolvers<ContextType>;
   AssignmentAcknowledgmentPreview?: AssignmentAcknowledgmentPreviewResolvers<ContextType>;
   CatalogCategory?: CatalogCategoryResolvers<ContextType>;
   CatalogItemType?: CatalogItemTypeResolvers<ContextType>;

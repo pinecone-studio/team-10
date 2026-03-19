@@ -16,6 +16,7 @@ export type StorageAssetDto = {
   assetImageDataUrl: string | null;
   conditionStatus: string;
   assetStatus: string;
+  assignedEmployeeName: string | null;
   storageId: string | null;
   storageName: string;
   storageType: string | null;
@@ -38,6 +39,10 @@ export type AssetLabelPdfDto = {
   base64: string;
   assetCount: number;
 };
+
+function wait(durationMs: number) {
+  return new Promise((resolve) => setTimeout(resolve, durationMs));
+}
 
 function inferStorageCategory(itemName: string) {
   const normalized = itemName.toLowerCase();
@@ -97,6 +102,7 @@ function buildLocalStorageAssets(): Promise<StorageAssetDto[]> {
               assetImageDataUrl: order.receivedImageDataUrl ?? null,
               conditionStatus: order.receivedCondition === "issue" ? "damaged" : "good",
               assetStatus: "inStorage",
+              assignedEmployeeName: null,
               storageId: "local-storage",
               storageName: order.storageLocation || "Main warehouse / Intake",
               storageType: "warehouse",
@@ -166,6 +172,7 @@ const storageAssetListFields = gql`
     assetImageDataUrl
     conditionStatus
     assetStatus
+    assignedEmployeeName
     storageId
     storageName
     storageType
@@ -195,6 +202,7 @@ const storageAssetDetailFields = gql`
     assetImageDataUrl
     conditionStatus
     assetStatus
+    assignedEmployeeName
     storageId
     storageName
     storageType
@@ -219,6 +227,12 @@ const storageAssetsQuery = gql`
     storageAssets {
       ...StorageAssetListFields
     }
+  }
+`;
+
+const storageLocationsQuery = gql`
+  query StorageLocations {
+    storageLocations
   }
 `;
 
@@ -251,9 +265,34 @@ export async function fetchStorageAssetsRequest() {
     });
 
     return data?.storageAssets ?? [];
+  } catch (firstError) {
+    await wait(350);
+    const { data } = await apolloClient.query<{ storageAssets: StorageAssetDto[] }>({
+      query: storageAssetsQuery,
+      fetchPolicy: "no-cache",
+    });
+
+    if (!data?.storageAssets) {
+      throw firstError instanceof Error
+        ? firstError
+        : new Error("Failed to load storage assets.");
+    }
+
+    return data.storageAssets;
+  }
+}
+
+export async function fetchStorageLocationsRequest() {
+  try {
+    const { data } = await apolloClient.query<{ storageLocations: string[] }>({
+      query: storageLocationsQuery,
+      fetchPolicy: "no-cache",
+    });
+
+    return data?.storageLocations ?? [];
   } catch (error) {
-    console.warn("Falling back to local storage assets.", error);
-    return buildLocalStorageAssets();
+    console.warn("Storage location list request failed. Using empty location list.", error);
+    return [];
   }
 }
 
