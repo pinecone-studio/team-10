@@ -1,6 +1,7 @@
 "use client";
 
 import { gql } from "@apollo/client/core";
+import { parseIntakeMetadata } from "@/app/_lib/intake-metadata";
 import { apolloClient } from "@/app/providers/apolloClient";
 import { loadOrdersSnapshot } from "@/app/_lib/order-store";
 
@@ -75,14 +76,15 @@ function buildLocalStorageAssets(): Promise<StorageAssetDto[]> {
               serialNumbers[absoluteAssetIndex] ??
               `${item.code}-${String(assetIndex + 1).padStart(3, "0")}`;
             const receivedAt = order.receivedAt ?? order.updatedAt;
+            const intakeMetadata = parseIntakeMetadata(order.receivedNote);
 
             return {
               id: `${order.id}-storage-${itemIndex}-${assetIndex}`,
               assetCode,
               qrCode: `QR-${order.id}-${item.code}-${serialNumber}`,
               assetName: item.name,
-              category: inferStorageCategory(item.name),
-              itemType: "Inventory Item",
+              category: intakeMetadata.category || inferStorageCategory(item.name),
+              itemType: intakeMetadata.itemType || "Inventory Item",
               serialNumber,
               conditionStatus: order.receivedCondition === "issue" ? "damaged" : "good",
               assetStatus: "inStorage",

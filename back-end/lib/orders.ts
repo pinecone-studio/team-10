@@ -321,7 +321,7 @@ function parseOrderStatus(
   return parsedStatus;
 }
 
-function mapApprovalTargetToFront(): FrontApprovalTarget {
+function mapApprovalTargetToFront(_approvalTarget?: DbApprovalQueue): FrontApprovalTarget {
   return "finance";
 }
 

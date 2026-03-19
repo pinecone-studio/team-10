@@ -116,6 +116,7 @@ export function buildReceiveRows(orders: StoredOrder[]): ReceiveRow[] {
               ? "received_inventory"
               : "approved_finance",
         requestNumber: order.requestNumber,
+        department: order.department,
         index: currentIndex,
         assetName: item.name,
         itemCode: item.code,

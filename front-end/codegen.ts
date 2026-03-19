@@ -1,7 +1,11 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
+const schema =
+  process.env.GRAPHQL_SCHEMA_URL ??
+  "./graphql/schema.graphql";
+
 const config: CodegenConfig = {
-  schema: "../back-end/graphql/generated/schema.graphql",
+  schema,
   documents: ["app/**/*.{ts,tsx}", "app/**/*.graphql"],
   ignoreNoDocuments: true,
   generates: {
