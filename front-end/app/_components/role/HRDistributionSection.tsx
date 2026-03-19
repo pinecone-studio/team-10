@@ -1,171 +1,185 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  assignOrderToPerson,
-  formatDisplayDate,
-  useOrdersStore,
-} from "../../_lib/order-store";
-import {
-  ActionButton,
-  Card,
-  Stat,
-  WorkspaceShell,
-} from "../shared/WorkspacePrimitives";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { fetchStorageAssetsRequest, type StorageAssetDto } from "@/app/(dashboard)/_graphql/storage/storage-api";
+import { formatDisplayDate } from "../../_lib/order-store";
+import { ActionButton, EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import DistributionHeader from "../distribution/DistributionHeader";
-import DistributionDashboard from "../distribution/DistributionDashboard";
-import DistributionSearchFilter from "../distribution/DistributionSearchFilter";
-import DistributionOrder from "../distribution/DistributionOrder";
-import AvailableOrder from "../distribution/AvailableOrder";
-import EmployeeOrder from "../distribution/EmployeeOrder";
-import PendingRetrievalPanel from "../distribution/PendingRetrievalPanel";
 
-const assignees = [
-  { name: "Bat-Erdene", role: "Employee" },
-  { name: "Tsogoo", role: "Employee" },
-  { name: "Nomin", role: "Department Lead" },
-];
+const KEY = "ams-hr-asset-handoffs";
+const roster = {
+  Employee: ["Bat-Erdene", "Tsogoo", "Nomin-Erdene Bat"],
+  "Department Lead": ["Nomin", "Tsolmon", "Oyungerel"],
+  "IT Admin": ["Anu", "Ganbold"],
+} as const;
+
+type RoleName = keyof typeof roster;
+type AssetState = { holder: string | null; role: RoleName | null; history: string[] };
 
 export function HRDistributionSection() {
-  const [activeTab, setActiveTab] = useState<
-    "distributions" | "available-assets" | "employee-requests" | "pending-retrieval"
-  >("distributions");
-  const orders = useOrdersStore();
-  const readyOrders = orders.filter(
-    (order) => order.status === "received_inventory",
-  );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [assigneeName, setAssigneeName] = useState(assignees[0].name);
-  const [assigneeRole, setAssigneeRole] = useState(assignees[0].role);
-  const selectedOrder = useMemo(
-    () =>
-      readyOrders.find((order) => order.id === selectedId) ??
-      readyOrders[0] ??
-      null,
-    [readyOrders, selectedId],
-  );
+  const [assets, setAssets] = useState<StorageAssetDto[]>([]);
+  const [assetState, setAssetState] = useState<Record<string, AssetState>>({});
+  const [activeView, setActiveView] = useState<"available" | "assigned">("available");
+  const [searchValue, setSearchValue] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All categories");
+  const [selectedType, setSelectedType] = useState("All types");
+  const [selectedRole, setSelectedRole] = useState<RoleName>("Employee");
+  const [selectedEmployee, setSelectedEmployee] = useState<string>(roster.Employee[0]);
 
-  if (!selectedOrder) {
-    return (
-      <div className="w-full">
-        <DistributionHeader />
-        <DistributionDashboard />
-        <DistributionSearchFilter
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
-        {activeTab === "distributions" ? <DistributionOrder /> : null}
-        {activeTab === "available-assets" ? <AvailableOrder /> : null}
-        {activeTab === "employee-requests" ? <EmployeeOrder /> : null}
-        {activeTab === "pending-retrieval" ? <PendingRetrievalPanel /> : null}
-      </div>
-    );
+  useEffect(() => {
+    let live = true;
+    void fetchStorageAssetsRequest().then((data) => live && setAssets(data)).catch(() => live && setAssets([]));
+    try {
+      const saved = window.localStorage.getItem(KEY);
+      if (saved) setAssetState(JSON.parse(saved));
+    } catch {}
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(assetState));
+    } catch {}
+  }, [assetState]);
+
+  useEffect(() => {
+    setSelectedEmployee(roster[selectedRole][0]);
+  }, [selectedRole]);
+
+  const availableBase = assets.filter((asset) => !assetState[asset.id]?.holder);
+  const categoryOptions = ["All categories", ...Array.from(new Set(availableBase.map((asset) => asset.category)))];
+  const typeOptions = ["All types", ...Array.from(new Set(availableBase.filter((asset) => selectedCategory === "All categories" || asset.category === selectedCategory).map((asset) => asset.itemType)))];
+
+  const filteredAssets = useMemo(() => {
+    const q = searchValue.trim().toLowerCase();
+    return assets.filter((asset) => {
+      if (selectedCategory !== "All categories" && asset.category !== selectedCategory) return false;
+      if (selectedType !== "All types" && asset.itemType !== selectedType) return false;
+      return !q || [asset.assetName, asset.assetCode, asset.serialNumber ?? "", asset.requestNumber, asset.storageName, asset.category, asset.itemType].some((value) => value.toLowerCase().includes(q));
+    });
+  }, [assets, searchValue, selectedCategory, selectedType]);
+
+  const available = filteredAssets.filter((asset) => !assetState[asset.id]?.holder);
+  const assigned = filteredAssets.filter((asset) => assetState[asset.id]?.holder);
+
+  function assign(asset: StorageAssetDto) {
+    setAssetState((current) => {
+      const prev = current[asset.id];
+      const from = prev?.holder ?? "Storage / Intake";
+      return { ...current, [asset.id]: { holder: selectedEmployee, role: selectedRole, history: [...(prev?.history ?? []), `${from} -> ${selectedEmployee}`] } };
+    });
   }
 
+  function receiveToInventoryHead(asset: StorageAssetDto) {
+    setAssetState((current) => {
+      const prev = current[asset.id];
+      if (!prev?.holder) return current;
+      return { ...current, [asset.id]: { holder: null, role: null, history: [...prev.history, `${prev.holder} -> Inventory Head`, "Inventory Head -> Available in storage"] } };
+    });
+  }
+
+  const availableControls = (
+    <div className="grid gap-3 border-b border-[#edf2f7] px-4 py-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr]">
+      <label className="grid gap-1 text-[12px] text-[#475569]">
+        <span>Employee role</span>
+        <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value as RoleName)} className="h-10 rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none">
+          {Object.keys(roster).map((role) => <option key={role} value={role}>{role}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1 text-[12px] text-[#475569]">
+        <span>Employee</span>
+        <select value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)} className="h-10 rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none">
+          {roster[selectedRole].map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1 text-[12px] text-[#475569]">
+        <span>Category</span>
+        <select value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); setSelectedType("All types"); }} className="h-10 rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none">
+          {categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1 text-[12px] text-[#475569]">
+        <span>Type</span>
+        <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="h-10 rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none">
+          {typeOptions.map((type) => <option key={type} value={type}>{type}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1 text-[12px] text-[#475569] md:col-span-2 xl:col-span-3">
+        <span>Search</span>
+        <input value={searchValue} onChange={(e) => setSearchValue(e.target.value)} placeholder="Asset, request, serial, storage..." className="h-10 rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none" />
+      </label>
+    </div>
+  );
+
   return (
-    <WorkspaceShell
-      title="Distribution"
-      subtitle="Assign stored goods to employees and other internal recipients."
-      actions={<ActionButton variant="light">Generate QR batch</ActionButton>}
-      hideHeader
-    >
+    <WorkspaceShell title="Distribution" subtitle="Assign one asset at a time, then receive it back through Inventory Head." backgroundClassName="bg-[#f7fafc]">
       <DistributionHeader />
-      <Card
-        title="Ready for assignment"
-        trailing={
-          <span className="text-[11px] text-[#8fa0ba]">
-            {readyOrders.length} order
-          </span>
-        }
-      >
-        <div className="space-y-[8px]">
-          {readyOrders.map((order) => (
-            <button
-              key={order.id}
-              type="button"
-              onClick={() => setSelectedId(order.id)}
-              className={`flex w-full items-center justify-between rounded-[10px] border px-[12px] py-[12px] text-left text-[12px] ${selectedOrder.id === order.id ? "border-black bg-black text-white" : "border-[#ececec] bg-white text-[#171717]"}`}
-            >
-              <span>{order.requestNumber}</span>
-              <span>{order.storageLocation}</span>
+      <section className="rounded-[18px] border border-[#e2e8f0] bg-white shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+        <div className="border-b border-[#edf2f7] px-4 py-3">
+          <div className="inline-flex rounded-[12px] bg-[#f1f5f9] p-1">
+            <button type="button" onClick={() => setActiveView("available")} className={`rounded-[10px] px-4 py-2 text-[13px] font-medium ${activeView === "available" ? "bg-white text-[#0f172a] shadow-sm" : "text-[#64748b]"}`}>
+              Available items ({available.length})
             </button>
-          ))}
-        </div>
-      </Card>
-      <Card title="Assign goods">
-        <div className="grid grid-cols-4 gap-[12px]">
-          <Stat label="Request" value={selectedOrder.requestNumber} />
-          <Stat label="Stored at" value={selectedOrder.storageLocation} />
-          <Stat
-            label="Received date"
-            value={formatDisplayDate(
-              selectedOrder.receivedAt ?? selectedOrder.requestDate,
-            )}
-          />
-          <Stat label="Recipient" value={assigneeName} accent />
-        </div>
-        <div className="mt-[14px] grid grid-cols-2 gap-[12px] text-[12px]">
-          <label className="flex flex-col gap-[6px]">
-            <span>Assign to</span>
-            <select
-              value={assigneeName}
-              onChange={(event) => setAssigneeName(event.target.value)}
-              className="h-[34px] rounded-[6px] border border-[#dfdfdf] bg-[#fbfbfb] px-[10px]"
-            >
-              {assignees.map((person) => (
-                <option key={person.name} value={person.name}>
-                  {person.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-[6px]">
-            <span>Recipient role</span>
-            <select
-              value={assigneeRole}
-              onChange={(event) => setAssigneeRole(event.target.value)}
-              className="h-[34px] rounded-[6px] border border-[#dfdfdf] bg-[#fbfbfb] px-[10px]"
-            >
-              {assignees.map((person, index) => (
-                <option
-                  key={`${person.name}-${person.role}-${index}`}
-                  value={person.role}
-                >
-                  {person.role}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="mt-[14px] rounded-[8px] bg-[#f6f6f7] px-[12px] py-[12px] text-[11px] text-[#666]">
-          {selectedOrder.items.map((item, index) => (
-            <p key={`${item.catalogId}-${index}`}>
-              {item.name} - {item.quantity} {item.unit}
-            </p>
-          ))}
-          <div className="mt-3 space-y-1 border-t border-[#e5e7eb] pt-3">
-            {selectedOrder.assetIds.slice(0, 6).map((assetId, index) => (
-              <p key={assetId}>
-                {assetId} - {selectedOrder.serialNumbers[index] ?? "QR ready"}
-              </p>
-            ))}
+            <button type="button" onClick={() => setActiveView("assigned")} className={`rounded-[10px] px-4 py-2 text-[13px] font-medium ${activeView === "assigned" ? "bg-white text-[#0f172a] shadow-sm" : "text-[#64748b]"}`}>
+              Assigned items ({assigned.length})
+            </button>
           </div>
         </div>
-        <div className="mt-[16px] flex justify-end">
-          <ActionButton
-            variant="green"
-            onClick={() =>
-              assignOrderToPerson({
-                orderId: selectedOrder.id,
-                assignedTo: assigneeName,
-                assignedRole: assigneeRole,
-              })
-            }
-          >
-            Assign goods
-          </ActionButton>
+        <div className="px-4 py-4">
+          {activeView === "available" ? (
+            <AssetPanel title={`Available items (${available.length})`} description="Storage dotor bgaa, assign hiigeegui assetuud." items={available} assetState={assetState} actionLabel="Assign" onAction={assign} controls={availableControls} />
+          ) : (
+            <AssetPanel title={`Assigned items (${assigned.length})`} description="Assigned assetiig Inventory Head ruu huleelgen uguud, holder neriig hasna." items={assigned} assetState={assetState} actionLabel="Receive to Inventory Head" onAction={receiveToInventoryHead} />
+          )}
         </div>
-      </Card>
+      </section>
     </WorkspaceShell>
+  );
+}
+
+function AssetPanel(props: {
+  title: string;
+  description: string;
+  items: StorageAssetDto[];
+  assetState: Record<string, AssetState>;
+  actionLabel: string;
+  onAction: (asset: StorageAssetDto) => void;
+  controls?: ReactNode;
+}) {
+  return (
+    <section className="rounded-[16px] border border-[#e2e8f0] bg-[#fbfdff]">
+      <div className="border-b border-[#edf2f7] px-4 py-3">
+        <p className="text-[15px] font-semibold text-[#0f172a]">{props.title}</p>
+        <p className="mt-1 text-[12px] text-[#64748b]">{props.description}</p>
+      </div>
+      {props.controls}
+      <div className="space-y-2 p-3">
+        {props.items.length === 0 ? <EmptyState title="No items" description="End list empty baina." /> : props.items.map((asset) => <AssetRow key={asset.id} asset={asset} state={props.assetState[asset.id]} actionLabel={props.actionLabel} onAction={props.onAction} />)}
+      </div>
+    </section>
+  );
+}
+
+function AssetRow(props: { asset: StorageAssetDto; state?: AssetState; actionLabel: string; onAction: (asset: StorageAssetDto) => void }) {
+  const good = props.asset.conditionStatus.toLowerCase() === "good";
+  const history = props.state?.history.at(-1) ?? "Storage / Intake";
+  return (
+    <div className="rounded-[14px] border border-[#e5ebf2] bg-white px-3 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold text-[#0f172a]">{props.asset.assetName}</p>
+          <p className="mt-1 text-[12px] text-[#64748b]">{props.asset.assetCode} | {props.asset.serialNumber ?? "No serial"} | {formatDisplayDate(props.asset.receivedAt)}</p>
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[#475569]">
+            <span className={`rounded-full px-2 py-1 ${good ? "bg-[#e8f7ee] text-[#166534]" : "bg-[#fef3c7] text-[#92400e]"}`}>{good ? "Good" : "Damaged"}</span>
+            <span className="rounded-full bg-[#eef2f7] px-2 py-1">{props.asset.storageName}</span>
+            <span className="rounded-full bg-[#eef2f7] px-2 py-1">{props.state?.holder ? `${props.state.holder} | ${props.state.role}` : "Available in storage"}</span>
+          </div>
+          <p className="mt-2 text-[12px] text-[#475569]">History: {history}</p>
+        </div>
+        <ActionButton variant={props.actionLabel === "Assign" ? "green" : "light"} onClick={() => props.onAction(props.asset)}>{props.actionLabel}</ActionButton>
+      </div>
+    </div>
   );
 }

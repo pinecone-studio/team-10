@@ -12,7 +12,6 @@ import { parseIntegerId } from "./reference-resolvers.ts";
 
 type ConditionStatus = (typeof conditionStatusValues)[number];
 type AssetStatus = (typeof assetStatusValues)[number];
-
 type AssetAuditRow = {
   id: number;
   createdAt: string;

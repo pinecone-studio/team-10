@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 type JwtPayload = Record<string, unknown> & {
   exp?: number;
   iat?: number;
@@ -90,4 +92,3 @@ export async function verifySignedJwt<TPayload extends JwtPayload>(
 
   return payload;
 }
-import { timingSafeEqual } from "node:crypto";

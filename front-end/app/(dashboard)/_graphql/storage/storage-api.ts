@@ -294,7 +294,6 @@ export async function fetchStorageAssetDetailRequest(input: {
         ? error
         : new Error("Failed to load storage asset detail.");
     }
-
     return findLocalStorageAssetDetail({
       id: normalizedId,
       qrCode: normalizedQrCode,
