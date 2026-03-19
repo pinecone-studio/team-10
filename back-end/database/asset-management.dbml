@@ -7,6 +7,7 @@ Project assetManagementSystem {
   Default seeded departments in SQL:
   IT Office, Finance Office, Human Resources, Operations, Procurement, Administration,
   Facilities, Legal, Sales, Marketing, Customer Service, Logistics, Engineering, Executive Office.
+  Order approvals now use a Finance-only review flow.
   '''
 }
 
@@ -39,7 +40,6 @@ Enum approvalScopeEnum {
 }
 
 Enum approvalQueueEnum {
-  anyHigherUps
   finance
 }
 
@@ -69,8 +69,6 @@ Enum currencyCodeEnum {
 }
 
 Enum orderStatusEnum {
-  pendingHigherUpApproval
-  rejectedByHigherUp
   pendingFinanceApproval
   rejectedByFinance
   financeApproved
@@ -236,11 +234,11 @@ Table orders {
   departmentId integer
   whyOrdered text [not null]
   status orderStatusEnum [not null]
-  approvalTarget approvalQueueEnum [not null, default: 'anyHigherUps']
+  approvalTarget approvalQueueEnum [not null, default: 'finance']
   expectedArrivalAt timestamp
   totalCost real [note: 'CHECK (total_cost >= 0)']
   currencyCode currencyCodeEnum [not null, default: 'USD']
-  requestedApproverId text [note: 'UI-selected approvee identifier from the permission request step.']
+  requestedApproverId text [note: 'Finance reviewer identifier used by the current workflow.']
   requestedApproverName text
   requestedApproverRole text
   approvalMessage text

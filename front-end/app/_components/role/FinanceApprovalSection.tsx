@@ -5,11 +5,11 @@ import { ActionButton, Card, EmptyState, Stat, WorkspaceShell } from "../shared/
 
 export function FinanceApprovalSection() {
   const orders = useOrdersStore();
-  const pendingOrders = orders.filter((order) => order.status === "pending_finance" || order.status === "pending_higher_up");
+  const pendingOrders = orders.filter((order) => order.status === "pending_finance");
   const processedOrders = orders.filter((order) => order.financeReviewedAt).slice(0, 4);
 
   return (
-    <WorkspaceShell title="Finance approval" subtitle="Review orders that were already approved by Any Higher-ups." actions={<ActionButton variant="light">Download summary</ActionButton>}>
+    <WorkspaceShell title="Finance approval" subtitle="Review new order requests before they move to receiving." actions={<ActionButton variant="light">Download summary</ActionButton>}>
       <Card title="Approval queue" trailing={<span className="text-[11px] text-[#8fa0ba]">{pendingOrders.length} pending</span>}>
         <div className="space-y-[12px]">
           {pendingOrders.length > 0 ? pendingOrders.map((order) => (

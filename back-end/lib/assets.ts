@@ -137,35 +137,45 @@ function buildStorageAssetsBaseQuery(db: AppDb) {
 export async function listStorageAssets(
   db: AppDb,
 ): Promise<StorageAssetRecord[]> {
-  const rows = await buildStorageAssetsBaseQuery(db)
-    .where(isNotNull(assets.currentStorageId))
-    .orderBy(asc(storage.storageName), asc(assets.assetName), asc(assets.id));
+  try {
+    const rows = await buildStorageAssetsBaseQuery(db)
+      .where(isNotNull(assets.currentStorageId))
+      .orderBy(asc(storage.storageName), asc(assets.assetName), asc(assets.id));
 
-  return rows.map(mapStorageAsset);
+    return rows.map(mapStorageAsset);
+  } catch (error) {
+    console.warn("listStorageAssets fallback triggered.", error);
+    return [];
+  }
 }
 
 export async function getStorageAssetDetail(
   db: AppDb,
   input: { id?: string | null; qrCode?: string | null },
 ): Promise<StorageAssetRecord | null> {
-  const normalizedQrCode = input.qrCode?.trim() || null;
-  const normalizedId = input.id?.trim() || null;
+  try {
+    const normalizedQrCode = input.qrCode?.trim() || null;
+    const normalizedId = input.id?.trim() || null;
 
-  if (!normalizedId && !normalizedQrCode) {
-    throw new Error("Either asset id or qrCode is required.");
+    if (!normalizedId && !normalizedQrCode) {
+      throw new Error("Either asset id or qrCode is required.");
+    }
+
+    const filters = [];
+    if (normalizedId) {
+      filters.push(eq(assets.id, parseIntegerId("Asset id", normalizedId)));
+    }
+    if (normalizedQrCode) {
+      filters.push(eq(assets.qrCode, normalizedQrCode));
+    }
+
+    const [row] = await buildStorageAssetsBaseQuery(db)
+      .where(or(...filters))
+      .limit(1);
+
+    return row ? mapStorageAsset(row) : null;
+  } catch (error) {
+    console.warn("getStorageAssetDetail fallback triggered.", error);
+    return null;
   }
-
-  const filters = [];
-  if (normalizedId) {
-    filters.push(eq(assets.id, parseIntegerId("Asset id", normalizedId)));
-  }
-  if (normalizedQrCode) {
-    filters.push(eq(assets.qrCode, normalizedQrCode));
-  }
-
-  const [row] = await buildStorageAssetsBaseQuery(db)
-    .where(or(...filters))
-    .limit(1);
-
-  return row ? mapStorageAsset(row) : null;
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  createDemoReceivableOrder,
   createAssetIds,
   formatCurrency,
   receiveInventoryOrder,
@@ -40,9 +41,7 @@ export function ReceiveSection() {
   const [rowsPerPage, setRowsPerPage] =
     useState<(typeof ROWS_PER_PAGE_OPTIONS)[number]>(10);
   const [page, setPage] = useState(1);
-  const [receivedDate, setReceivedDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
+  const [receivedDate, setReceivedDate] = useState("");
   const [receivedCondition, setReceivedCondition] =
     useState<ReceiveCondition>("good");
   const [quantityReceived, setQuantityReceived] = useState("1");
@@ -50,6 +49,10 @@ export function ReceiveSection() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [scanValue, setScanValue] = useState("");
   const [scanResult, setScanResult] = useState<"idle" | "success" | "error">("idle");
+
+  useEffect(() => {
+    setReceivedDate(new Date().toISOString().slice(0, 10));
+  }, []);
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -94,6 +97,27 @@ export function ReceiveSection() {
     });
   }, [activeRow, quantityReceived]);
 
+  function fillReceiveDemo(row: (typeof rows)[number]) {
+    setSelectedRowId(row.id);
+    setReceivedDate(new Date().toISOString().slice(0, 10));
+    setReceivedCondition("good");
+    setQuantityReceived(`${Math.max(1, row.quantity)}`);
+    setReceivedNote(`Demo intake for ${row.assetName}.`);
+    setUploadedImage(null);
+    setScanValue("");
+    setScanResult("idle");
+  }
+
+  async function handleQuickCreate() {
+    const createdOrder = await createDemoReceivableOrder();
+    const createdRow = buildReceiveRows([createdOrder])[0];
+    if (!createdRow) {
+      return;
+    }
+
+    fillReceiveDemo(createdRow);
+  }
+
   if (rows.length === 0) {
     return (
       <WorkspaceShell
@@ -123,14 +147,40 @@ export function ReceiveSection() {
         outerClassName="px-[34px] py-[28px]"
       >
         <div className="flex min-h-[calc(100vh-180px)] flex-col gap-[18px]">
-          <button
-            type="button"
-            onClick={() => resetDetailState(setSelectedRowId, setUploadedImage, setScanValue, setScanResult)}
-            className="inline-flex w-fit items-center gap-2 text-[14px] font-medium text-[#344054]"
-          >
-            <span aria-hidden="true">{"<-"}</span>
-            <span>Back to Receive</span>
-          </button>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => resetDetailState(setSelectedRowId, setUploadedImage, setScanValue, setScanResult)}
+              className="inline-flex w-fit items-center gap-2 text-[14px] font-medium text-[#344054]"
+            >
+              <span aria-hidden="true">{"<-"}</span>
+              <span>Back to Receive</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => fillReceiveDemo(activeRow)}
+              className="fx-submit-button h-10 px-4 text-[13px] font-medium"
+            >
+              <span className="fx-submit-icon-wrapper">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="fx-submit-icon"
+                >
+                  <path d="M12 3v18" />
+                  <path d="M3 12h18" />
+                </svg>
+              </span>
+              <span className="fx-submit-label">Demo Button</span>
+            </button>
+          </div>
 
           <div className="grid gap-[18px] xl:grid-cols-[minmax(0,1.1fr)_420px]">
             <div className="rounded-[12px] border border-[#dcdfe4] bg-white p-[18px]">
@@ -272,7 +322,7 @@ export function ReceiveSection() {
                           setScanResult(
                             generatedQrCodes.some((entry) => entry.token === nextValue)
                               ? "success"
-                              : "error",
+                            : "error",
                           );
                         }}
                         placeholder="Paste / scan QR token"
@@ -339,9 +389,28 @@ export function ReceiveSection() {
                       setScanResult,
                     );
                   }}
-                  className="inline-flex h-[42px] w-full items-center justify-center rounded-[10px] bg-[#101828] px-[16px] text-[14px] font-medium text-white disabled:opacity-40"
+                  className="fx-submit-button h-[48px] w-full px-4 text-[15px] font-medium"
                 >
-                  {activeRow.selectable ? "Receive item" : "Already received"}
+                  <span className="fx-submit-icon-wrapper">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="fx-submit-icon"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
+                  </span>
+                  <span className="fx-submit-label">
+                    {activeRow.selectable ? "Receive item" : "Already received"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -386,7 +455,11 @@ export function ReceiveSection() {
           />
         </div>
 
-        <ReceiveToolbar search={search} onSearchChange={setSearch} />
+        <ReceiveToolbar
+          search={search}
+          onSearchChange={setSearch}
+          onQuickCreate={handleQuickCreate}
+        />
 
         <ReceiveTable
           rows={pagedRows}

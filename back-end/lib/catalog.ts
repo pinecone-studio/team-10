@@ -552,97 +552,119 @@ function normalizeImageInputs(inputs?: CatalogImageInput[] | null) {
 export async function listCatalogCategories(
   db: AppDb,
 ): Promise<CatalogCategoryRecord[]> {
-  const rows = await db
-    .select(categorySelection)
-    .from(catalogCategories)
-    .orderBy(asc(catalogCategories.displayName));
+  try {
+    const rows = await db
+      .select(categorySelection)
+      .from(catalogCategories)
+      .orderBy(asc(catalogCategories.displayName));
 
-  return rows.map(mapCategory);
+    return rows.map(mapCategory);
+  } catch (error) {
+    console.warn("listCatalogCategories fallback triggered.", error);
+    return [];
+  }
 }
 
 export async function listCatalogItemTypes(
   db: AppDb,
   input: ListCatalogItemTypesInput = {},
 ): Promise<CatalogItemTypeRecord[]> {
-  const query = db
-    .select(itemTypeSelection)
-    .from(catalogItemTypes)
-    .orderBy(asc(catalogItemTypes.displayName));
+  try {
+    const query = db
+      .select(itemTypeSelection)
+      .from(catalogItemTypes)
+      .orderBy(asc(catalogItemTypes.displayName));
 
-  const rows = input.categoryId
-    ? await query.where(
-        eq(
-          catalogItemTypes.categoryId,
-          parseIntegerId("categoryId", input.categoryId),
-        ),
-      )
-    : await query;
+    const rows = input.categoryId
+      ? await query.where(
+          eq(
+            catalogItemTypes.categoryId,
+            parseIntegerId("categoryId", input.categoryId),
+          ),
+        )
+      : await query;
 
-  return rows.map(mapItemType);
+    return rows.map(mapItemType);
+  } catch (error) {
+    console.warn("listCatalogItemTypes fallback triggered.", error);
+    return [];
+  }
 }
 
 export async function listCatalogProducts(
   db: AppDb,
   input: ListCatalogProductsInput = {},
 ): Promise<CatalogProductRecord[]> {
-  const categoryId = input.categoryId
-    ? parseIntegerId("categoryId", input.categoryId)
-    : null;
-  const itemTypeId = input.itemTypeId
-    ? parseIntegerId("itemTypeId", input.itemTypeId)
-    : null;
-  const status = input.status ? parseCatalogStatus(input.status) : null;
+  try {
+    const categoryId = input.categoryId
+      ? parseIntegerId("categoryId", input.categoryId)
+      : null;
+    const itemTypeId = input.itemTypeId
+      ? parseIntegerId("itemTypeId", input.itemTypeId)
+      : null;
+    const status = input.status ? parseCatalogStatus(input.status) : null;
 
-  const filters: ReturnType<typeof eq>[] = [];
-  if (categoryId !== null) {
-    filters.push(eq(catalogItemTypes.categoryId, categoryId));
+    const filters: ReturnType<typeof eq>[] = [];
+    if (categoryId !== null) {
+      filters.push(eq(catalogItemTypes.categoryId, categoryId));
+    }
+    if (itemTypeId !== null) {
+      filters.push(eq(catalogProducts.itemTypeId, itemTypeId));
+    }
+    if (status !== null) {
+      filters.push(eq(catalogProducts.status, status));
+    }
+
+    const joinedQuery = db
+      .select(productSelection)
+      .from(catalogProducts)
+      .innerJoin(
+        catalogItemTypes,
+        eq(catalogProducts.itemTypeId, catalogItemTypes.id),
+      );
+
+    const rows =
+      filters.length > 0
+        ? await joinedQuery
+            .where(filters.length === 1 ? filters[0] : and(...filters))
+            .orderBy(asc(catalogProducts.displayName))
+        : await db
+            .select(productSelection)
+            .from(catalogProducts)
+            .orderBy(asc(catalogProducts.displayName));
+
+    const productIds = rows.map((row) => row.id);
+    const relations = await listProductRelations(db, productIds);
+
+    return assembleProducts(rows, relations.images, relations.attributes);
+  } catch (error) {
+    console.warn("listCatalogProducts fallback triggered.", error);
+    return [];
   }
-  if (itemTypeId !== null) {
-    filters.push(eq(catalogProducts.itemTypeId, itemTypeId));
-  }
-  if (status !== null) {
-    filters.push(eq(catalogProducts.status, status));
-  }
-
-  const joinedQuery = db
-    .select(productSelection)
-    .from(catalogProducts)
-    .innerJoin(
-      catalogItemTypes,
-      eq(catalogProducts.itemTypeId, catalogItemTypes.id),
-    );
-
-  const rows =
-    filters.length > 0
-      ? await joinedQuery
-          .where(filters.length === 1 ? filters[0] : and(...filters))
-          .orderBy(asc(catalogProducts.displayName))
-      : await db
-          .select(productSelection)
-          .from(catalogProducts)
-          .orderBy(asc(catalogProducts.displayName));
-
-  const productIds = rows.map((row) => row.id);
-  const relations = await listProductRelations(db, productIds);
-
-  return assembleProducts(rows, relations.images, relations.attributes);
 }
 
 export async function getCatalogProductById(
   db: AppDb,
   id: string,
 ): Promise<CatalogProductRecord | null> {
-  const numericId = parseIntegerId("Catalog product id", id);
-  const [row] = await db
-    .select(productSelection)
-    .from(catalogProducts)
-    .where(eq(catalogProducts.id, numericId))
-    .limit(1);
+  try {
+    const numericId = parseIntegerId("Catalog product id", id);
+    const [row] = await db
+      .select(productSelection)
+      .from(catalogProducts)
+      .where(eq(catalogProducts.id, numericId))
+      .limit(1);
 
-  if (!row) return null;
+    if (!row) return null;
 
-  const relations = await listProductRelations(db, [row.id]);
-  return assembleProducts([row], relations.images, relations.attributes)[0] ?? null;
+    const relations = await listProductRelations(db, [row.id]);
+    return (
+      assembleProducts([row], relations.images, relations.attributes)[0] ?? null
+    );
+  } catch (error) {
+    console.warn(`getCatalogProductById fallback triggered for ${id}.`, error);
+    return null;
+  }
 }
 
 export async function createCatalogCategory(

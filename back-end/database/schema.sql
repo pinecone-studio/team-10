@@ -108,7 +108,6 @@ CREATE TABLE IF NOT EXISTS order_approvers (
   user_id INTEGER NOT NULL,
   approval_queue TEXT NOT NULL CHECK (
     approval_queue IN (
-      'anyHigherUps',
       'finance'
     )
   ),
@@ -148,8 +147,6 @@ CREATE TABLE IF NOT EXISTS orders (
   why_ordered TEXT NOT NULL,
   status TEXT NOT NULL CHECK (
     status IN (
-      'pendingHigherUpApproval',
-      'rejectedByHigherUp',
       'pendingFinanceApproval',
       'rejectedByFinance',
       'financeApproved',
@@ -159,9 +156,8 @@ CREATE TABLE IF NOT EXISTS orders (
       'closed'
     )
   ),
-  approval_target TEXT NOT NULL DEFAULT 'anyHigherUps' CHECK (
+  approval_target TEXT NOT NULL DEFAULT 'finance' CHECK (
     approval_target IN (
-      'anyHigherUps',
       'finance'
     )
   ),
@@ -210,7 +206,6 @@ CREATE TABLE IF NOT EXISTS order_approval_steps (
   step_order INTEGER NOT NULL CHECK (step_order > 0),
   approval_queue TEXT NOT NULL CHECK (
     approval_queue IN (
-      'anyHigherUps',
       'finance'
     )
   ),

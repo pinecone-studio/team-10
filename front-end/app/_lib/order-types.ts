@@ -54,15 +54,13 @@ export type OrderItem = {
 };
 
 export type OrderStatus =
-  | "pending_higher_up"
-  | "rejected_higher_up"
   | "pending_finance"
   | "approved_finance"
   | "rejected_finance"
   | "received_inventory"
   | "assigned_hr";
 
-export type ApprovalTarget = "any_higher_ups" | "finance";
+export type ApprovalTarget = "finance";
 
 export type ReceivedCondition = "complete" | "issue";
 

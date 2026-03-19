@@ -62,9 +62,47 @@ export function buildQrToken(orderId: string, itemCode: string, serialNumber: st
 }
 
 export function buildReceiveRows(orders: StoredOrder[]): ReceiveRow[] {
+  function parseRequestNumber(requestNumber: string) {
+    const match = /^REQ-(\d{8})-(\d+)$/.exec(requestNumber.trim());
+    if (!match) {
+      return null;
+    }
+
+    return {
+      dateNumber: Number(match[1]),
+      sequenceNumber: Number(match[2]),
+    };
+  }
+
+  const sortedOrders = [...orders].sort((left, right) => {
+    const leftRequestNumber = parseRequestNumber(left.requestNumber);
+    const rightRequestNumber = parseRequestNumber(right.requestNumber);
+
+    if (leftRequestNumber && rightRequestNumber) {
+      const requestDateCompare =
+        rightRequestNumber.dateNumber - leftRequestNumber.dateNumber;
+      if (requestDateCompare !== 0) {
+        return requestDateCompare;
+      }
+
+      const requestSequenceCompare =
+        rightRequestNumber.sequenceNumber - leftRequestNumber.sequenceNumber;
+      if (requestSequenceCompare !== 0) {
+        return requestSequenceCompare;
+      }
+    }
+
+    const updatedAtCompare = right.updatedAt.localeCompare(left.updatedAt);
+    if (updatedAtCompare !== 0) {
+      return updatedAtCompare;
+    }
+
+    return right.createdAt.localeCompare(left.createdAt);
+  });
+
   let currentIndex = 0;
 
-  return orders.flatMap((order) =>
+  return sortedOrders.flatMap((order) =>
     order.items.map((item, itemIndex) => {
       currentIndex += 1;
 

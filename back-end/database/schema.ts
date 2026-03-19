@@ -38,7 +38,6 @@ export const approvalScopeValues = [
 ] as const;
 
 export const approvalQueueValues = [
-  "anyHigherUps",
   "finance",
 ] as const;
 
@@ -68,8 +67,6 @@ export const currencyCodeValues = [
 ] as const;
 
 export const orderStatusValues = [
-  "pendingHigherUpApproval",
-  "rejectedByHigherUp",
   "pendingFinanceApproval",
   "rejectedByFinance",
   "financeApproved",
@@ -268,7 +265,7 @@ export const orders = sqliteTable(
     status: text("status", { enum: orderStatusValues }).notNull(),
     approvalTarget: text("approval_target", { enum: approvalQueueValues })
       .notNull()
-      .default("anyHigherUps"),
+      .default("finance"),
     expectedArrivalAt: text("expected_arrival_at"),
     totalCost: real("total_cost"),
     currencyCode: text("currency_code", { enum: currencyCodeValues })
