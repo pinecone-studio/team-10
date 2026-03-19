@@ -10,7 +10,7 @@ function normalizeGraphqlUrl(value: string) {
   return new URL("/api/graphql", value).toString();
 }
 
-function buildCandidateUrls(request: NextRequest) {
+function buildCandidateUrls() {
   const explicitUrls = [
     process.env.BACKEND_GRAPHQL_URL,
     process.env.NEXT_PUBLIC_GRAPHQL_URL,
@@ -18,33 +18,11 @@ function buildCandidateUrls(request: NextRequest) {
     .filter((value): value is string => Boolean(value?.trim()))
     .map((value) => normalizeGraphqlUrl(value.trim()));
 
-  const requestHost = request.headers.get("host");
-  const isLocalRequest =
-    requestHost?.includes("localhost") || requestHost?.includes("127.0.0.1");
+  if (explicitUrls.length > 0) {
+    return [...new Set(explicitUrls)];
+  }
 
-  const inferredUrls = (() => {
-    if (!isLocalRequest) {
-      return [DEFAULT_BACKEND_GRAPHQL_URL];
-    }
-
-    const requestUrl = new URL(request.url);
-    const frontendPort = Number(requestUrl.port || (requestUrl.protocol === "https:" ? 443 : 80));
-    const localPorts = [
-      3001,
-      3000,
-      frontendPort + 1,
-      frontendPort - 1,
-      3002,
-      3010,
-      4000,
-    ].filter((port, index, ports) => port > 0 && ports.indexOf(port) === index);
-
-    return localPorts.map(
-      (port) => `${requestUrl.protocol}//${requestUrl.hostname}:${port}/api/graphql`,
-    );
-  })();
-
-  return [...new Set([...explicitUrls, ...inferredUrls, DEFAULT_BACKEND_GRAPHQL_URL])];
+  return [DEFAULT_BACKEND_GRAPHQL_URL];
 }
 
 function defaultPort(protocol: string) {
@@ -70,7 +48,7 @@ function isSelfProxyTarget(request: NextRequest, candidateUrl: string) {
 
 export async function POST(request: NextRequest) {
   const requestBody = await request.text();
-  const candidateUrls = buildCandidateUrls(request);
+  const candidateUrls = buildCandidateUrls();
   const failures: string[] = [];
 
   for (const candidateUrl of candidateUrls) {

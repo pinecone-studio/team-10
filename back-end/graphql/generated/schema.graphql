@@ -16,6 +16,12 @@ type AssetLabelPdf {
   fileName: String!
 }
 
+type AssignmentAcknowledgmentPdf {
+  base64: String!
+  contentType: String!
+  fileName: String!
+}
+
 type AssignmentAcknowledgmentPreview {
   acknowledgmentId: ID!
   assetCode: String!
@@ -250,6 +256,7 @@ type Query {
   assetDistributions(includeReturned: Boolean): [DistributionRecord!]!
   assetLabelPdf(assetCodes: [String!]!): AssetLabelPdf!
   assignmentAcknowledgment(token: String!): AssignmentAcknowledgmentPreview!
+  assignmentAcknowledgmentPdf(token: String!): AssignmentAcknowledgmentPdf!
   catalogCategories: [CatalogCategory!]!
   catalogItemTypes(categoryId: ID): [CatalogItemType!]!
   catalogProduct(id: ID!): CatalogProduct
@@ -261,6 +268,7 @@ type Query {
   receive(id: ID!): Receive
   receives: [Receive!]!
   storageAssets: [StorageAsset!]!
+  storageLocations: [String!]!
 }
 
 type Receive {
@@ -299,6 +307,8 @@ type ReceivedAsset {
 type SignAssignmentAcknowledgmentResult {
   acknowledgmentId: ID!
   distribution: DistributionRecord!
+  pdfBase64: String!
+  pdfContentType: String!
   pdfFileName: String
   pdfObjectKey: String
   signedAt: String
@@ -310,6 +320,7 @@ type StorageAsset {
   assetImageDataUrl: String
   assetName: String!
   assetStatus: String!
+  assignedEmployeeName: String
   category: String!
   conditionStatus: String!
   createdAt: String!

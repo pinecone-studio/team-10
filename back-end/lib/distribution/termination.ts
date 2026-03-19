@@ -121,7 +121,6 @@ export async function terminateEmployeeAssets(
       .update(assets)
       .set({
         assetStatus: "pendingRetrieval",
-        currentStorageId: null,
         updatedAt: now,
       })
       .where(inArray(assets.id, assetIds))

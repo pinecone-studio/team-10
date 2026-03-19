@@ -142,7 +142,6 @@ export async function assignAssetDistribution(
       .update(assets)
       .set({
         assetStatus: "pendingAssignment",
-        currentStorageId: null,
         updatedAt: now,
       })
       .where(eq(assets.id, assetId))

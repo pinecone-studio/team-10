@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   downloadAssetLabelsPdfRequest,
   fetchStorageAssetsRequest,
+  fetchStorageLocationsRequest,
   type StorageAssetDto,
 } from "@/app/(dashboard)/_graphql/storage/storage-api";
 import { downloadBase64File } from "@/app/_lib/download-base64";
@@ -33,6 +34,7 @@ const STATUS_FILTERS = [
   "All status",
   "Available",
   "Assigned",
+  "Pending Assignment",
   "In Repair",
   "Pending Disposal",
   "Pending Retrieval",
@@ -68,6 +70,7 @@ type CensusSession = {
 export function InventoryStorageSection() {
   const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
   const [assets, setAssets] = useState<StorageAssetDto[]>([]);
+  const [storageLocations, setStorageLocations] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [selectedCategory, setSelectedCategory] =
     useState<(typeof CATEGORIES)[number]>("All Categories");
@@ -105,9 +108,13 @@ export function InventoryStorageSection() {
       setErrorMessage(null);
 
       try {
-        const nextAssets = await fetchStorageAssetsRequest();
+        const [nextAssets, nextStorageLocations] = await Promise.all([
+          fetchStorageAssetsRequest(),
+          fetchStorageLocationsRequest(),
+        ]);
         if (!isMounted) return;
         setAssets(nextAssets);
+        setStorageLocations(nextStorageLocations);
         setSessionHistory(createInitialCensusHistory(nextAssets));
       } catch (error) {
         if (!isMounted) return;
@@ -144,6 +151,7 @@ export function InventoryStorageSection() {
         mapCategory(asset.category),
         asset.itemType,
         asset.storageName,
+        asset.assignedEmployeeName ?? "",
         asset.serialNumber ?? "",
         asset.qrCode,
         humanizeConditionValue(asset.conditionStatus),
@@ -182,8 +190,16 @@ export function InventoryStorageSection() {
   }, [searchedAssets, selectedCategory]);
 
   const locationOptions = useMemo(
-    () => ["All Locations", ...Array.from(new Set(searchedAssets.map((asset) => asset.storageName)))],
-    [searchedAssets],
+    () => [
+      "All Locations",
+      ...Array.from(
+        new Set([
+          ...storageLocations,
+          ...searchedAssets.map((asset) => asset.storageName).filter(Boolean),
+        ]),
+      ).sort((left, right) => left.localeCompare(right)),
+    ],
+    [searchedAssets, storageLocations],
   );
 
   const visibleAssets = useMemo(() => {
@@ -734,7 +750,7 @@ export function InventoryStorageSection() {
                           ))}
                         </TableHeaderTrigger>
                       </th>
-                      <th className="w-[16%] px-2 py-3 text-left align-middle">
+                      <th className="w-[14%] px-2 py-3 text-left align-middle">
                         <TableHeaderTrigger
                           label="Location"
                           open={openHeaderMenu === "location"}
@@ -756,6 +772,7 @@ export function InventoryStorageSection() {
                           ))}
                         </TableHeaderTrigger>
                       </th>
+                      <th className="w-[12%] px-2 py-3 text-left align-middle">Employee</th>
                       <th className="w-[12%] px-2 py-3 text-left align-middle">
                         <TableHeaderTrigger
                           label="Condition"
@@ -873,13 +890,23 @@ export function InventoryStorageSection() {
                           </div>
                         </td>
                         <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
+                          <div className="leading-5">
+                            <span className="block break-words">
+                              {asset.assignedEmployeeName ?? "-"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
                           <div className="flex items-center">
                             <StorageConditionBadge value={asset.conditionStatus} />
                           </div>
                         </td>
                         <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <div className="flex items-center">
-                            <StorageStatusBadge value={normalizeStorageStatus(asset.assetStatus)} />
+                          <div className="flex w-[170px] items-center">
+                            <StorageStatusBadge
+                              value={normalizeStorageStatus(asset.assetStatus)}
+                              fixedWidth
+                            />
                           </div>
                         </td>
                         <td className="border-t border-[#edf2f7] px-2 py-3 text-right align-middle">
@@ -1159,7 +1186,7 @@ function parseCurrency(value: string) {
 }
 
 function normalizeStorageStatus(value: string) {
-  if (value === "inStorage" || value === "received" || value === "pendingAssignment") {
+  if (value === "inStorage" || value === "received") {
     return "available";
   }
 
@@ -1178,6 +1205,7 @@ function humanizeConditionValue(value: string) {
 function humanizeStatusValue(value: string) {
   if (value === "available") return "Available";
   if (value === "assigned") return "Assigned";
+  if (value === "pendingAssignment") return "Pending Assignment";
   if (value === "inRepair") return "In Repair";
   if (value === "pendingDisposal") return "Pending Disposal";
   if (value === "pendingRetrieval") return "Pending Retrieval";
@@ -1197,6 +1225,7 @@ function conditionFilterToValue(value: (typeof CONDITION_FILTERS)[number]) {
 function statusFilterToValue(value: (typeof STATUS_FILTERS)[number]) {
   if (value === "Available") return "available";
   if (value === "Assigned") return "assigned";
+  if (value === "Pending Assignment") return "pendingAssignment";
   if (value === "In Repair") return "inRepair";
   if (value === "Pending Disposal") return "pendingDisposal";
   if (value === "Pending Retrieval") return "pendingRetrieval";
