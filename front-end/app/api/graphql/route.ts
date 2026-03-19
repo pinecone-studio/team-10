@@ -23,6 +23,7 @@ function normalizeGraphqlUrl(value: string, request: NextRequest) {
 function buildCandidateUrls(request: NextRequest) {
   const explicitUrls = [
     process.env.BACKEND_GRAPHQL_URL,
+    process.env.NEXT_PUBLIC_GRAPHQL_URL,
     process.env.BACKEND_URL,
     process.env.NEXT_PUBLIC_BACKEND_URL,
     process.env.GRAPHQL_PROXY_BACKEND_URL,
