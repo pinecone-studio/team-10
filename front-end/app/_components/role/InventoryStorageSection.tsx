@@ -383,7 +383,8 @@ export function InventoryStorageSection() {
       title="Storage Assets"
       subtitle="Manage your inventory stock levels"
       backgroundClassName="bg-[linear-gradient(180deg,#dcebfb_0%,#eff7ff_58%,#ffffff_100%)]"
-      contentWidthClassName="max-w-[1320px]"
+      contentWidthClassName="max-w-[1400px]"
+      outerClassName="px-[18px] py-[20px]"
     >
       {errorMessage ? (
         <EmptyState title="Storage data unavailable" description={errorMessage} />
@@ -413,9 +414,9 @@ export function InventoryStorageSection() {
         />
       ) : (
         <div className="overflow-hidden rounded-[20px] border border-[#d7e5f3] bg-white shadow-[0_18px_42px_rgba(148,163,184,0.14)]">
-          <div className="bg-[linear-gradient(180deg,#cfe3fb_0%,#d9ebff_26%,#eef6ff_68%,#ffffff_100%)] px-6 pb-5 pt-6">
-            <div className="flex flex-wrap gap-3">
-              <div className="relative min-w-[280px] flex-1">
+          <div className="bg-[linear-gradient(180deg,#cfe3fb_0%,#d9ebff_26%,#eef6ff_68%,#ffffff_100%)] px-5 pb-3 pt-4">
+            <div className="flex flex-wrap gap-2.5">
+              <div className="relative min-w-[240px] flex-[1.2]">
                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#8fa0ba]">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <circle cx="7" cy="7" r="4.8" stroke="currentColor" strokeWidth="1.4" />
@@ -426,7 +427,7 @@ export function InventoryStorageSection() {
                   value={searchValue}
                   onChange={(event) => setSearchValue(event.target.value)}
                   placeholder="Search by QR, asset, category, type, requester, or department..."
-                  className="h-11 w-full rounded-[14px] border border-[#dbe8f5] bg-white pl-11 pr-4 text-[14px] text-[#334155] outline-none shadow-[0_4px_12px_rgba(148,163,184,0.08)] placeholder:text-[#94a3b8]"
+                  className="h-10 w-full rounded-[12px] border border-[#dbe8f5] bg-white pl-11 pr-4 text-[13px] text-[#334155] outline-none shadow-[0_4px_12px_rgba(148,163,184,0.08)] placeholder:text-[#94a3b8]"
                 />
               </div>
               {ACTIONS.map((action) => (
@@ -434,7 +435,7 @@ export function InventoryStorageSection() {
                   key={action}
                   type="button"
                   onClick={() => handleActionClick(action)}
-                  className="fx-submit-button h-10 px-4 text-[12px] font-medium"
+                  className="fx-submit-button h-10 px-3.5 text-[12px] font-medium"
                 >
                   <span className="fx-submit-icon-wrapper">
                     <svg
@@ -460,7 +461,7 @@ export function InventoryStorageSection() {
                 type="button"
                 onClick={() => void handleDownloadLabels()}
                 disabled={selectedIds.length === 0 || isDownloadingPdf}
-                className="fx-submit-button h-10 px-4 text-[12px] font-medium disabled:opacity-60"
+                className="fx-submit-button h-10 px-3.5 text-[12px] font-medium disabled:opacity-60"
               >
                 <span className="fx-submit-icon-wrapper">
                   <svg
@@ -485,14 +486,14 @@ export function InventoryStorageSection() {
                 </span>
               </button>
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="mt-3 flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
                   setOpenHeaderMenu((current) => (current === "type" ? null : "type"));
                 }}
-                className="relative h-10 min-w-[180px] rounded-[10px] border border-[#dbe8f5] bg-white px-3 text-left text-[13px] text-[#334155] shadow-[0_4px_12px_rgba(148,163,184,0.08)]"
+                className="relative h-9 min-w-[168px] rounded-[10px] border border-[#dbe8f5] bg-white px-3 text-left text-[12px] text-[#334155] shadow-[0_4px_12px_rgba(148,163,184,0.08)]"
               >
                 <span>{selectedType}</span>
                 <HeaderMenuChevron />
@@ -518,7 +519,7 @@ export function InventoryStorageSection() {
                   event.stopPropagation();
                   setOpenHeaderMenu((current) => (current === "sort" ? null : "sort"));
                 }}
-                className="relative h-10 min-w-[180px] rounded-[10px] border border-[#dbe8f5] bg-white px-3 text-left text-[13px] text-[#334155] shadow-[0_4px_12px_rgba(148,163,184,0.08)]"
+                className="relative h-9 min-w-[168px] rounded-[10px] border border-[#dbe8f5] bg-white px-3 text-left text-[12px] text-[#334155] shadow-[0_4px_12px_rgba(148,163,184,0.08)]"
               >
                 <span>
                   {sortMode === "recent"
@@ -578,7 +579,7 @@ export function InventoryStorageSection() {
                 ) : null}
               </button>
             </div>
-            <div className="mt-5 flex flex-wrap gap-2">
+            <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-7">
               {categoryCounts.map(({ category, count }) => (
                 <button
                   key={category}
@@ -587,7 +588,7 @@ export function InventoryStorageSection() {
                     setSelectedCategory(category);
                     setSelectedType("All Types");
                   }}
-                  className={`min-w-[148px] rounded-[14px] border px-3 py-3 text-left shadow-[0_4px_12px_rgba(148,163,184,0.10)] ${
+                  className={`min-w-0 rounded-[12px] border px-3 py-2.5 text-left shadow-[0_4px_12px_rgba(148,163,184,0.10)] ${
                     selectedCategory === category
                       ? "border-[#93c5fd] bg-[linear-gradient(135deg,#eaf3ff_0%,#f9fbff_100%)]"
                       : "border-[#dbe8f5] bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_100%)]"
@@ -595,35 +596,35 @@ export function InventoryStorageSection() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-[12px] font-semibold leading-5 text-[#334155]">
+                      <p className="truncate text-[11px] font-semibold leading-4 text-[#334155]">
                         {category}
                       </p>
-                      <p className="mt-0.5 text-[10px] text-[#64748b]">
+                      <p className="mt-0.5 text-[9px] text-[#64748b]">
                         {category === "All Categories" ? "All assets" : "Filter"}
                       </p>
                     </div>
-                    <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-[rgba(37,99,235,0.12)] px-2 text-[11px] font-medium text-[#2563eb]">
+                    <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[rgba(37,99,235,0.12)] px-2 text-[10px] font-medium text-[#2563eb]">
                       {count}
                     </span>
                   </div>
                 </button>
               ))}
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {typeBreakdown.length > 0 ? (
                 typeBreakdown.map(({ type, count }) => (
                   <button
                     key={type}
                     type="button"
                     onClick={() => setSelectedType(type)}
-                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[12px] ${
+                    className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[11px] ${
                       selectedType === type
                         ? "border-[#93c5fd] bg-white text-[#1d4ed8]"
                         : "border-[#dbe3ee] bg-[#f8fbff] text-[#475569]"
                     }`}
                   >
                     <span>{type}</span>
-                    <span className="rounded-full bg-[rgba(37,99,235,0.10)] px-2 py-[1px] text-[11px] text-[#2563eb]">
+                    <span className="rounded-full bg-[rgba(37,99,235,0.10)] px-2 py-[1px] text-[10px] text-[#2563eb]">
                       {count}
                     </span>
                   </button>
@@ -634,7 +635,7 @@ export function InventoryStorageSection() {
                 </span>
               )}
             </div>
-            <div className="mt-3 flex items-center justify-between text-[12px] text-[#64748b]">
+            <div className="mt-2.5 flex items-center justify-between text-[11px] text-[#64748b]">
               <span>
                 Showing {visibleAssets.length} asset{visibleAssets.length === 1 ? "" : "s"}
               </span>
@@ -650,8 +651,8 @@ export function InventoryStorageSection() {
               </p>
             ) : null}
           </div>
-          <div className="space-y-4 px-4 pb-3">
-            <div className="overflow-x-auto rounded-[14px] border border-[#dbe7f3] bg-white shadow-[0_8px_22px_rgba(148,163,184,0.10)]">
+          <div className="space-y-3 px-4 pb-3 pt-3">
+            <div className="rounded-[14px] border border-[#dbe7f3] bg-white shadow-[0_8px_22px_rgba(148,163,184,0.10)]">
               {visibleAssets.length === 0 ? (
                 <div className="px-6 py-10 text-center">
                   <p className="text-[16px] font-semibold text-[#0f172a]">
@@ -664,10 +665,10 @@ export function InventoryStorageSection() {
                   </p>
                 </div>
               ) : (
-                <table className="min-w-[1320px] w-full table-auto border-separate border-spacing-y-0 text-[12px] text-[#334155]">
+                <table className="w-full table-fixed border-separate border-spacing-y-0 text-[11px] text-[#334155]">
                   <thead>
                     <tr className="bg-[#dfeeff] text-[12px] font-semibold text-[#334155]">
-                      <th className="w-[52px] rounded-l-[12px] px-3 py-4 text-center align-middle">
+                      <th className="w-[44px] rounded-l-[12px] px-2 py-3 text-center align-middle">
                         <StorageCheckbox
                           checked={allVisibleSelected}
                           onChange={(checked) =>
@@ -687,12 +688,12 @@ export function InventoryStorageSection() {
                           ariaLabel="Select all storage assets"
                         />
                       </th>
-                      <th className="w-[48px] px-3 py-4 text-left align-middle">No</th>
-                      <th className="w-[132px] px-3 py-4 text-left align-middle">ID</th>
-                      <th className="min-w-[220px] px-3 py-4 text-left align-middle">
+                      <th className="w-[42px] px-2 py-3 text-left align-middle">No</th>
+                      <th className="w-[108px] px-2 py-3 text-left align-middle">ID</th>
+                      <th className="w-[15%] px-2 py-3 text-left align-middle">
                         <div className="flex items-center">Asset Name</div>
                       </th>
-                      <th className="w-[110px] px-3 py-4 text-left align-middle">
+                      <th className="w-[90px] px-2 py-3 text-left align-middle">
                         <TableHeaderSortTrigger
                           label="Date"
                           direction={sortMode === "recent" ? "desc" : sortMode === "oldest" ? "asc" : null}
@@ -701,7 +702,7 @@ export function InventoryStorageSection() {
                           }
                         />
                       </th>
-                      <th className="min-w-[160px] px-3 py-4 text-left align-middle">
+                      <th className="w-[13%] px-2 py-3 text-left align-middle">
                         <TableHeaderTrigger
                           label="Category"
                           open={openHeaderMenu === "category"}
@@ -733,7 +734,7 @@ export function InventoryStorageSection() {
                           ))}
                         </TableHeaderTrigger>
                       </th>
-                      <th className="min-w-[200px] px-3 py-4 text-left align-middle">
+                      <th className="w-[16%] px-2 py-3 text-left align-middle">
                         <TableHeaderTrigger
                           label="Location"
                           open={openHeaderMenu === "location"}
@@ -755,7 +756,7 @@ export function InventoryStorageSection() {
                           ))}
                         </TableHeaderTrigger>
                       </th>
-                      <th className="min-w-[150px] px-3 py-4 text-left align-middle">
+                      <th className="w-[12%] px-2 py-3 text-left align-middle">
                         <TableHeaderTrigger
                           label="Condition"
                           open={openHeaderMenu === "condition"}
@@ -782,7 +783,7 @@ export function InventoryStorageSection() {
                           ))}
                         </TableHeaderTrigger>
                       </th>
-                      <th className="min-w-[150px] px-3 py-4 text-left align-middle">
+                      <th className="w-[12%] px-2 py-3 text-left align-middle">
                         <TableHeaderTrigger
                           label="Status"
                           open={openHeaderMenu === "status"}
@@ -809,7 +810,7 @@ export function InventoryStorageSection() {
                           ))}
                         </TableHeaderTrigger>
                       </th>
-                      <th className="w-[96px] px-3 py-4 text-right align-middle">
+                      <th className="w-[92px] px-2 py-3 text-right align-middle">
                         <div className="flex justify-end">
                           <TableHeaderSortTrigger
                             label="Unit Cost"
@@ -821,13 +822,13 @@ export function InventoryStorageSection() {
                           />
                         </div>
                       </th>
-                      <th className="w-[44px] rounded-r-[12px] px-3 py-4 text-center align-middle" />
+                      <th className="w-[38px] rounded-r-[12px] px-2 py-3 text-center align-middle" />
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedAssets.map((asset, index) => (
                       <tr key={asset.id} className="transition hover:bg-[#f8fbff]">
-                        <td className="border-t border-[#edf2f7] px-3 py-4 text-center align-middle">
+                        <td className="border-t border-[#edf2f7] px-2 py-3 text-center align-middle">
                           <div onClick={(event) => event.stopPropagation()}>
                             <StorageCheckbox
                               checked={selectedIds.includes(asset.id)}
@@ -842,54 +843,54 @@ export function InventoryStorageSection() {
                             />
                           </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
                           {(currentPageSafe - 1) * rowsPerPage + index + 1}
                         </td>
-                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle font-semibold text-[#0f172a]">
-                          <div className="whitespace-nowrap leading-6">{asset.assetCode}</div>
+                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle font-semibold text-[#0f172a]">
+                          <div className="break-words leading-5">{asset.assetCode}</div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
                           <div className="flex items-center">
                             <Link
                               href={`/assets/${asset.id}?role=${currentRole}`}
-                              className="block whitespace-nowrap font-medium leading-6 text-[#111827] hover:text-[#2563eb]"
+                              className="block break-words font-medium leading-5 text-[#111827] hover:text-[#2563eb]"
                             >
                               {asset.assetName}
                             </Link>
                           </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
-                          <div className="whitespace-nowrap leading-6">{formatDisplayDate(asset.receivedAt)}</div>
+                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
+                          <div className="leading-5">{formatDisplayDate(asset.receivedAt)}</div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
                           <div className="flex items-center">
                             <StorageCategoryBadge label={mapCategory(asset.category)} />
                           </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
-                          <div className="leading-6">
-                            <span className="block whitespace-nowrap">{asset.storageName}</span>
+                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
+                          <div className="leading-5">
+                            <span className="block break-words">{asset.storageName}</span>
                           </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
                           <div className="flex items-center">
                             <StorageConditionBadge value={asset.conditionStatus} />
                           </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
                           <div className="flex items-center">
                             <StorageStatusBadge value={normalizeStorageStatus(asset.assetStatus)} />
                           </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-3 py-4 text-right align-middle">
-                          <div className="whitespace-nowrap leading-6">
+                        <td className="border-t border-[#edf2f7] px-2 py-3 text-right align-middle">
+                          <div className="leading-5">
                             {formatCurrency(
                               asset.unitCost ?? 0,
                               parseCurrency(asset.currencyCode),
                             )}
                           </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-3 py-4 text-center align-middle">
+                        <td className="border-t border-[#edf2f7] px-2 py-3 text-center align-middle">
                           <div className="relative">
                             <button
                               type="button"

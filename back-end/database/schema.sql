@@ -618,6 +618,7 @@ CREATE TABLE IF NOT EXISTS asset_distributions (
   employee_id INTEGER NOT NULL,
   distributed_by_user_id INTEGER NOT NULL,
   distributed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  recipient_role TEXT,
   status TEXT NOT NULL CHECK (
     status IN (
       'pendingHandover',
@@ -627,6 +628,9 @@ CREATE TABLE IF NOT EXISTS asset_distributions (
     )
   ),
   returned_at TEXT,
+  usage_years TEXT,
+  return_condition TEXT,
+  return_power TEXT,
   note TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,

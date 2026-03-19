@@ -86,7 +86,36 @@ type CatalogProductImage {
   updatedAt: String!
 }
 
+type DistributionRecord {
+  assetCode: String!
+  assetId: ID!
+  assetName: String!
+  assetStatus: String!
+  assignmentRequestId: ID
+  category: String!
+  conditionStatus: String!
+  createdAt: String!
+  currentStorageId: ID
+  currentStorageName: String
+  distributedAt: String!
+  distributedByUserId: ID!
+  employeeId: ID!
+  employeeName: String!
+  id: ID!
+  itemType: String!
+  note: String
+  recipientRole: String!
+  returnCondition: String
+  returnPower: String
+  returnedAt: String
+  serialNumber: String
+  status: String!
+  updatedAt: String!
+  usageYears: String
+}
+
 type Mutation {
+  assignAssetDistribution(assetId: ID!, employeeName: String!, note: String, recipientRole: String): DistributionRecord!
   createAssetAudit(assetIds: [ID!]!, assetStatus: String, conditionStatus: String, confirmedLocation: String, note: String): [AssetAuditEntry!]!
   createCatalogCategory(displayName: String!): CatalogCategory!
   createCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String!, status: String, unit: String): CatalogProduct!
@@ -98,6 +127,8 @@ type Mutation {
   markAllNotificationsAsRead(userId: ID): Boolean!
   markNotificationAsRead(id: ID!, userId: ID): Notification
   receiveOrderItem(assetImageDataUrl: String, assetImageFileName: String, catalogId: ID, itemCode: String!, officeId: ID, orderId: ID!, orderItemId: ID, quantityReceived: Int!, receivedAt: String, receivedByUserId: ID, receivedCondition: String!, receivedNote: String, serialNumbers: [String!], storageLocation: String): ReceiveOrderItemPayload!
+  returnAssetDistribution(distributionId: ID!, note: String, returnCondition: String, returnPower: String, storageLocation: String, usageYears: String): DistributionRecord!
+  sendDistributionNotification(distributionId: ID!, message: String): Boolean!
   updateCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String, id: ID!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String, status: String, unit: String): CatalogProduct
   updateOrder(approvalMessage: String, approvalTarget: String, assignedAt: String, assignedRole: String, assignedTo: String, deliveryDate: String, department: String, departmentId: ID, financeNote: String, financeReviewedAt: String, financeReviewer: String, higherUpNote: String, higherUpReviewedAt: String, higherUpReviewer: String, id: ID!, items: [OrderItemInput!], officeId: ID, orderName: String, receivedAt: String, receivedCondition: String, receivedNote: String, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, serialNumbers: [String!], status: String, storageLocation: String, totalAmount: Float, userId: ID, whyOrdered: String): Order
   updateReceive(conditionStatus: String, id: ID!, note: String, orderId: ID, orderItemId: ID, quantityReceived: Int, receivedAt: String, receivedCondition: String, serialNumbers: [String!], storageLocation: String): Receive
@@ -188,6 +219,7 @@ input OrderItemInput {
 type Query {
   asset(id: ID, qrCode: String): StorageAsset
   assetAuditHistory(assetId: ID!): [AssetAuditEntry!]!
+  assetDistributions(includeReturned: Boolean): [DistributionRecord!]!
   assetLabelPdf(assetCodes: [String!]!): AssetLabelPdf!
   catalogCategories: [CatalogCategory!]!
   catalogItemTypes(categoryId: ID): [CatalogItemType!]!

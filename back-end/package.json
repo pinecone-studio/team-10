@@ -17,7 +17,8 @@
     "codegen": "graphql-codegen --config codegen.ts",
     "db:drizzle:generate": "drizzle-kit generate",
     "db:drizzle:push": "drizzle-kit push",
-    "db:remote:migrate": "npx wrangler d1 execute team10-backend-db --remote --file ./database/schema.sql"
+    "db:remote:migrate": "node --import dotenv/config ./scripts/apply-remote-migrations.mjs",
+    "db:remote:reset": "npx wrangler d1 execute team10-backend-db --remote --file ./database/schema.sql"
   },
   "dependencies": {
     "@apollo/server": "^5.1.0",
