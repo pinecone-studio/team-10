@@ -19,6 +19,7 @@ import {
   resolveOfficeId,
   resolveUserId,
 } from "./reference-resolvers.ts";
+import type { D1DatabaseLike } from "./d1.ts";
 
 type DbOrderStatus = (typeof orderStatusValues)[number];
 type DbApprovalQueue = (typeof approvalQueueValues)[number];
@@ -269,6 +270,172 @@ const orderItemSelection = {
   unitCost: orderItems.unitCost,
   currencyCode: orderItems.currencyCode,
 };
+
+type CompatibilityColumn = {
+  table: string;
+  name: string;
+  definition: string;
+};
+
+const orderCompatibilityTableStatements = [
+  `CREATE TABLE IF NOT EXISTS "users" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "email" text NOT NULL UNIQUE, "full_name" text NOT NULL, "role" text NOT NULL DEFAULT 'employee', "position" text NOT NULL DEFAULT 'staff', "department_id" integer, "password_hash" text NOT NULL DEFAULT 'demo-password', "is_active" integer NOT NULL DEFAULT 1, "created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP, "updated_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS "offices" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "office_name" text NOT NULL UNIQUE, "location" text NOT NULL, "created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP, "updated_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS "departments" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "department_name" text NOT NULL UNIQUE, "description" text, "created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP, "updated_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS "orders" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "order_name" text NOT NULL, "request_number" text UNIQUE, "request_date" text, "requester_name" text, "user" integer NOT NULL, "office_id" integer NOT NULL, "department_id" integer, "why_ordered" text NOT NULL DEFAULT '', "status" text NOT NULL DEFAULT 'pendingFinanceApproval', "approval_target" text NOT NULL DEFAULT 'finance', "expected_arrival_at" text, "total_cost" real, "currency_code" text NOT NULL DEFAULT 'USD', "requested_approver_id" text, "requested_approver_name" text, "requested_approver_role" text, "approval_message" text, "higher_up_reviewer" text, "higher_up_reviewed_at" text, "higher_up_note" text, "finance_reviewer" text, "finance_reviewed_at" text, "finance_note" text, "received_at" text, "received_condition" text, "received_note" text, "storage_location" text, "serial_numbers_json" text, "assigned_to" text, "assigned_role" text, "assigned_at" text, "created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP, "updated_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS "order_items" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "order_id" integer NOT NULL, "item_name" text NOT NULL, "item_code" text NOT NULL, "category" text NOT NULL DEFAULT 'General', "item_type" text NOT NULL DEFAULT 'General', "unit" text NOT NULL DEFAULT 'pcs', "catalog_category_id" integer, "catalog_item_type_id" integer, "catalog_product_id" integer, "quantity" integer NOT NULL DEFAULT 1, "unit_cost" real NOT NULL DEFAULT 0, "currency_code" text NOT NULL DEFAULT 'USD', "from_where" text, "additional_notes" text, "eta" text, "created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP, "updated_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS "notifications" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "user_id" integer NOT NULL, "type" text NOT NULL, "title" text NOT NULL, "message" text NOT NULL, "entity_type" text NOT NULL, "entity_id" text, "is_read" integer NOT NULL DEFAULT 0, "created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP, "read_at" text)`,
+] as const;
+
+const orderCompatibilityColumns: CompatibilityColumn[] = [
+  { table: "users", name: "full_name", definition: `"full_name" text NOT NULL DEFAULT ''` },
+  { table: "users", name: "role", definition: `"role" text NOT NULL DEFAULT 'employee'` },
+  { table: "users", name: "position", definition: `"position" text NOT NULL DEFAULT 'staff'` },
+  { table: "users", name: "department_id", definition: `"department_id" integer` },
+  { table: "users", name: "password_hash", definition: `"password_hash" text NOT NULL DEFAULT 'demo-password'` },
+  { table: "users", name: "is_active", definition: `"is_active" integer NOT NULL DEFAULT 1` },
+  { table: "users", name: "created_at", definition: `"created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "users", name: "updated_at", definition: `"updated_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "offices", name: "office_name", definition: `"office_name" text NOT NULL DEFAULT ''` },
+  { table: "offices", name: "location", definition: `"location" text NOT NULL DEFAULT ''` },
+  { table: "offices", name: "created_at", definition: `"created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "offices", name: "updated_at", definition: `"updated_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "departments", name: "department_name", definition: `"department_name" text NOT NULL DEFAULT ''` },
+  { table: "departments", name: "description", definition: `"description" text` },
+  { table: "departments", name: "created_at", definition: `"created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "departments", name: "updated_at", definition: `"updated_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "orders", name: "request_number", definition: `"request_number" text` },
+  { table: "orders", name: "request_date", definition: `"request_date" text` },
+  { table: "orders", name: "requester_name", definition: `"requester_name" text` },
+  { table: "orders", name: "department_id", definition: `"department_id" integer` },
+  { table: "orders", name: "approval_target", definition: `"approval_target" text NOT NULL DEFAULT 'finance'` },
+  { table: "orders", name: "expected_arrival_at", definition: `"expected_arrival_at" text` },
+  { table: "orders", name: "total_cost", definition: `"total_cost" real` },
+  { table: "orders", name: "currency_code", definition: `"currency_code" text NOT NULL DEFAULT 'USD'` },
+  { table: "orders", name: "requested_approver_id", definition: `"requested_approver_id" text` },
+  { table: "orders", name: "requested_approver_name", definition: `"requested_approver_name" text` },
+  { table: "orders", name: "requested_approver_role", definition: `"requested_approver_role" text` },
+  { table: "orders", name: "approval_message", definition: `"approval_message" text` },
+  { table: "orders", name: "higher_up_reviewer", definition: `"higher_up_reviewer" text` },
+  { table: "orders", name: "higher_up_reviewed_at", definition: `"higher_up_reviewed_at" text` },
+  { table: "orders", name: "higher_up_note", definition: `"higher_up_note" text` },
+  { table: "orders", name: "finance_reviewer", definition: `"finance_reviewer" text` },
+  { table: "orders", name: "finance_reviewed_at", definition: `"finance_reviewed_at" text` },
+  { table: "orders", name: "finance_note", definition: `"finance_note" text` },
+  { table: "orders", name: "received_at", definition: `"received_at" text` },
+  { table: "orders", name: "received_condition", definition: `"received_condition" text` },
+  { table: "orders", name: "received_note", definition: `"received_note" text` },
+  { table: "orders", name: "storage_location", definition: `"storage_location" text` },
+  { table: "orders", name: "serial_numbers_json", definition: `"serial_numbers_json" text` },
+  { table: "orders", name: "assigned_to", definition: `"assigned_to" text` },
+  { table: "orders", name: "assigned_role", definition: `"assigned_role" text` },
+  { table: "orders", name: "assigned_at", definition: `"assigned_at" text` },
+  { table: "orders", name: "created_at", definition: `"created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "orders", name: "updated_at", definition: `"updated_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "order_items", name: "category", definition: `"category" text NOT NULL DEFAULT 'General'` },
+  { table: "order_items", name: "item_type", definition: `"item_type" text NOT NULL DEFAULT 'General'` },
+  { table: "order_items", name: "unit", definition: `"unit" text NOT NULL DEFAULT 'pcs'` },
+  { table: "order_items", name: "catalog_category_id", definition: `"catalog_category_id" integer` },
+  { table: "order_items", name: "catalog_item_type_id", definition: `"catalog_item_type_id" integer` },
+  { table: "order_items", name: "catalog_product_id", definition: `"catalog_product_id" integer` },
+  { table: "order_items", name: "quantity", definition: `"quantity" integer NOT NULL DEFAULT 1` },
+  { table: "order_items", name: "unit_cost", definition: `"unit_cost" real NOT NULL DEFAULT 0` },
+  { table: "order_items", name: "currency_code", definition: `"currency_code" text NOT NULL DEFAULT 'USD'` },
+  { table: "order_items", name: "from_where", definition: `"from_where" text` },
+  { table: "order_items", name: "additional_notes", definition: `"additional_notes" text` },
+  { table: "order_items", name: "eta", definition: `"eta" text` },
+  { table: "order_items", name: "created_at", definition: `"created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "order_items", name: "updated_at", definition: `"updated_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "notifications", name: "entity_id", definition: `"entity_id" text` },
+  { table: "notifications", name: "is_read", definition: `"is_read" integer NOT NULL DEFAULT 0` },
+  { table: "notifications", name: "created_at", definition: `"created_at" text NOT NULL DEFAULT CURRENT_TIMESTAMP` },
+  { table: "notifications", name: "read_at", definition: `"read_at" text` },
+];
+
+let orderSchemaCompatibilityReady = false;
+
+function isD1DatabaseLike(value: unknown): value is D1DatabaseLike {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "prepare" in value &&
+    typeof (value as { prepare?: unknown }).prepare === "function" &&
+    "batch" in value &&
+    typeof (value as { batch?: unknown }).batch === "function"
+  );
+}
+
+function getRawD1Client(db: AppDb): D1DatabaseLike | null {
+  const client = (db as unknown as { $client?: unknown }).$client;
+  return isD1DatabaseLike(client) ? client : null;
+}
+
+async function readTableColumns(db: AppDb, table: string) {
+  const client = getRawD1Client(db);
+  if (!client) return new Set<string>();
+  const result = await client.prepare(`PRAGMA table_info("${table}")`).all<{
+    name?: string;
+  }>();
+  return new Set(
+    result.results
+      .map((row) => row.name?.toLowerCase().trim())
+      .filter((name): name is string => Boolean(name)),
+  );
+}
+
+async function ensureOrderSchemaCompatibility(db: AppDb) {
+  if (orderSchemaCompatibilityReady) return;
+
+  const client = getRawD1Client(db);
+  if (!client) return;
+
+  for (const statement of orderCompatibilityTableStatements) {
+    await client.prepare(statement).run();
+  }
+
+  const tableColumns = new Map<string, Set<string>>();
+  for (const column of orderCompatibilityColumns) {
+    const existing =
+      tableColumns.get(column.table) ?? (await readTableColumns(db, column.table));
+    tableColumns.set(column.table, existing);
+    if (existing.has(column.name.toLowerCase())) continue;
+    await client
+      .prepare(`ALTER TABLE "${column.table}" ADD COLUMN ${column.definition}`)
+      .run();
+    existing.add(column.name.toLowerCase());
+  }
+
+  orderSchemaCompatibilityReady = true;
+}
+
+function isOrderSchemaError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("no such table") ||
+    message.includes("no such column") ||
+    message.includes("has no column named")
+  );
+}
+
+async function withOrderSchemaCompatibility<T>(
+  db: AppDb,
+  label: string,
+  action: () => Promise<T>,
+) {
+  try {
+    await ensureOrderSchemaCompatibility(db);
+    return await action();
+  } catch (error) {
+    if (!isOrderSchemaError(error)) {
+      throw error;
+    }
+
+    console.warn(`${label} schema compatibility retry triggered.`, error);
+    orderSchemaCompatibilityReady = false;
+    await ensureOrderSchemaCompatibility(db);
+    return action();
+  }
+}
 
 function mapDbStatusToFront(status: DbOrderStatus): FrontOrderStatus {
   if (status === "pendingFinanceApproval") return "pending_finance";
@@ -753,39 +920,43 @@ async function getOrderRowById(
 }
 
 export async function listOrders(db: AppDb): Promise<OrderRecord[]> {
-  try {
-    const rows = await db
-      .select(orderSelection)
-      .from(orders)
-      .leftJoin(departments, eq(orders.departmentId, departments.id))
-      .orderBy(desc(orders.id));
+  return withOrderSchemaCompatibility(db, "listOrders", async () => {
+    try {
+      const rows = await db
+        .select(orderSelection)
+        .from(orders)
+        .leftJoin(departments, eq(orders.departmentId, departments.id))
+        .orderBy(desc(orders.id));
 
-    const itemsByOrderId = await listOrderItemsByOrderIds(
-      db,
-      rows.map((row) => row.id),
-    );
+      const itemsByOrderId = await listOrderItemsByOrderIds(
+        db,
+        rows.map((row) => row.id),
+      );
 
-    return rows.map((row) => mapOrder(row, itemsByOrderId.get(row.id) ?? []));
-  } catch (error) {
-    console.error("listOrders failed.", error);
-    throw error;
-  }
+      return rows.map((row) => mapOrder(row, itemsByOrderId.get(row.id) ?? []));
+    } catch (error) {
+      console.error("listOrders failed.", error);
+      throw error;
+    }
+  });
 }
 
 export async function getOrderById(
   db: AppDb,
   id: string,
 ): Promise<OrderRecord | null> {
-  try {
-    const row = await getOrderRowById(db, id);
-    if (!row) return null;
+  return withOrderSchemaCompatibility(db, "getOrderById", async () => {
+    try {
+      const row = await getOrderRowById(db, id);
+      if (!row) return null;
 
-    const itemsByOrderId = await listOrderItemsByOrderIds(db, [row.id]);
-    return mapOrder(row, itemsByOrderId.get(row.id) ?? []);
-  } catch (error) {
-    console.error(`getOrderById failed for order ${id}.`, error);
-    throw error;
-  }
+      const itemsByOrderId = await listOrderItemsByOrderIds(db, [row.id]);
+      return mapOrder(row, itemsByOrderId.get(row.id) ?? []);
+    } catch (error) {
+      console.error(`getOrderById failed for order ${id}.`, error);
+      throw error;
+    }
+  });
 }
 
 export async function createOrder(
@@ -793,83 +964,86 @@ export async function createOrder(
   input: CreateOrderInput,
   currentUserId?: string | null,
 ): Promise<OrderRecord> {
-  try {
-    const normalizedItems = input.items ?? [];
-    if (normalizedItems.length === 0) {
-      throw new Error("At least one order item is required.");
+  return withOrderSchemaCompatibility(db, "createOrder", async () => {
+    try {
+      const normalizedItems = input.items ?? [];
+      if (normalizedItems.length === 0) {
+        throw new Error("At least one order item is required.");
+      }
+
+      const userId = await resolveUserId(db, input.userId, currentUserId);
+      const officeId = await resolveOfficeId(db, input.officeId);
+      const departmentId = await resolveDepartmentForOrder(
+        db,
+        input.departmentId,
+        input.department,
+      );
+      const requestDate =
+        input.requestDate?.trim() || new Date().toISOString().slice(0, 10);
+      const requestNumber = await buildUniqueRequestNumber(
+        db,
+        requestDate,
+        input.requestNumber,
+      );
+      const currencyCode = parseCurrencyCode();
+      const insertValues: typeof orders.$inferInsert = {
+        orderName: parseOrderName(input.orderName),
+        requestNumber,
+        requestDate,
+        requesterName: parseRequesterName(input.requester),
+        userId,
+        officeId,
+        departmentId,
+        whyOrdered: input.whyOrdered?.trim() ?? "",
+        status: parseOrderStatus(input.status, "pendingFinanceApproval"),
+        approvalTarget: parseApprovalTarget(input.approvalTarget),
+        totalCost:
+          input.totalAmount ??
+          normalizedItems.reduce(
+            (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
+            0,
+          ),
+        currencyCode,
+      };
+
+      if (input.deliveryDate) {
+        insertValues.expectedArrivalAt = input.deliveryDate;
+      }
+
+      if (input.requestedApproverId?.trim()) {
+        insertValues.requestedApproverId = input.requestedApproverId.trim();
+      }
+
+      if (input.requestedApproverName?.trim()) {
+        insertValues.requestedApproverName = input.requestedApproverName.trim();
+      }
+
+      if (input.requestedApproverRole?.trim()) {
+        insertValues.requestedApproverRole = input.requestedApproverRole.trim();
+      }
+
+      if (input.approvalMessage?.trim()) {
+        insertValues.approvalMessage = input.approvalMessage.trim();
+      }
+
+      const [row] = await db
+        .insert(orders)
+        .values(insertValues)
+        .returning({ id: orders.id });
+
+      await replaceOrderItems(db, row.id, normalizedItems);
+
+      const createdOrder = await getOrderById(db, String(row.id));
+      if (!createdOrder) {
+        throw new Error("Failed to load created order.");
+      }
+
+      return createdOrder;
+    } catch (error) {
+      console.error("createOrder failed.", error);
+      throw error;
     }
-
-    const userId = await resolveUserId(db, input.userId, currentUserId);
-    const officeId = await resolveOfficeId(db, input.officeId);
-    const departmentId = await resolveDepartmentForOrder(
-      db,
-      input.departmentId,
-      input.department,
-    );
-    const requestDate = input.requestDate?.trim() || new Date().toISOString().slice(0, 10);
-    const requestNumber = await buildUniqueRequestNumber(
-      db,
-      requestDate,
-      input.requestNumber,
-    );
-    const currencyCode = parseCurrencyCode();
-    const insertValues: typeof orders.$inferInsert = {
-      orderName: parseOrderName(input.orderName),
-      requestNumber,
-      requestDate,
-      requesterName: parseRequesterName(input.requester),
-      userId,
-      officeId,
-      departmentId,
-      whyOrdered: input.whyOrdered?.trim() ?? "",
-      status: parseOrderStatus(input.status, "pendingFinanceApproval"),
-      approvalTarget: parseApprovalTarget(input.approvalTarget),
-      totalCost:
-        input.totalAmount ??
-        normalizedItems.reduce(
-          (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
-          0,
-        ),
-      currencyCode,
-    };
-
-    if (input.deliveryDate) {
-      insertValues.expectedArrivalAt = input.deliveryDate;
-    }
-
-    if (input.requestedApproverId?.trim()) {
-      insertValues.requestedApproverId = input.requestedApproverId.trim();
-    }
-
-    if (input.requestedApproverName?.trim()) {
-      insertValues.requestedApproverName = input.requestedApproverName.trim();
-    }
-
-    if (input.requestedApproverRole?.trim()) {
-      insertValues.requestedApproverRole = input.requestedApproverRole.trim();
-    }
-
-    if (input.approvalMessage?.trim()) {
-      insertValues.approvalMessage = input.approvalMessage.trim();
-    }
-
-    const [row] = await db
-      .insert(orders)
-      .values(insertValues)
-      .returning({ id: orders.id });
-
-    await replaceOrderItems(db, row.id, normalizedItems);
-
-    const createdOrder = await getOrderById(db, String(row.id));
-    if (!createdOrder) {
-      throw new Error("Failed to load created order.");
-    }
-
-    return createdOrder;
-  } catch (error) {
-    console.error("createOrder failed.", error);
-    throw error;
-  }
+  });
 }
 
 export async function updateOrder(
@@ -878,18 +1052,19 @@ export async function updateOrder(
   input: UpdateOrderInput,
   currentUserId?: string | null,
 ): Promise<OrderRecord | null> {
-  try {
-    const numericId = parseIntegerId("Order id", id);
-    const existingOrder = await getOrderRowById(db, id);
-    if (!existingOrder) return null;
+  return withOrderSchemaCompatibility(db, "updateOrder", async () => {
+    try {
+      const numericId = parseIntegerId("Order id", id);
+      const existingOrder = await getOrderRowById(db, id);
+      if (!existingOrder) return null;
 
-    const updates: Partial<typeof orders.$inferInsert> = {
-      updatedAt: new Date().toISOString(),
-    };
+      const updates: Partial<typeof orders.$inferInsert> = {
+        updatedAt: new Date().toISOString(),
+      };
 
-    if (input.userId !== undefined && input.userId !== null) {
-      updates.userId = await resolveUserId(db, input.userId, currentUserId);
-    }
+      if (input.userId !== undefined && input.userId !== null) {
+        updates.userId = await resolveUserId(db, input.userId, currentUserId);
+      }
 
     if (input.orderName !== undefined && input.orderName !== null) {
       updates.orderName = parseOrderName(input.orderName);
@@ -1029,44 +1204,47 @@ export async function updateOrder(
       updates.assignedAt = input.assignedAt ?? null;
     }
 
-    await db.update(orders).set(updates).where(eq(orders.id, numericId)).run();
+      await db.update(orders).set(updates).where(eq(orders.id, numericId)).run();
 
-    if (input.items !== undefined) {
-      await replaceOrderItems(db, numericId, input.items ?? []);
+      if (input.items !== undefined) {
+        await replaceOrderItems(db, numericId, input.items ?? []);
+      }
+
+      const nextDbStatus = updates.status ?? existingOrder.status;
+      if (
+        nextDbStatus === "financeApproved" &&
+        existingOrder.status !== "financeApproved"
+      ) {
+        await createFinanceApprovalNotificationIfMissing(
+          db,
+          numericId,
+          existingOrder.userId,
+          updates.orderName ?? existingOrder.orderName,
+        );
+      }
+
+      return getOrderById(db, id);
+    } catch (error) {
+      console.error(`updateOrder failed for ${id}.`, error);
+      throw error;
     }
-
-    const nextDbStatus = updates.status ?? existingOrder.status;
-    if (
-      nextDbStatus === "financeApproved" &&
-      existingOrder.status !== "financeApproved"
-    ) {
-      await createFinanceApprovalNotificationIfMissing(
-        db,
-        numericId,
-        existingOrder.userId,
-        updates.orderName ?? existingOrder.orderName,
-      );
-    }
-
-    return getOrderById(db, id);
-  } catch (error) {
-    console.error(`updateOrder failed for ${id}.`, error);
-    throw error;
-  }
+  });
 }
 
 export async function deleteOrder(db: AppDb, id: string): Promise<boolean> {
-  try {
-    const numericId = parseIntegerId("Order id", id);
+  return withOrderSchemaCompatibility(db, "deleteOrder", async () => {
+    try {
+      const numericId = parseIntegerId("Order id", id);
 
-    const rows = await db
-      .delete(orders)
-      .where(eq(orders.id, numericId))
-      .returning({ id: orders.id });
+      const rows = await db
+        .delete(orders)
+        .where(eq(orders.id, numericId))
+        .returning({ id: orders.id });
 
-    return rows.length > 0;
-  } catch (error) {
-    console.error(`deleteOrder failed for ${id}.`, error);
-    throw error;
-  }
+      return rows.length > 0;
+    } catch (error) {
+      console.error(`deleteOrder failed for ${id}.`, error);
+      throw error;
+    }
+  });
 }

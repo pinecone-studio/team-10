@@ -110,7 +110,7 @@ export function useReceiveSectionState() {
   }
   function openRow(rowId: string) {
     const row = rows.find((entry) => entry.id === rowId);
-    setSelectedRowId(rowId); setReceivedDate(today); setQuantityReceived(`${row?.quantity ?? 1}`); setReceivedCondition("good"); setReceivedNote(""); if (row) applyClassificationDefaults(row); setUploadedImage(null); setUploadedImageFileName(null);
+    setSelectedRowId(rowId); setReceivedDate(today); setQuantityReceived("1"); setReceivedCondition("good"); setReceivedNote(""); if (row) applyClassificationDefaults(row); setUploadedImage(null); setUploadedImageFileName(null);
   }
   async function handleQuickCreate() {
     if (activeRow) {
@@ -121,7 +121,7 @@ export function useReceiveSectionState() {
     const createdOrder = await createDemoReceivableOrder();
     const createdRow = buildReceiveRows([createdOrder])[0];
     if (createdRow) {
-      setSelectedRowId(createdRow.id); setReceivedDate(today); setReceivedCondition("good"); setQuantityReceived(`${Math.max(1, createdRow.quantity)}`); setReceivedNote(`Demo intake for ${createdRow.assetName}.`); applyClassificationDefaults(createdRow); setUploadedImage(null); setUploadedImageFileName(null);
+      setSelectedRowId(createdRow.id); setReceivedDate(today); setReceivedCondition("good"); setQuantityReceived("1"); setReceivedNote(`Demo intake for ${createdRow.assetName}.`); applyClassificationDefaults(createdRow); setUploadedImage(null); setUploadedImageFileName(null);
     }
   }
   function handleAddCategory(value: string) {
