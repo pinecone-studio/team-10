@@ -6,6 +6,8 @@ export * from "./catalog/getCatalogItemTypes.ts";
 export * from "./catalog/getCatalogProducts.ts";
 export * from "./catalog/getCatalogProductById.ts";
 export * from "./distribution/getAssetDistributions.ts";
+export * from "./distribution/getAssignmentAcknowledgment.ts";
+export * from "./distribution/getEmployeeDirectory.ts";
 export * from "./notification/getNotifications.ts";
 export * from "./order/getOrderById.ts";
 export * from "./order/getOrders.ts";

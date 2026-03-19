@@ -16,6 +16,23 @@ type AssetLabelPdf {
   fileName: String!
 }
 
+type AssignmentAcknowledgmentPreview {
+  acknowledgmentId: ID!
+  assetCode: String!
+  assetId: ID!
+  assetName: String!
+  assignmentRequestId: ID!
+  category: String!
+  employeeEmail: String!
+  employeeId: ID!
+  employeeName: String!
+  expiresAt: String!
+  recipientRole: String!
+  signedAt: String
+  status: String!
+  tokenConsumedAt: String
+}
+
 input CatalogAttributeInput {
   attributeName: String!
   attributeValue: String!
@@ -114,6 +131,15 @@ type DistributionRecord {
   usageYears: String
 }
 
+type EmployeeDirectoryEntry {
+  email: String!
+  fullName: String!
+  id: ID!
+  isActive: Boolean!
+  position: String!
+  role: String!
+}
+
 type Mutation {
   assignAssetDistribution(assetId: ID!, employeeName: String!, note: String, recipientRole: String): DistributionRecord!
   createAssetAudit(assetIds: [ID!]!, assetStatus: String, conditionStatus: String, confirmedLocation: String, note: String): [AssetAuditEntry!]!
@@ -129,6 +155,8 @@ type Mutation {
   receiveOrderItem(assetImageDataUrl: String, assetImageFileName: String, catalogId: ID, itemCode: String!, officeId: ID, orderId: ID!, orderItemId: ID, quantityReceived: Int!, receivedAt: String, receivedByUserId: ID, receivedCondition: String!, receivedNote: String, serialNumbers: [String!], storageLocation: String): ReceiveOrderItemPayload!
   returnAssetDistribution(distributionId: ID!, note: String, returnCondition: String, returnPower: String, storageLocation: String, usageYears: String): DistributionRecord!
   sendDistributionNotification(distributionId: ID!, message: String): Boolean!
+  signAssignmentAcknowledgment(signatureText: String!, signerName: String!, token: String!): SignAssignmentAcknowledgmentResult!
+  terminateEmployeeAssets(employeeId: ID!, note: String): TerminationResult!
   updateCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String, id: ID!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String, status: String, unit: String): CatalogProduct
   updateOrder(approvalMessage: String, approvalTarget: String, assignedAt: String, assignedRole: String, assignedTo: String, deliveryDate: String, department: String, departmentId: ID, financeNote: String, financeReviewedAt: String, financeReviewer: String, higherUpNote: String, higherUpReviewedAt: String, higherUpReviewer: String, id: ID!, items: [OrderItemInput!], officeId: ID, orderName: String, receivedAt: String, receivedCondition: String, receivedNote: String, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, serialNumbers: [String!], status: String, storageLocation: String, totalAmount: Float, userId: ID, whyOrdered: String): Order
   updateReceive(conditionStatus: String, id: ID!, note: String, orderId: ID, orderItemId: ID, quantityReceived: Int, receivedAt: String, receivedCondition: String, serialNumbers: [String!], storageLocation: String): Receive
@@ -221,10 +249,12 @@ type Query {
   assetAuditHistory(assetId: ID!): [AssetAuditEntry!]!
   assetDistributions(includeReturned: Boolean): [DistributionRecord!]!
   assetLabelPdf(assetCodes: [String!]!): AssetLabelPdf!
+  assignmentAcknowledgment(token: String!): AssignmentAcknowledgmentPreview!
   catalogCategories: [CatalogCategory!]!
   catalogItemTypes(categoryId: ID): [CatalogItemType!]!
   catalogProduct(id: ID!): CatalogProduct
   catalogProducts(categoryId: ID, itemTypeId: ID, status: String): [CatalogProduct!]!
+  employeeDirectory(activeOnly: Boolean): [EmployeeDirectoryEntry!]!
   notifications(userId: ID): [Notification!]!
   order(id: ID!): Order
   orders: [Order!]!
@@ -266,6 +296,15 @@ type ReceivedAsset {
   serialNumber: String
 }
 
+type SignAssignmentAcknowledgmentResult {
+  acknowledgmentId: ID!
+  distribution: DistributionRecord!
+  pdfFileName: String
+  pdfObjectKey: String
+  signedAt: String
+  status: String!
+}
+
 type StorageAsset {
   assetCode: String!
   assetImageDataUrl: String
@@ -291,4 +330,16 @@ type StorageAsset {
   storageType: String
   unitCost: Float
   updatedAt: String!
+}
+
+type TerminationResult {
+  emailError: String
+  emailStatus: String!
+  employeeId: ID!
+  employeeName: String!
+  employeeNotified: Boolean!
+  hrNotifiedCount: Int!
+  pendingAssetCount: Int!
+  pendingAssets: [DistributionRecord!]!
+  terminatedAt: String!
 }
