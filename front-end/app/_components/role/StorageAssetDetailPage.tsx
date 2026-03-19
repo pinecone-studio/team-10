@@ -137,6 +137,7 @@ export function StorageAssetDetailPage({
       ) : isLoading || !asset ? (
         <FrontendLoading
           compact
+          variant="asset-detail"
           title="Loading asset detail"
           description="Fetching the latest storage snapshot for this asset."
         />

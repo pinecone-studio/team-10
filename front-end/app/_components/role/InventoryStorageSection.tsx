@@ -363,6 +363,7 @@ export function InventoryStorageSection() {
         <EmptyState title="Storage data unavailable" description={errorMessage} />
       ) : isLoading ? (
         <FrontendLoading
+          variant="storage-list"
           title="Loading storage assets"
           description="Pulling live asset and storage records from the backend."
         />
