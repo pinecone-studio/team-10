@@ -67,6 +67,21 @@ async function run() {
     "return_power",
     "ALTER TABLE asset_distributions ADD COLUMN return_power TEXT",
   );
+  await applyAddColumn(
+    "assets",
+    "asset_image_object_key",
+    "ALTER TABLE assets ADD COLUMN asset_image_object_key TEXT",
+  );
+  await applyAddColumn(
+    "assets",
+    "asset_image_file_name",
+    "ALTER TABLE assets ADD COLUMN asset_image_file_name TEXT",
+  );
+  await applyAddColumn(
+    "assets",
+    "asset_image_content_type",
+    "ALTER TABLE assets ADD COLUMN asset_image_content_type TEXT",
+  );
 
   console.log("Safe remote migrations completed.");
 }
