@@ -5,6 +5,14 @@ import type { D1DatabaseLike } from "./d1.ts";
 export type RuntimeConfig = {
   appUrl: string;
   assignmentJwtSecret: string;
+  smtpService: string | null;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpSecure: boolean;
+  smtpUser: string | null;
+  smtpPass: string | null;
+  emailFrom: string | null;
+  emailFromName: string | null;
   sendgridApiKey: string | null;
   sendgridFromEmail: string | null;
   r2AccountId: string | null;
@@ -46,6 +54,16 @@ export function createGraphQLContextValue(
     runtimeConfig: {
       appUrl,
       assignmentJwtSecret,
+      smtpService: process.env.SMTP_SERVICE?.trim() || null,
+      smtpHost: process.env.SMTP_HOST?.trim() || null,
+      smtpPort: process.env.SMTP_PORT?.trim()
+        ? Number(process.env.SMTP_PORT.trim())
+        : null,
+      smtpSecure: (process.env.SMTP_SECURE?.trim() || "").toLowerCase() === "true",
+      smtpUser: process.env.SMTP_USER?.trim() || null,
+      smtpPass: process.env.SMTP_PASS?.trim() || null,
+      emailFrom: process.env.EMAIL_FROM?.trim() || null,
+      emailFromName: process.env.EMAIL_FROM_NAME?.trim() || null,
       sendgridApiKey: process.env.SENDGRID_API_KEY?.trim() || null,
       sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL?.trim() || null,
       r2AccountId: process.env.CLOUDFLARE_R2_ACCOUNT_ID?.trim() || null,

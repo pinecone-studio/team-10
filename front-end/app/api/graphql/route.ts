@@ -47,12 +47,38 @@ function buildCandidateUrls(request: NextRequest) {
   return [...new Set([...explicitUrls, ...inferredUrls, DEFAULT_BACKEND_GRAPHQL_URL])];
 }
 
+function defaultPort(protocol: string) {
+  return protocol === "https:" ? "443" : "80";
+}
+
+function isSelfProxyTarget(request: NextRequest, candidateUrl: string) {
+  try {
+    const requestUrl = new URL(request.url);
+    const candidate = new URL(candidateUrl);
+
+    return (
+      requestUrl.protocol === candidate.protocol &&
+      requestUrl.hostname === candidate.hostname &&
+      (requestUrl.port || defaultPort(requestUrl.protocol)) ===
+        (candidate.port || defaultPort(candidate.protocol)) &&
+      requestUrl.pathname === candidate.pathname
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const requestBody = await request.text();
   const candidateUrls = buildCandidateUrls(request);
   const failures: string[] = [];
 
   for (const candidateUrl of candidateUrls) {
+    if (isSelfProxyTarget(request, candidateUrl)) {
+      failures.push(`${candidateUrl} (skipped self-proxy target)`);
+      continue;
+    }
+
     try {
       const response = await fetch(candidateUrl, {
         method: "POST",
@@ -62,6 +88,11 @@ export async function POST(request: NextRequest) {
         body: requestBody,
         cache: "no-store",
       });
+
+      if (response.status >= 500) {
+        failures.push(`${candidateUrl} (returned ${response.status})`);
+        continue;
+      }
 
       return new NextResponse(response.body, {
         status: response.status,
