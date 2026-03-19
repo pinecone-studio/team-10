@@ -11,6 +11,7 @@ import {
 import { downloadBase64File } from "@/app/_lib/download-base64";
 import { formatCurrency, formatDisplayDate } from "@/app/_lib/order-store";
 import { buildRegisteredAssetScanUrl } from "@/app/_lib/qr-links";
+import { FrontendLoading } from "../shared/FrontendLoading";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import { BrandedQrCode } from "../shared/BrandedQrCode";
 import {
@@ -134,9 +135,11 @@ export function StorageAssetDetailPage({
       {errorMessage && !asset ? (
         <EmptyState title="Asset detail unavailable" description={errorMessage} />
       ) : isLoading || !asset ? (
-        <div className="flex min-h-[360px] items-center justify-center rounded-[22px] border border-dashed border-[#d8e6f4] bg-white/80 text-[15px] text-[#64748b]">
-          Loading asset detail...
-        </div>
+        <FrontendLoading
+          compact
+          title="Loading asset detail"
+          description="Fetching the latest storage snapshot for this asset."
+        />
       ) : (
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.3fr)_420px]">
           <section className="overflow-hidden rounded-[24px] border border-[#d7e4f2] bg-white shadow-[0_20px_48px_rgba(148,163,184,0.16)]">
