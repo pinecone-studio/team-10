@@ -14,6 +14,7 @@ function buildCandidateUrls(request: NextRequest) {
   const explicitUrls = [
     process.env.BACKEND_GRAPHQL_URL,
     process.env.NEXT_PUBLIC_GRAPHQL_URL,
+    process.env.GRAPHQL_URL,
   ]
     .filter((value): value is string => Boolean(value?.trim()))
     .map((value) => normalizeGraphqlUrl(value.trim()));
@@ -24,7 +25,7 @@ function buildCandidateUrls(request: NextRequest) {
 
   const inferredUrls = (() => {
     if (!isLocalRequest) {
-      return [DEFAULT_BACKEND_GRAPHQL_URL];
+      return [];
     }
 
     const requestUrl = new URL(request.url);
@@ -68,10 +69,56 @@ function isSelfProxyTarget(request: NextRequest, candidateUrl: string) {
   }
 }
 
+function buildForwardHeaders(request: NextRequest) {
+  const headers = new Headers();
+  headers.set(
+    "content-type",
+    request.headers.get("content-type") ?? "application/json",
+  );
+
+  const forwardedHeaderNames = [
+    "authorization",
+    "x-user-id",
+    "x-forwarded-for",
+    "x-forwarded-host",
+    "x-forwarded-proto",
+    "cookie",
+  ] as const;
+
+  for (const headerName of forwardedHeaderNames) {
+    const value = request.headers.get(headerName);
+    if (value) {
+      headers.set(headerName, value);
+    }
+  }
+
+  return headers;
+}
+
 export async function POST(request: NextRequest) {
   const requestBody = await request.text();
   const candidateUrls = buildCandidateUrls(request);
   const failures: string[] = [];
+  const requestHost = request.headers.get("host");
+  const isLocalRequest =
+    requestHost?.includes("localhost") || requestHost?.includes("127.0.0.1");
+
+  if (!isLocalRequest && candidateUrls.length === 0) {
+    return NextResponse.json(
+      {
+        errors: [
+          {
+            message:
+              "Frontend GraphQL proxy is missing a deployed backend URL. Set BACKEND_GRAPHQL_URL or NEXT_PUBLIC_GRAPHQL_URL in Vercel Preview/Production env.",
+            extensions: {
+              code: "BACKEND_URL_MISSING",
+            },
+          },
+        ],
+      },
+      { status: 503 },
+    );
+  }
 
   for (const candidateUrl of candidateUrls) {
     if (isSelfProxyTarget(request, candidateUrl)) {
@@ -82,9 +129,7 @@ export async function POST(request: NextRequest) {
     try {
       const response = await fetch(candidateUrl, {
         method: "POST",
-        headers: {
-          "content-type": request.headers.get("content-type") ?? "application/json",
-        },
+        headers: buildForwardHeaders(request),
         body: requestBody,
         cache: "no-store",
       });
