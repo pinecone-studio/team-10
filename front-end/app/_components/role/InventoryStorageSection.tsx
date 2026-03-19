@@ -8,6 +8,7 @@ import {
   type StorageAssetDto,
 } from "@/app/(dashboard)/_graphql/storage/storage-api";
 import { formatCurrency, formatDisplayDate } from "../../_lib/order-store";
+import { FrontendLoading } from "../shared/FrontendLoading";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import {
   StorageCheckbox,
@@ -250,7 +251,10 @@ export function InventoryStorageSection() {
       {errorMessage ? (
         <EmptyState title="Storage data unavailable" description={errorMessage} />
       ) : isLoading ? (
-        <StorageLoadingState />
+        <FrontendLoading
+          title="Loading storage assets"
+          description="Pulling live asset and storage records from the backend."
+        />
       ) : assets.length === 0 ? (
         <EmptyState
           title="No stored goods yet"
@@ -573,29 +577,6 @@ function normalizeStorageStatus(value: string) {
   }
 
   return value;
-}
-
-function StorageLoadingState() {
-  return (
-    <div className="flex min-h-[420px] flex-col items-center justify-center gap-6 rounded-[18px] border border-dashed border-[#d9e9f9] bg-white/80 px-6 py-10 text-center">
-      <div className="inventory-loader" aria-hidden="true">
-        <div className="inventory-loader-ground">
-          <div />
-        </div>
-        {Array.from({ length: 8 }, (_, index) => (
-          <div key={index} className={`inventory-loader-box inventory-loader-box${index}`}>
-            <div />
-          </div>
-        ))}
-      </div>
-      <div>
-        <p className="text-[18px] font-semibold text-[#0f172a]">Loading storage assets</p>
-        <p className="mt-2 max-w-[360px] text-[13px] text-[#64748b]">
-          Pulling live asset and storage records from the backend.
-        </p>
-      </div>
-    </div>
-  );
 }
 
 function StorageCensusWorkspace({
