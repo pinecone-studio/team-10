@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  fetchAssetDistributionsRequest,
+  fetchEmployeeDirectoryRequest,
+  terminateEmployeeAssetsRequest,
+  type DistributionRecordDto,
+  type EmployeeDirectoryEntryDto,
+} from "@/app/(dashboard)/_graphql/distribution/distribution-api";
 import {
   ActionButton,
   Card,
@@ -8,75 +15,87 @@ import {
   WorkspaceShell,
 } from "../shared/WorkspacePrimitives";
 
-type PendingAsset = {
-  name: string;
-  code: string;
-  issuedAt: string;
-  condition: string;
+type TerminatingEmployee = EmployeeDirectoryEntryDto & {
+  pendingAssets: DistributionRecordDto[];
 };
-
-type TerminatingEmployee = {
-  id: string;
-  name: string;
-  role: string;
-  department: string;
-  manager: string;
-  lastWorkingDay: string;
-  location: string;
-  pendingAssets: PendingAsset[];
-};
-
-const terminatingEmployees: TerminatingEmployee[] = [
-  {
-    id: "emp-001",
-    name: "Nomin-Erdene Bat",
-    role: "Senior Product Designer",
-    department: "Design",
-    manager: "Ariunaa Tsogt",
-    lastWorkingDay: "2026-03-29",
-    location: "HQ, 4th floor",
-    pendingAssets: [
-      { name: 'MacBook Pro 14"', code: "IT-2041", issuedAt: "2025-08-12", condition: "Good" },
-      { name: "Dell 27 Monitor", code: "IT-3188", issuedAt: "2025-11-03", condition: "Needs cable check" },
-      { name: "Access card", code: "SEC-0081", issuedAt: "2024-01-15", condition: "Active" },
-    ],
-  },
-  {
-    id: "emp-002",
-    name: "Temuulen Munkh",
-    role: "Finance Analyst",
-    department: "Finance",
-    manager: "Solongo Erdene",
-    lastWorkingDay: "2026-03-24",
-    location: "Annex, 2nd floor",
-    pendingAssets: [
-      { name: 'ThinkPad X1 Carbon', code: "IT-2207", issuedAt: "2025-02-01", condition: "Good" },
-      { name: "YubiKey", code: "SEC-0212", issuedAt: "2025-02-01", condition: "Active" },
-    ],
-  },
-  {
-    id: "emp-003",
-    name: "Batjargal Enkhjin",
-    role: "Operations Coordinator",
-    department: "Operations",
-    manager: "Ganbaatar Lhagva",
-    lastWorkingDay: "2026-04-02",
-    location: "Warehouse B",
-    pendingAssets: [
-      { name: "Samsung A54", code: "MOB-1142", issuedAt: "2025-06-09", condition: "Good" },
-    ],
-  },
-];
 
 export function HigherUpTerminateSection() {
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState(terminatingEmployees[0]?.id ?? "");
-  const selectedEmployee = useMemo(
-    () =>
-      terminatingEmployees.find((employee) => employee.id === selectedEmployeeId) ??
-      terminatingEmployees[0] ??
-      null,
-    [selectedEmployeeId],
-  );
+  const [employees, setEmployees] = useState<EmployeeDirectoryEntryDto[]>([]);
+  const [records, setRecords] = useState<DistributionRecordDto[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [note, setNote] = useState("");
+  const [notice, setNotice] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function reload() {
+    const [employeeDirectory, distributions] = await Promise.all([
+      fetchEmployeeDirectoryRequest(true),
+      fetchAssetDistributionsRequest(false),
+    ]);
+    setEmployees(employeeDirectory);
+    setRecords(distributions);
+  }
+
+  useEffect(() => {
+    void reload();
+  }, []);
+
+  const terminatingEmployees = useMemo<TerminatingEmployee[]>(() => {
+    return employees
+      .map((employee) => ({
+        ...employee,
+        pendingAssets: records.filter(
+          (record) =>
+            record.employeeId === employee.id &&
+            record.status === "active" &&
+            record.assetStatus === "assigned",
+        ),
+      }))
+      .filter((employee) => employee.pendingAssets.length > 0);
+  }, [employees, records]);
+
+  const effectiveSelectedEmployeeId =
+    terminatingEmployees.some((employee) => employee.id === selectedEmployeeId)
+      ? selectedEmployeeId
+      : terminatingEmployees[0]?.id ?? "";
+
+  const selectedEmployee =
+    terminatingEmployees.find(
+      (employee) => employee.id === effectiveSelectedEmployeeId,
+    ) ?? null;
+
+  async function terminateEmployee() {
+    if (!selectedEmployee) {
+      setNotice("No employee selected.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await terminateEmployeeAssetsRequest({
+        employeeId: selectedEmployee.id,
+        note: note.trim() || null,
+      });
+
+      if (!result) {
+        setNotice("Termination request finished without response.");
+      } else {
+        setNotice(
+          `${result.employeeName} terminated. ${result.pendingAssetCount} asset(s) moved to pending retrieval. Email status: ${result.emailStatus}${result.emailError ? ` (${result.emailError})` : ""}`,
+        );
+      }
+      setNote("");
+      await reload();
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "Failed to terminate employee.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   if (!selectedEmployee) {
     return (
@@ -86,7 +105,7 @@ export function HigherUpTerminateSection() {
       >
         <EmptyState
           title="No employees queued for termination"
-          description="Once HR starts an offboarding flow, the responsible employee and pending assets will appear here."
+          description="Once an active employee has assigned assets, they appear here for termination."
         />
       </WorkspaceShell>
     );
@@ -95,7 +114,7 @@ export function HigherUpTerminateSection() {
   return (
     <WorkspaceShell
       title="Terminate access"
-      subtitle="Select an employee, review assigned assets, and terminate access when the offboarding review is ready."
+      subtitle="Select a real employee from DB, review assigned assets, and terminate with retrieval workflow."
     >
       <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
         <Card
@@ -106,29 +125,25 @@ export function HigherUpTerminateSection() {
             <label className="flex flex-col gap-2 text-[12px] text-[#525252]">
               <span>Select employee</span>
               <select
-                value={selectedEmployeeId}
+                value={effectiveSelectedEmployeeId}
                 onChange={(event) => setSelectedEmployeeId(event.target.value)}
                 className="h-[42px] rounded-[10px] border border-[#d7dde5] bg-[#f8fafc] px-3 text-[13px] text-[#171717] outline-none"
               >
                 {terminatingEmployees.map((employee) => (
                   <option key={employee.id} value={employee.id}>
-                    {employee.name} - {employee.department}
+                    {employee.fullName}
                   </option>
                 ))}
               </select>
             </label>
 
             <div className="rounded-[14px] border border-[#e5e7eb] bg-[#f8fafc] p-4">
-              <p className="text-[15px] font-semibold text-[#111827]">{selectedEmployee.name}</p>
+              <p className="text-[15px] font-semibold text-[#111827]">{selectedEmployee.fullName}</p>
               <p className="mt-1 text-[12px] text-[#64748b]">{selectedEmployee.role}</p>
               <div className="mt-4 space-y-2 text-[12px] text-[#475569]">
                 <div className="flex items-center justify-between gap-3">
-                  <span>Department</span>
-                  <span className="font-medium text-[#0f172a]">{selectedEmployee.department}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span>Last working day</span>
-                  <span className="font-medium text-[#0f172a]">{selectedEmployee.lastWorkingDay}</span>
+                  <span>Email</span>
+                  <span className="font-medium text-[#0f172a]">{selectedEmployee.email}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span>Assigned assets</span>
@@ -137,31 +152,42 @@ export function HigherUpTerminateSection() {
               </div>
             </div>
 
-            <ActionButton variant="warning">Terminate</ActionButton>
+            <label className="flex flex-col gap-2 text-[12px] text-[#525252]">
+              <span>Termination note (optional)</span>
+              <textarea
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                rows={3}
+                className="rounded-[10px] border border-[#d7dde5] bg-[#f8fafc] px-3 py-2 text-[13px] text-[#171717] outline-none"
+              />
+            </label>
+
+            <ActionButton variant="warning" onClick={() => void terminateEmployee()} disabled={isSubmitting}>
+              {isSubmitting ? "Terminating..." : "Terminate"}
+            </ActionButton>
+            {notice ? <p className="text-[12px] text-[#166534]">{notice}</p> : null}
           </div>
         </Card>
 
         <div className="space-y-5">
-          <Card
-            title="Assigned assets"
-          >
+          <Card title="Assigned assets">
             <div className="space-y-3">
               {selectedEmployee.pendingAssets.map((asset) => (
                 <div
-                  key={asset.code}
+                  key={asset.id}
                   className="grid gap-3 rounded-[14px] border border-[#e5e7eb] bg-[#fcfcfd] px-4 py-4 md:grid-cols-[1.3fr_0.7fr_0.7fr_auto]"
                 >
                   <div>
-                    <p className="text-[14px] font-semibold text-[#0f172a]">{asset.name}</p>
-                    <p className="mt-1 text-[12px] text-[#64748b]">{asset.code}</p>
+                    <p className="text-[14px] font-semibold text-[#0f172a]">{asset.assetName}</p>
+                    <p className="mt-1 text-[12px] text-[#64748b]">{asset.assetCode}</p>
                   </div>
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.12em] text-[#94a3b8]">Issued</p>
-                    <p className="mt-1 text-[13px] text-[#334155]">{asset.issuedAt}</p>
+                    <p className="mt-1 text-[13px] text-[#334155]">{asset.distributedAt.slice(0, 10)}</p>
                   </div>
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.12em] text-[#94a3b8]">Condition</p>
-                    <p className="mt-1 text-[13px] text-[#334155]">{asset.condition}</p>
+                    <p className="mt-1 text-[13px] text-[#334155]">{asset.conditionStatus}</p>
                   </div>
                   <div className="flex items-center md:justify-end">
                     <span className="rounded-full bg-[#eff6ff] px-3 py-1 text-[11px] font-medium text-[#1d4ed8]">

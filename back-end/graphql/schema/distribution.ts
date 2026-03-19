@@ -1,4 +1,51 @@
 export const DistributionTypeDefs = `
+  type EmployeeDirectoryEntry {
+    id: ID!
+    fullName: String!
+    email: String!
+    role: String!
+    position: String!
+    isActive: Boolean!
+  }
+
+  type AssignmentAcknowledgmentPreview {
+    acknowledgmentId: ID!
+    assignmentRequestId: ID!
+    assetId: ID!
+    assetCode: String!
+    assetName: String!
+    category: String!
+    employeeId: ID!
+    employeeName: String!
+    employeeEmail: String!
+    recipientRole: String!
+    expiresAt: String!
+    status: String!
+    signedAt: String
+    tokenConsumedAt: String
+  }
+
+  type SignAssignmentAcknowledgmentResult {
+    acknowledgmentId: ID!
+    pdfObjectKey: String
+    pdfFileName: String
+    status: String!
+    signedAt: String
+    distribution: DistributionRecord!
+  }
+
+  type TerminationResult {
+    employeeId: ID!
+    employeeName: String!
+    terminatedAt: String!
+    pendingAssetCount: Int!
+    pendingAssets: [DistributionRecord!]!
+    hrNotifiedCount: Int!
+    employeeNotified: Boolean!
+    emailStatus: String!
+    emailError: String
+  }
+
   type DistributionRecord {
     id: ID!
     assignmentRequestId: ID
@@ -29,6 +76,8 @@ export const DistributionTypeDefs = `
 
   type Query {
     assetDistributions(includeReturned: Boolean): [DistributionRecord!]!
+    employeeDirectory(activeOnly: Boolean): [EmployeeDirectoryEntry!]!
+    assignmentAcknowledgment(token: String!): AssignmentAcknowledgmentPreview!
   }
 
   type Mutation {
@@ -50,5 +99,14 @@ export const DistributionTypeDefs = `
       distributionId: ID!
       message: String
     ): Boolean!
+    signAssignmentAcknowledgment(
+      token: String!
+      signerName: String!
+      signatureText: String!
+    ): SignAssignmentAcknowledgmentResult!
+    terminateEmployeeAssets(
+      employeeId: ID!
+      note: String
+    ): TerminationResult!
   }
 `;

@@ -21,6 +21,7 @@ export type DistributionSession = {
 export type DistributionItem = {
   id: string;
   distributionId: string | null;
+  assetStatus: string;
   assetName: string;
   assetCode: string;
   serialNumber: string | null;
@@ -89,6 +90,7 @@ export function buildAvailableItems(storageAssets: StorageAssetDto[], historyMap
   return storageAssets.map<DistributionItem>((asset) => ({
     id: asset.id,
     distributionId: null,
+    assetStatus: asset.assetStatus,
     assetName: asset.assetName,
     assetCode: asset.assetCode,
     serialNumber: asset.serialNumber,
@@ -110,6 +112,7 @@ export function buildAssignedItems(records: DistributionRecordDto[]) {
     .map<DistributionItem>((record) => ({
       id: record.assetId,
       distributionId: record.id,
+      assetStatus: record.assetStatus,
       assetName: record.assetName,
       assetCode: record.assetCode,
       serialNumber: record.serialNumber,

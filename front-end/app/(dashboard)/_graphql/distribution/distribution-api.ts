@@ -31,6 +31,53 @@ export type DistributionRecordDto = {
   updatedAt: string;
 };
 
+export type EmployeeDirectoryEntryDto = {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  position: string;
+  isActive: boolean;
+};
+
+export type AssignmentAcknowledgmentPreviewDto = {
+  acknowledgmentId: string;
+  assignmentRequestId: string;
+  assetId: string;
+  assetCode: string;
+  assetName: string;
+  category: string;
+  employeeId: string;
+  employeeName: string;
+  employeeEmail: string;
+  recipientRole: string;
+  expiresAt: string;
+  status: string;
+  signedAt: string | null;
+  tokenConsumedAt: string | null;
+};
+
+export type SignAssignmentAcknowledgmentResultDto = {
+  acknowledgmentId: string;
+  pdfObjectKey: string | null;
+  pdfFileName: string | null;
+  status: string;
+  signedAt: string | null;
+  distribution: DistributionRecordDto;
+};
+
+export type TerminationResultDto = {
+  employeeId: string;
+  employeeName: string;
+  terminatedAt: string;
+  pendingAssetCount: number;
+  pendingAssets: DistributionRecordDto[];
+  hrNotifiedCount: number;
+  employeeNotified: boolean;
+  emailStatus: string;
+  emailError: string | null;
+};
+
 const distributionFields = gql`
   fragment DistributionFields on DistributionRecord {
     id
@@ -58,6 +105,40 @@ const distributionFields = gql`
     note
     createdAt
     updatedAt
+  }
+`;
+
+const employeeDirectoryQuery = gql`
+  query EmployeeDirectory($activeOnly: Boolean) {
+    employeeDirectory(activeOnly: $activeOnly) {
+      id
+      fullName
+      email
+      role
+      position
+      isActive
+    }
+  }
+`;
+
+const assignmentAcknowledgmentQuery = gql`
+  query AssignmentAcknowledgment($token: String!) {
+    assignmentAcknowledgment(token: $token) {
+      acknowledgmentId
+      assignmentRequestId
+      assetId
+      assetCode
+      assetName
+      category
+      employeeId
+      employeeName
+      employeeEmail
+      recipientRole
+      expiresAt
+      status
+      signedAt
+      tokenConsumedAt
+    }
   }
 `;
 
@@ -94,6 +175,41 @@ const notifyMutation = gql`
   }
 `;
 
+const signAcknowledgmentMutation = gql`
+  ${distributionFields}
+  mutation SignAssignmentAcknowledgment($token: String!, $signerName: String!, $signatureText: String!) {
+    signAssignmentAcknowledgment(token: $token, signerName: $signerName, signatureText: $signatureText) {
+      acknowledgmentId
+      pdfObjectKey
+      pdfFileName
+      status
+      signedAt
+      distribution {
+        ...DistributionFields
+      }
+    }
+  }
+`;
+
+const terminateMutation = gql`
+  ${distributionFields}
+  mutation TerminateEmployeeAssets($employeeId: ID!, $note: String) {
+    terminateEmployeeAssets(employeeId: $employeeId, note: $note) {
+      employeeId
+      employeeName
+      terminatedAt
+      pendingAssetCount
+      pendingAssets {
+        ...DistributionFields
+      }
+      hrNotifiedCount
+      employeeNotified
+      emailStatus
+      emailError
+    }
+  }
+`;
+
 export async function fetchAssetDistributionsRequest(includeReturned = true) {
   const { data } = await apolloClient.query<{ assetDistributions: DistributionRecordDto[] }>({
     query: distributionsQuery,
@@ -102,6 +218,32 @@ export async function fetchAssetDistributionsRequest(includeReturned = true) {
   });
 
   return data?.assetDistributions ?? [];
+}
+
+export async function fetchEmployeeDirectoryRequest(activeOnly = true) {
+  const { data } = await apolloClient.query<{
+    employeeDirectory: EmployeeDirectoryEntryDto[];
+  }>({
+    query: employeeDirectoryQuery,
+    variables: {
+      activeOnly,
+    },
+    fetchPolicy: "no-cache",
+  });
+
+  return data?.employeeDirectory ?? [];
+}
+
+export async function fetchAssignmentAcknowledgmentRequest(token: string) {
+  const { data } = await apolloClient.query<{
+    assignmentAcknowledgment: AssignmentAcknowledgmentPreviewDto;
+  }>({
+    query: assignmentAcknowledgmentQuery,
+    variables: { token },
+    fetchPolicy: "no-cache",
+  });
+
+  return data?.assignmentAcknowledgment ?? null;
 }
 
 export async function assignAssetDistributionRequest(input: {
@@ -144,4 +286,35 @@ export async function sendDistributionNotificationRequest(distributionId: string
   });
 
   return data?.sendDistributionNotification ?? false;
+}
+
+export async function signAssignmentAcknowledgmentRequest(input: {
+  token: string;
+  signerName: string;
+  signatureText: string;
+}) {
+  const { data } = await apolloClient.mutate<{
+    signAssignmentAcknowledgment: SignAssignmentAcknowledgmentResultDto;
+  }>({
+    mutation: signAcknowledgmentMutation,
+    variables: input,
+    fetchPolicy: "no-cache",
+  });
+
+  return data?.signAssignmentAcknowledgment ?? null;
+}
+
+export async function terminateEmployeeAssetsRequest(input: {
+  employeeId: string;
+  note?: string | null;
+}) {
+  const { data } = await apolloClient.mutate<{
+    terminateEmployeeAssets: TerminationResultDto;
+  }>({
+    mutation: terminateMutation,
+    variables: input,
+    fetchPolicy: "no-cache",
+  });
+
+  return data?.terminateEmployeeAssets ?? null;
 }

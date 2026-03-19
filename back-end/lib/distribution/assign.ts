@@ -1,12 +1,19 @@
 import { and, eq } from "drizzle-orm";
 import {
+  assetAssignmentAcknowledgments,
   assetAssignmentRequests,
   assetDistributions,
   assets,
+  users,
 } from "../../database/schema.ts";
+import type { RuntimeConfig } from "../context.ts";
 import type { AppDb } from "../db.ts";
 import { resolveUserId, parseIntegerId } from "../reference-resolvers.ts";
 import { resolveEmployeeByName } from "./users.ts";
+import {
+  createAssignmentAcknowledgment,
+  notifyHrManagersOfAssignmentConflict,
+} from "./assignment-acknowledgment.ts";
 import {
   createDistributionNotification,
   getDistributionById,
@@ -16,6 +23,7 @@ import {
 
 export async function assignAssetDistribution(
   db: AppDb,
+  runtimeConfig: RuntimeConfig,
   input: {
     assetId: string;
     employeeName: string;
@@ -29,7 +37,12 @@ export async function assignAssetDistribution(
     const employeeName = sanitizeName(input.employeeName);
     const recipientRole = input.recipientRole?.trim() || "Employee";
     const [asset] = await db
-      .select({ id: assets.id, assetCode: assets.assetCode, assetName: assets.assetName })
+      .select({
+        id: assets.id,
+        assetCode: assets.assetCode,
+        assetName: assets.assetName,
+        category: assets.category,
+      })
       .from(assets)
       .where(eq(assets.id, assetId))
       .limit(1);
@@ -45,8 +58,58 @@ export async function assignAssetDistribution(
     if (activeDistribution) throw new Error(`Asset ${asset.assetCode} is already assigned.`);
 
     const employeeId = await resolveEmployeeByName(db, employeeName);
+    const [employee] = await db
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        email: users.email,
+      })
+      .from(users)
+      .where(eq(users.id, employeeId))
+      .limit(1);
+
+    if (!employee) {
+      throw new Error(`Employee '${employeeName}' was not found.`);
+    }
+
+    const [existingPendingAcknowledgment] = await db
+      .select({ id: assetAssignmentAcknowledgments.id })
+      .from(assetAssignmentAcknowledgments)
+      .where(
+        and(
+          eq(assetAssignmentAcknowledgments.assetId, assetId),
+          eq(assetAssignmentAcknowledgments.status, "pending"),
+        ),
+      )
+      .limit(1);
+
+    if (existingPendingAcknowledgment) {
+      throw new Error(
+        `Asset ${asset.assetCode} already has a pending acknowledgment request.`,
+      );
+    }
+
     const distributedByUserId = await resolveUserId(db, undefined, currentUserId);
     const now = new Date().toISOString();
+    const [conflict] = await db
+      .select({
+        conflictAssetCode: assets.assetCode,
+      })
+      .from(assetDistributions)
+      .innerJoin(assets, eq(assetDistributions.assetId, assets.id))
+      .where(
+        and(
+          eq(assetDistributions.employeeId, employeeId),
+          eq(assetDistributions.status, "active"),
+          eq(assets.category, asset.category),
+        ),
+      )
+      .limit(1);
+
+    const conflictWarning = conflict
+      ? `Conflict warning: ${employee.fullName} already has an active asset in category '${asset.category}' (${conflict.conflictAssetCode}).`
+      : null;
+
     const [assignmentRequest] = await db
       .insert(assetAssignmentRequests)
       .values({
@@ -54,7 +117,7 @@ export async function assignAssetDistribution(
         employeeId,
         reviewedByUserId: distributedByUserId,
         reviewedAt: now,
-        reviewNote: input.note?.trim() || null,
+        reviewNote: input.note?.trim() || conflictWarning,
         status: "approved",
       })
       .returning({ id: assetAssignmentRequests.id });
@@ -67,24 +130,62 @@ export async function assignAssetDistribution(
         distributedByUserId,
         distributedAt: now,
         recipientRole,
-        status: "active",
-        note: input.note?.trim() || null,
+        status: "pendingHandover",
+        note:
+          [input.note?.trim(), conflictWarning, "Awaiting employee acknowledgment."]
+            .filter(Boolean)
+            .join(" | ") || null,
       })
       .returning({ id: assetDistributions.id });
 
-    await db.update(assets).set({
-      assetStatus: "assigned",
-      currentStorageId: null,
-      updatedAt: now,
-    }).where(eq(assets.id, assetId)).run();
+    await db
+      .update(assets)
+      .set({
+        assetStatus: "pendingAssignment",
+        currentStorageId: null,
+        updatedAt: now,
+      })
+      .where(eq(assets.id, assetId))
+      .run();
+
+    const acknowledgment = await createAssignmentAcknowledgment(db, runtimeConfig, {
+      assignmentRequestId: assignmentRequest.id,
+      assetId,
+      assetCode: asset.assetCode,
+      assetName: asset.assetName,
+      employeeId: employee.id,
+      employeeName: employee.fullName,
+      employeeEmail: employee.email,
+      recipientRole,
+    });
 
     await createDistributionNotification(
       db,
-      employeeId,
-      "Asset assigned to you",
-      `${asset.assetName} (${asset.assetCode}) has been assigned to you.`,
+      employee.id,
+      "Asset assignment pending your signature",
+      `${asset.assetName} (${asset.assetCode}) was requested for assignment. Please sign the emailed acknowledgment link within 72 hours.`,
       String(distribution.id),
     );
+
+    if (conflictWarning) {
+      await notifyHrManagersOfAssignmentConflict(db, {
+        employeeId: employee.id,
+        employeeName: employee.fullName,
+        category: asset.category,
+        assetCode: asset.assetCode,
+        conflictAssetCode: conflict?.conflictAssetCode ?? "-",
+      });
+    }
+
+    if (acknowledgment.emailStatus !== "sent") {
+      await createDistributionNotification(
+        db,
+        distributedByUserId,
+        "Assignment email delivery issue",
+        `Acknowledgment email for ${employee.fullName} was not sent (${acknowledgment.emailStatus}). ${acknowledgment.emailError ?? ""}`.trim(),
+        String(distribution.id),
+      );
+    }
 
     const detail = await getDistributionById(db, distribution.id);
     if (!detail) throw new Error("Assigned distribution could not be reloaded.");

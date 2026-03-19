@@ -107,6 +107,10 @@ function getStorageNameFallback(row: StorageAssetRow) {
     return "Assigned to employee";
   }
 
+  if (row.assetStatus === "pendingAssignment") {
+    return "Pending assignment acknowledgment";
+  }
+
   if (row.assetStatus === "pendingRetrieval") {
     return "Pending retrieval";
   }

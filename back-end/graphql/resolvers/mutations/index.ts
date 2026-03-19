@@ -5,6 +5,8 @@ export * from "./catalog/updateCatalogProduct.ts";
 export * from "./distribution/assignAssetDistribution.ts";
 export * from "./distribution/returnAssetDistribution.ts";
 export * from "./distribution/sendDistributionNotification.ts";
+export * from "./distribution/signAssignmentAcknowledgment.ts";
+export * from "./distribution/terminateEmployeeAssets.ts";
 export * from "./notification/markAllNotificationsAsRead.ts";
 export * from "./notification/markNotificationAsRead.ts";
 export * from "./order/createOrder.ts";
