@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { buildIntakeMetadataNote } from "../../_lib/intake-metadata";
 import {
   createDemoReceivableOrder,
   createAssetIds,
