@@ -4,13 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
+  downloadAssetLabelsPdfRequest,
   fetchStorageAssetsRequest,
   type StorageAssetDto,
 } from "@/app/(dashboard)/_graphql/storage/storage-api";
+import { downloadBase64File } from "@/app/_lib/download-base64";
 import { formatCurrency, formatDisplayDate } from "../../_lib/order-store";
 import { FrontendLoading } from "../shared/FrontendLoading";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import {
+  StorageCategoryBadge,
   StorageCheckbox,
   StorageConditionBadge,
   StorageStatusBadge,
@@ -26,8 +29,26 @@ const CATEGORIES = [
   "Furniture",
   "Other Assets",
 ] as const;
+const CONDITION_FILTERS = ["All Conditions", "Good", "Damaged", "Defective", "Missing"] as const;
+const STATUS_FILTERS = [
+  "All Statuses",
+  "Available",
+  "Assigned",
+  "In Repair",
+  "Pending Disposal",
+  "Pending Retrieval",
+] as const;
 
 type StorageWorkspaceView = "assets" | "census";
+type StorageHeaderMenu =
+  | "type"
+  | "sort"
+  | "category"
+  | "location"
+  | "condition"
+  | "status"
+  | "actions"
+  | null;
 
 type CensusSession = {
   id: string;
@@ -51,9 +72,18 @@ export function InventoryStorageSection() {
   const [selectedCategory, setSelectedCategory] =
     useState<(typeof CATEGORIES)[number]>("All Categories");
   const [selectedType, setSelectedType] = useState("All Types");
-  const [sortMode, setSortMode] = useState<"recent" | "name" | "cost_desc">("recent");
+  const [sortMode, setSortMode] = useState<
+    "recent" | "oldest" | "name" | "cost_desc" | "cost_asc"
+  >("recent");
+  const [selectedLocationFilter, setSelectedLocationFilter] = useState("All Locations");
+  const [selectedConditionFilter, setSelectedConditionFilter] =
+    useState<(typeof CONDITION_FILTERS)[number]>("All Conditions");
+  const [selectedStatusFilter, setSelectedStatusFilter] =
+    useState<(typeof STATUS_FILTERS)[number]>("All Statuses");
   const [isLoading, setIsLoading] = useState(true);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [view, setView] = useState<StorageWorkspaceView>("assets");
   const [censusTitle, setCensusTitle] = useState("");
@@ -62,6 +92,8 @@ export function InventoryStorageSection() {
   const [censusNote, setCensusNote] = useState("");
   const [currentSession, setCurrentSession] = useState<CensusSession | null>(null);
   const [sessionHistory, setSessionHistory] = useState<CensusSession[]>([]);
+  const [openHeaderMenu, setOpenHeaderMenu] = useState<StorageHeaderMenu>(null);
+  const [openRowActionId, setOpenRowActionId] = useState<string | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -108,10 +140,14 @@ export function InventoryStorageSection() {
         asset.requester,
         asset.department,
         asset.category,
+        mapCategory(asset.category),
         asset.itemType,
         asset.storageName,
         asset.serialNumber ?? "",
         asset.qrCode,
+        humanizeConditionValue(asset.conditionStatus),
+        humanizeStatusValue(normalizeStorageStatus(asset.assetStatus)),
+        formatDisplayDate(asset.receivedAt),
       ].some((value) => value.toLowerCase().includes(normalizedQuery)),
     );
   }, [assets, searchValue]);
@@ -144,6 +180,11 @@ export function InventoryStorageSection() {
     ];
   }, [searchedAssets, selectedCategory]);
 
+  const locationOptions = useMemo(
+    () => ["All Locations", ...Array.from(new Set(searchedAssets.map((asset) => asset.storageName)))],
+    [searchedAssets],
+  );
+
   const visibleAssets = useMemo(() => {
     const categoryFilteredAssets =
       selectedCategory === "All Categories"
@@ -155,8 +196,27 @@ export function InventoryStorageSection() {
         : categoryFilteredAssets.filter(
             (asset) => normalizeItemType(asset.itemType) === selectedType,
           );
+    const conditionFilteredAssets =
+      selectedConditionFilter === "All Conditions"
+        ? typeFilteredAssets
+        : typeFilteredAssets.filter(
+            (asset) =>
+              humanizeConditionValue(asset.conditionStatus) === selectedConditionFilter,
+          );
+    const statusFilteredAssets =
+      selectedStatusFilter === "All Statuses"
+        ? conditionFilteredAssets
+        : conditionFilteredAssets.filter(
+            (asset) =>
+              humanizeStatusValue(normalizeStorageStatus(asset.assetStatus)) ===
+              selectedStatusFilter,
+          );
+    const locationFilteredAssets =
+      selectedLocationFilter === "All Locations"
+        ? statusFilteredAssets
+        : statusFilteredAssets.filter((asset) => asset.storageName === selectedLocationFilter);
 
-    return [...typeFilteredAssets].sort((left, right) => {
+    return [...locationFilteredAssets].sort((left, right) => {
       if (sortMode === "name") {
         return left.assetName.localeCompare(right.assetName);
       }
@@ -165,9 +225,25 @@ export function InventoryStorageSection() {
         return (right.unitCost ?? 0) - (left.unitCost ?? 0);
       }
 
+      if (sortMode === "cost_asc") {
+        return (left.unitCost ?? 0) - (right.unitCost ?? 0);
+      }
+
+      if (sortMode === "oldest") {
+        return left.receivedAt.localeCompare(right.receivedAt);
+      }
+
       return right.receivedAt.localeCompare(left.receivedAt);
     });
-  }, [searchedAssets, selectedCategory, selectedType, sortMode]);
+  }, [
+    selectedLocationFilter,
+    searchedAssets,
+    selectedCategory,
+    selectedConditionFilter,
+    selectedStatusFilter,
+    selectedType,
+    sortMode,
+  ]);
 
   const typeBreakdown = useMemo(
     () =>
@@ -196,9 +272,43 @@ export function InventoryStorageSection() {
         ? assets.filter((asset) => asset.storageName === censusLocation).length
         : assets.length;
 
+  useEffect(() => {
+    function handlePointerDown() {
+      setOpenHeaderMenu(null);
+      setOpenRowActionId(null);
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, []);
+
   function handleActionClick(action: (typeof ACTIONS)[number]) {
     if (action === "Census") {
       setView("census");
+    }
+  }
+
+  async function handleDownloadLabels() {
+    if (selectedIds.length === 0) {
+      setActionErrorMessage("Select at least one asset to print labels.");
+      return;
+    }
+
+    setIsDownloadingPdf(true);
+    setActionErrorMessage(null);
+
+    try {
+      const selectedAssetCodes = assets
+        .filter((asset) => selectedIds.includes(asset.id))
+        .map((asset) => asset.assetCode);
+      const pdf = await downloadAssetLabelsPdfRequest(selectedAssetCodes);
+      downloadBase64File(pdf);
+    } catch (error) {
+      setActionErrorMessage(
+        error instanceof Error ? error.message : "Failed to download asset labels.",
+      );
+    } finally {
+      setIsDownloadingPdf(false);
     }
   }
 
@@ -247,6 +357,7 @@ export function InventoryStorageSection() {
       title="Storage Assets"
       subtitle="Manage your inventory stock levels"
       backgroundClassName="bg-[linear-gradient(180deg,#dcebfb_0%,#eff7ff_58%,#ffffff_100%)]"
+      contentWidthClassName="max-w-[1320px]"
     >
       {errorMessage ? (
         <EmptyState title="Storage data unavailable" description={errorMessage} />
@@ -282,18 +393,20 @@ export function InventoryStorageSection() {
       ) : (
         <div className="overflow-hidden rounded-[20px] border border-[#d7e5f3] bg-white shadow-[0_18px_42px_rgba(148,163,184,0.14)]">
           <div className="bg-[linear-gradient(180deg,#cfe3fb_0%,#d9ebff_26%,#eef6ff_68%,#ffffff_100%)] px-6 pb-5 pt-6">
-            <div className="flex flex-wrap gap-2">
-              <div className="fx-group min-w-[260px] flex-1" data-filled={searchValue ? "true" : "false"}>
+            <div className="flex flex-wrap gap-3">
+              <div className="relative min-w-[280px] flex-1">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#8fa0ba]">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <circle cx="7" cy="7" r="4.8" stroke="currentColor" strokeWidth="1.4" />
+                    <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </span>
                 <input
                   value={searchValue}
                   onChange={(event) => setSearchValue(event.target.value)}
-                  className="fx-input"
+                  placeholder="Search by QR, asset, category, type, requester, or department..."
+                  className="h-11 w-full rounded-[14px] border border-[#dbe8f5] bg-white pl-11 pr-4 text-[14px] text-[#334155] outline-none shadow-[0_4px_12px_rgba(148,163,184,0.08)] placeholder:text-[#94a3b8]"
                 />
-                <span className="fx-highlight" />
-                <span className="fx-bar" />
-                <span className="fx-label">
-                  Search by QR, asset, category, type, requester, or department...
-                </span>
               </div>
               {ACTIONS.map((action) => (
                 <button
@@ -322,28 +435,127 @@ export function InventoryStorageSection() {
                   <span className="fx-submit-label">{action}</span>
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => void handleDownloadLabels()}
+                disabled={selectedIds.length === 0 || isDownloadingPdf}
+                className="fx-submit-button h-10 px-4 text-[12px] font-medium disabled:opacity-60"
+              >
+                <span className="fx-submit-icon-wrapper">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="fx-submit-icon"
+                  >
+                    <path d="M12 3v12" />
+                    <path d="m7 10 5 5 5-5" />
+                    <path d="M5 21h14" />
+                  </svg>
+                </span>
+                <span className="fx-submit-label">
+                  {isDownloadingPdf ? "Preparing..." : "Print Labels"}
+                </span>
+              </button>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <select
-                value={selectedType}
-                onChange={(event) => setSelectedType(event.target.value)}
-                className="h-10 min-w-[180px] rounded-[10px] border border-[#dbe8f5] bg-white px-3 text-[13px] text-[#334155] shadow-[0_4px_12px_rgba(148,163,184,0.08)]"
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpenHeaderMenu((current) => (current === "type" ? null : "type"));
+                }}
+                className="relative h-10 min-w-[180px] rounded-[10px] border border-[#dbe8f5] bg-white px-3 text-left text-[13px] text-[#334155] shadow-[0_4px_12px_rgba(148,163,184,0.08)]"
               >
-                {typeOptions.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={sortMode}
-                onChange={(event) => setSortMode(event.target.value as typeof sortMode)}
-                className="h-10 min-w-[180px] rounded-[10px] border border-[#dbe8f5] bg-white px-3 text-[13px] text-[#334155] shadow-[0_4px_12px_rgba(148,163,184,0.08)]"
+                <span>{selectedType}</span>
+                <HeaderMenuChevron />
+                {openHeaderMenu === "type" ? (
+                  <HeaderMenuPanel>
+                    {typeOptions.map((type) => (
+                      <HeaderMenuItem
+                        key={type}
+                        label={type}
+                        selected={selectedType === type}
+                        onClick={() => {
+                          setSelectedType(type);
+                          setOpenHeaderMenu(null);
+                        }}
+                      />
+                    ))}
+                  </HeaderMenuPanel>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpenHeaderMenu((current) => (current === "sort" ? null : "sort"));
+                }}
+                className="relative h-10 min-w-[180px] rounded-[10px] border border-[#dbe8f5] bg-white px-3 text-left text-[13px] text-[#334155] shadow-[0_4px_12px_rgba(148,163,184,0.08)]"
               >
-                <option value="recent">Sort: Latest received</option>
-                <option value="name">Sort: Asset name</option>
-                <option value="cost_desc">Sort: Highest cost</option>
-              </select>
+                <span>
+                  {sortMode === "recent"
+                    ? "Sort: Latest received"
+                    : sortMode === "oldest"
+                      ? "Sort: Oldest received"
+                      : sortMode === "name"
+                        ? "Sort: Asset name"
+                        : sortMode === "cost_asc"
+                          ? "Sort: Lowest cost"
+                          : "Sort: Highest cost"}
+                </span>
+                <HeaderMenuChevron />
+                {openHeaderMenu === "sort" ? (
+                  <HeaderMenuPanel>
+                    <HeaderMenuItem
+                      label="Sort: Latest received"
+                      selected={sortMode === "recent"}
+                      onClick={() => {
+                        setSortMode("recent");
+                        setOpenHeaderMenu(null);
+                      }}
+                    />
+                    <HeaderMenuItem
+                      label="Sort: Oldest received"
+                      selected={sortMode === "oldest"}
+                      onClick={() => {
+                        setSortMode("oldest");
+                        setOpenHeaderMenu(null);
+                      }}
+                    />
+                    <HeaderMenuItem
+                      label="Sort: Asset name"
+                      selected={sortMode === "name"}
+                      onClick={() => {
+                        setSortMode("name");
+                        setOpenHeaderMenu(null);
+                      }}
+                    />
+                    <HeaderMenuItem
+                      label="Sort: Lowest cost"
+                      selected={sortMode === "cost_asc"}
+                      onClick={() => {
+                        setSortMode("cost_asc");
+                        setOpenHeaderMenu(null);
+                      }}
+                    />
+                    <HeaderMenuItem
+                      label="Sort: Highest cost"
+                      selected={sortMode === "cost_desc"}
+                      onClick={() => {
+                        setSortMode("cost_desc");
+                        setOpenHeaderMenu(null);
+                      }}
+                    />
+                  </HeaderMenuPanel>
+                ) : null}
+              </button>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               {categoryCounts.map(({ category, count }) => (
@@ -411,9 +623,14 @@ export function InventoryStorageSection() {
                   : `${selectedCategory}${selectedType === "All Types" ? "" : ` / ${selectedType}`}`}
               </span>
             </div>
+            {actionErrorMessage ? (
+              <p className="mt-3 text-[12px] font-medium text-[#dc2626]">
+                {actionErrorMessage}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-4 px-4 pb-3">
-            <div className="overflow-hidden rounded-[14px] border border-[#dbe7f3] bg-white shadow-[0_8px_22px_rgba(148,163,184,0.10)]">
+            <div className="overflow-x-auto rounded-[14px] border border-[#dbe7f3] bg-white shadow-[0_8px_22px_rgba(148,163,184,0.10)]">
               {visibleAssets.length === 0 ? (
                 <div className="px-6 py-10 text-center">
                   <p className="text-[16px] font-semibold text-[#0f172a]">
@@ -426,23 +643,10 @@ export function InventoryStorageSection() {
                   </p>
                 </div>
               ) : (
-                <table className="w-full table-fixed border-separate border-spacing-0 text-[11px] text-[#334155]">
-                  <colgroup>
-                    <col className="w-[4%]" />
-                    <col className="w-[4%]" />
-                    <col className="w-[10%]" />
-                    <col className="w-[23%]" />
-                    <col className="w-[9%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[7%]" />
-                    <col className="w-[3%]" />
-                  </colgroup>
+                <table className="min-w-[1320px] w-full table-auto border-separate border-spacing-y-0 text-[12px] text-[#334155]">
                   <thead>
-                    <tr className="bg-[#dfeeff] text-[11px] font-medium text-[#334155]">
-                      <th className="rounded-l-[12px] px-2 py-3 text-center">
+                    <tr className="bg-[#dfeeff] text-[12px] font-semibold text-[#334155]">
+                      <th className="w-[52px] rounded-l-[12px] px-3 py-4 text-center align-middle">
                         <StorageCheckbox
                           checked={allVisibleSelected}
                           onChange={(checked) =>
@@ -451,22 +655,147 @@ export function InventoryStorageSection() {
                           ariaLabel="Select all storage assets"
                         />
                       </th>
-                      <th className="px-2 py-3 text-left">No</th>
-                      <th className="px-2 py-3 text-left">ID</th>
-                      <th className="px-2 py-3 text-left">Asset Name</th>
-                      <th className="px-2 py-3 text-left">Date</th>
-                      <th className="px-2 py-3 text-left">Category</th>
-                      <th className="px-2 py-3 text-left">Location</th>
-                      <th className="px-2 py-3 text-left">Condition</th>
-                      <th className="px-2 py-3 text-left">Status</th>
-                      <th className="px-2 py-3 text-right">Unit Cost</th>
-                      <th className="rounded-r-[12px] px-2 py-3 text-center" />
+                      <th className="w-[48px] px-3 py-4 text-left align-middle">No</th>
+                      <th className="w-[132px] px-3 py-4 text-left align-middle">ID</th>
+                      <th className="min-w-[220px] px-3 py-4 text-left align-middle">
+                        <div className="flex items-center">Asset Name</div>
+                      </th>
+                      <th className="w-[110px] px-3 py-4 text-left align-middle">
+                        <TableHeaderSortTrigger
+                          label="Date"
+                          direction={sortMode === "recent" ? "desc" : sortMode === "oldest" ? "asc" : null}
+                          onClick={() =>
+                            setSortMode((current) => (current === "recent" ? "oldest" : "recent"))
+                          }
+                        />
+                      </th>
+                      <th className="min-w-[160px] px-3 py-4 text-left align-middle">
+                        <TableHeaderTrigger
+                          label="Category"
+                          open={openHeaderMenu === "category"}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setOpenHeaderMenu((current) => (current === "category" ? null : "category"));
+                          }}
+                        >
+                          <HeaderMenuItem
+                            label="All Categories"
+                            selected={selectedCategory === "All Categories"}
+                            onClick={() => {
+                              setSelectedCategory("All Categories");
+                              setOpenHeaderMenu(null);
+                            }}
+                          />
+                          {CATEGORIES.filter((category) => category !== "All Categories").map((category) => (
+                            <HeaderMenuItem
+                              key={category}
+                              label={category}
+                              preview={<StorageCategoryBadge label={category} />}
+                              selected={selectedCategory === category}
+                              onClick={() => {
+                                setSelectedCategory(category);
+                                setSelectedType("All Types");
+                                setOpenHeaderMenu(null);
+                              }}
+                            />
+                          ))}
+                        </TableHeaderTrigger>
+                      </th>
+                      <th className="min-w-[200px] px-3 py-4 text-left align-middle">
+                        <TableHeaderTrigger
+                          label="Location"
+                          open={openHeaderMenu === "location"}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setOpenHeaderMenu((current) => (current === "location" ? null : "location"));
+                          }}
+                        >
+                          {locationOptions.map((location) => (
+                            <HeaderMenuItem
+                              key={location}
+                              label={location}
+                              selected={selectedLocationFilter === location}
+                              onClick={() => {
+                                setSelectedLocationFilter(location);
+                                setOpenHeaderMenu(null);
+                              }}
+                            />
+                          ))}
+                        </TableHeaderTrigger>
+                      </th>
+                      <th className="min-w-[150px] px-3 py-4 text-left align-middle">
+                        <TableHeaderTrigger
+                          label="Condition"
+                          open={openHeaderMenu === "condition"}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setOpenHeaderMenu((current) => (current === "condition" ? null : "condition"));
+                          }}
+                        >
+                          {CONDITION_FILTERS.map((option) => (
+                            <HeaderMenuItem
+                              key={option}
+                              label={option}
+                              preview={
+                                option === "All Conditions" ? undefined : (
+                                  <StorageConditionBadge value={conditionFilterToValue(option)} />
+                                )
+                              }
+                              selected={selectedConditionFilter === option}
+                              onClick={() => {
+                                setSelectedConditionFilter(option);
+                                setOpenHeaderMenu(null);
+                              }}
+                            />
+                          ))}
+                        </TableHeaderTrigger>
+                      </th>
+                      <th className="min-w-[150px] px-3 py-4 text-left align-middle">
+                        <TableHeaderTrigger
+                          label="Status"
+                          open={openHeaderMenu === "status"}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setOpenHeaderMenu((current) => (current === "status" ? null : "status"));
+                          }}
+                        >
+                          {STATUS_FILTERS.map((option) => (
+                            <HeaderMenuItem
+                              key={option}
+                              label={option}
+                              preview={
+                                option === "All Statuses" ? undefined : (
+                                  <StorageStatusBadge value={statusFilterToValue(option)} />
+                                )
+                              }
+                              selected={selectedStatusFilter === option}
+                              onClick={() => {
+                                setSelectedStatusFilter(option);
+                                setOpenHeaderMenu(null);
+                              }}
+                            />
+                          ))}
+                        </TableHeaderTrigger>
+                      </th>
+                      <th className="w-[96px] px-3 py-4 text-right align-middle">
+                        <div className="flex justify-end">
+                          <TableHeaderSortTrigger
+                            label="Unit Cost"
+                            align="right"
+                            direction={sortMode === "cost_desc" ? "desc" : sortMode === "cost_asc" ? "asc" : null}
+                            onClick={() =>
+                              setSortMode((current) => (current === "cost_desc" ? "cost_asc" : "cost_desc"))
+                            }
+                          />
+                        </div>
+                      </th>
+                      <th className="w-[44px] rounded-r-[12px] px-3 py-4 text-center align-middle" />
                     </tr>
                   </thead>
                   <tbody>
                     {visibleAssets.map((asset, index) => (
                       <tr key={asset.id} className="transition hover:bg-[#f8fbff]">
-                        <td className="border-t border-[#edf2f7] px-2 py-3 text-center align-middle">
+                        <td className="border-t border-[#edf2f7] px-3 py-4 text-center align-middle">
                           <div onClick={(event) => event.stopPropagation()}>
                             <StorageCheckbox
                               checked={selectedIds.includes(asset.id)}
@@ -481,50 +810,92 @@ export function InventoryStorageSection() {
                             />
                           </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
+                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
                           {index + 1}
                         </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle font-semibold text-[#0f172a]">
-                          {asset.assetCode}
+                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle font-semibold text-[#0f172a]">
+                          <div className="whitespace-nowrap leading-6">{asset.assetCode}</div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <Link
-                            href={`/assets/${asset.id}?role=${currentRole}`}
-                            className="block truncate font-medium text-[#111827] hover:text-[#2563eb]"
-                          >
-                            {asset.assetName}
-                          </Link>
+                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                          <div className="flex items-center">
+                            <Link
+                              href={`/assets/${asset.id}?role=${currentRole}`}
+                              className="block whitespace-nowrap font-medium leading-6 text-[#111827] hover:text-[#2563eb]"
+                            >
+                              {asset.assetName}
+                            </Link>
+                          </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          {formatDisplayDate(asset.receivedAt)}
+                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                          <div className="whitespace-nowrap leading-6">{formatDisplayDate(asset.receivedAt)}</div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <span className="inline-flex max-w-full truncate rounded-full border border-[#dbe3ee] bg-[#f8fafc] px-2 py-[2px] text-[10px]">
-                            {mapCategory(asset.category)}
-                          </span>
+                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                          <div className="flex items-center">
+                            <StorageCategoryBadge label={mapCategory(asset.category)} />
+                          </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <span className="block truncate">{asset.storageName}</span>
+                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                          <div className="leading-6">
+                            <span className="block whitespace-nowrap">{asset.storageName}</span>
+                          </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <StorageConditionBadge value={asset.conditionStatus} />
+                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                          <div className="flex items-center">
+                            <StorageConditionBadge value={asset.conditionStatus} />
+                          </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <StorageStatusBadge value={normalizeStorageStatus(asset.assetStatus)} />
+                        <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
+                          <div className="flex items-center">
+                            <StorageStatusBadge value={normalizeStorageStatus(asset.assetStatus)} />
+                          </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 text-right align-middle">
-                          {formatCurrency(
-                            asset.unitCost ?? 0,
-                            parseCurrency(asset.currencyCode),
-                          )}
+                        <td className="border-t border-[#edf2f7] px-3 py-4 text-right align-middle">
+                          <div className="whitespace-nowrap leading-6">
+                            {formatCurrency(
+                              asset.unitCost ?? 0,
+                              parseCurrency(asset.currencyCode),
+                            )}
+                          </div>
                         </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 text-center align-middle">
-                          <Link
-                            href={`/assets/${asset.id}?role=${currentRole}`}
-                            className="inline-block text-[18px] leading-none text-[#94a3b8]"
-                          >
-                            &#8942;
-                          </Link>
+                        <td className="border-t border-[#edf2f7] px-3 py-4 text-center align-middle">
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setOpenRowActionId((current) => current === asset.id ? null : asset.id);
+                              }}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[18px] leading-none text-[#94a3b8] transition hover:bg-[#f1f5f9]"
+                            >
+                              &#8942;
+                            </button>
+                            {openRowActionId === asset.id ? (
+                              <div
+                                onClick={(event) => event.stopPropagation()}
+                                className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[150px] rounded-[14px] border border-[#d7e2ef] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+                              >
+                                <Link
+                                  href={`/assets/${asset.id}?role=${currentRole}`}
+                                  className="flex items-center justify-between rounded-[10px] px-3 py-2 text-[14px] text-[#344054] hover:bg-[#f8fbff]"
+                                >
+                                  <span>View Details</span>
+                                  <span aria-hidden="true">{"->"}</span>
+                                </Link>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAssets((current) => current.filter((entry) => entry.id !== asset.id));
+                                    setSelectedIds((current) => current.filter((id) => id !== asset.id));
+                                    setOpenRowActionId(null);
+                                  }}
+                                  className="mt-1 flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-[14px] text-[#dc2626] hover:bg-[#fff1f3]"
+                                >
+                                  <span>Delete</span>
+                                  <span aria-hidden="true">{"×"}</span>
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -544,6 +915,137 @@ export function InventoryStorageSection() {
         </div>
       )}
     </WorkspaceShell>
+  );
+}
+
+function TableHeaderTrigger({
+  label,
+  open,
+  onClick,
+  children,
+}: {
+  label: string;
+  open: boolean;
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onClick}
+        className="inline-flex items-center gap-1 text-left"
+      >
+        <span>{label}</span>
+        <HeaderMenuChevron compact absolute={false} />
+      </button>
+      {open ? <HeaderMenuPanel>{children}</HeaderMenuPanel> : null}
+    </div>
+  );
+}
+
+function TableHeaderSortTrigger({
+  label,
+  direction,
+  align = "left",
+  onClick,
+}: {
+  label: string;
+  direction: "asc" | "desc" | null;
+  align?: "left" | "right";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1 ${align === "right" ? "justify-end text-right" : "text-left"}`}
+    >
+      <span>{label}</span>
+      <span className="inline-flex flex-col text-[#94a3b8]" aria-hidden="true">
+        <svg
+          width="10"
+          height="8"
+          viewBox="0 0 10 8"
+          fill="none"
+          className={direction === "asc" ? "text-[#2563eb]" : ""}
+        >
+          <path d="M5 1L8 4H2L5 1Z" fill="currentColor" />
+        </svg>
+        <svg
+          width="10"
+          height="8"
+          viewBox="0 0 10 8"
+          fill="none"
+          className={`-mt-[1px] ${direction === "desc" ? "text-[#2563eb]" : ""}`}
+        >
+          <path d="M5 7L2 4H8L5 7Z" fill="currentColor" />
+        </svg>
+      </span>
+    </button>
+  );
+}
+
+function HeaderMenuPanel({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      onClick={(event) => event.stopPropagation()}
+      className="absolute left-0 top-[calc(100%+10px)] z-20 min-w-[176px] rounded-[16px] border border-[#d7e2ef] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+    >
+      {children}
+    </div>
+  );
+}
+
+function HeaderMenuItem({
+  label,
+  preview,
+  selected,
+  onClick,
+}: {
+  label: string;
+  preview?: React.ReactNode;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center justify-between rounded-[12px] px-3 py-2 text-left text-[14px] transition ${
+        selected ? "bg-[#f8fbff] text-[#2563eb]" : "text-[#344054] hover:bg-[#f8fbff]"
+      }`}
+    >
+      {preview ?? <span>{label}</span>}
+      {selected ? <span aria-hidden="true">✓</span> : null}
+    </button>
+  );
+}
+
+function HeaderMenuChevron({
+  compact = false,
+  absolute = true,
+}: {
+  compact?: boolean;
+  absolute?: boolean;
+}) {
+  return (
+    <svg
+      width={compact ? "14" : "16"}
+      height={compact ? "14" : "16"}
+      viewBox="0 0 16 16"
+      fill="none"
+      className={`${absolute ? "absolute right-3 top-1/2 -translate-y-1/2" : "shrink-0"} text-[#64748b]`}
+      aria-hidden="true"
+    >
+      <path
+        d="M4 6L8 10L12 6"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -577,6 +1079,44 @@ function normalizeStorageStatus(value: string) {
   }
 
   return value;
+}
+
+function humanizeConditionValue(value: string) {
+  if (value === "good") return "Good";
+  if (value === "damaged") return "Damaged";
+  if (value === "defective") return "Defective";
+  if (value === "missing") return "Missing";
+
+  return value;
+}
+
+function humanizeStatusValue(value: string) {
+  if (value === "available") return "Available";
+  if (value === "assigned") return "Assigned";
+  if (value === "inRepair") return "In Repair";
+  if (value === "pendingDisposal") return "Pending Disposal";
+  if (value === "pendingRetrieval") return "Pending Retrieval";
+
+  return value;
+}
+
+function conditionFilterToValue(value: (typeof CONDITION_FILTERS)[number]) {
+  if (value === "Good") return "good";
+  if (value === "Damaged") return "damaged";
+  if (value === "Defective") return "defective";
+  if (value === "Missing") return "missing";
+
+  return "good";
+}
+
+function statusFilterToValue(value: (typeof STATUS_FILTERS)[number]) {
+  if (value === "Available") return "available";
+  if (value === "Assigned") return "assigned";
+  if (value === "In Repair") return "inRepair";
+  if (value === "Pending Disposal") return "pendingDisposal";
+  if (value === "Pending Retrieval") return "pendingRetrieval";
+
+  return "available";
 }
 
 function StorageCensusWorkspace({

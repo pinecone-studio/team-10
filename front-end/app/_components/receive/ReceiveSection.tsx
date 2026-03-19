@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { buildIntakeMetadataNote } from "../../_lib/intake-metadata";
 import {
@@ -23,9 +24,13 @@ import {
   ROWS_PER_PAGE_OPTIONS,
 } from "./receiveData";
 import type { ReceiveCondition } from "./receiveTypes";
+import { BrandedQrCode } from "../shared/BrandedQrCode";
+import { buildPendingAssetScanUrl } from "../../_lib/qr-links";
 
 export function ReceiveSection() {
   const today = new Date().toISOString().slice(0, 10);
+  const router = useRouter();
+  const pathname = usePathname();
   const orders = useOrdersStore();
   const catalog = useCatalogStore();
   const receiveOrders = useMemo(
@@ -57,8 +62,6 @@ export function ReceiveSection() {
     {},
   );
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [scanValue, setScanValue] = useState("");
-  const [scanResult, setScanResult] = useState<"idle" | "success" | "error">("idle");
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -119,6 +122,18 @@ export function ReceiveSection() {
       };
     });
   }, [activeRow, quantityReceived]);
+  const currentRole =
+    pathname.split("/").filter(Boolean)[0] === "systemAdmin" ? "systemAdmin" : "inventoryHead";
+  const primaryQrEntry = generatedQrCodes[0] ?? null;
+  const pendingQrLink =
+    typeof window !== "undefined" && activeRow && primaryQrEntry
+      ? buildPendingAssetScanUrl({
+          token: primaryQrEntry.token,
+          assetName: activeRow.assetName,
+          serialNumber: primaryQrEntry.serialNumber,
+          role: currentRole,
+        })
+      : "";
 
   function applyClassificationDefaults(row: (typeof rows)[number]) {
     const matchedProduct =
@@ -173,8 +188,6 @@ export function ReceiveSection() {
     setReceivedNote(`Demo intake for ${row.assetName}.`);
     applyClassificationDefaults(row);
     setUploadedImage(null);
-    setScanValue("");
-    setScanResult("idle");
   }
 
   async function handleQuickCreate() {
@@ -225,8 +238,6 @@ export function ReceiveSection() {
                   setSelectedCategory,
                   setSelectedType,
                   setUploadedImage,
-                  setScanValue,
-                  setScanResult,
                 )
               }
               className="inline-flex w-fit items-center gap-2 text-[14px] font-medium text-[#344054]"
@@ -260,8 +271,8 @@ export function ReceiveSection() {
             </button>
           </div>
 
-          <div className="grid gap-[18px] xl:grid-cols-[minmax(0,1.1fr)_420px]">
-            <div className="rounded-[12px] border border-[#dcdfe4] bg-white p-[18px]">
+          <div className="grid gap-[18px] xl:grid-cols-[minmax(0,1.15fr)_390px]">
+            <div className="self-start rounded-[12px] border border-[#dcdfe4] bg-white p-[18px]">
               <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#98a2b3]">
                 Ordered list
               </p>
@@ -282,23 +293,27 @@ export function ReceiveSection() {
                   value={`${completedRowIds.filter((rowId) => rows.some((row) => row.id === rowId && row.orderId === activeRow.orderId)).length}/${rows.filter((row) => row.orderId === activeRow.orderId).length} items`}
                 />
               </div>
-              <div className="mt-[16px] overflow-hidden rounded-[12px] border border-[#dce6f3] bg-[linear-gradient(180deg,#eff6ff_0%,#dbeafe_100%)]">
+              <div className="mt-[16px] overflow-hidden rounded-[16px] border border-[#dce6f3] bg-[linear-gradient(180deg,#eff6ff_0%,#dbeafe_100%)]">
                 {uploadedImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={uploadedImage}
-                    alt={`${activeRow.assetName} upload`}
-                    className="h-[220px] w-full object-cover"
-                  />
+                  <div className="flex min-h-[280px] items-center justify-center bg-[radial-gradient(circle_at_top,#f8fbff_0%,#dbeafe_72%)] p-5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={uploadedImage}
+                      alt={`${activeRow.assetName} upload`}
+                      className="max-h-[240px] w-full rounded-[14px] object-contain shadow-[0_18px_45px_rgba(59,130,246,0.14)]"
+                    />
+                  </div>
                 ) : activeProduct?.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={activeProduct.imageUrl}
-                    alt={activeRow.assetName}
-                    className="h-[220px] w-full object-cover"
-                  />
+                  <div className="flex min-h-[280px] items-center justify-center bg-[radial-gradient(circle_at_top,#f8fbff_0%,#dbeafe_72%)] p-5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={activeProduct.imageUrl}
+                      alt={activeRow.assetName}
+                      className="max-h-[240px] w-full rounded-[14px] object-contain shadow-[0_18px_45px_rgba(59,130,246,0.14)]"
+                    />
+                  </div>
                 ) : (
-                  <div className="flex h-[220px] items-center justify-center">
+                  <div className="flex min-h-[280px] items-center justify-center p-6">
                     <div className="rounded-[18px] border border-white/60 bg-white/70 px-6 py-5 text-center shadow-[0_16px_40px_rgba(59,130,246,0.18)]">
                       <div className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#60a5fa]">
                         Item Preview
@@ -330,33 +345,35 @@ export function ReceiveSection() {
               </label>
             </div>
 
-            <div className="rounded-[12px] border border-[#dcdfe4] bg-white p-[18px]">
+            <div className="self-start rounded-[12px] border border-[#dcdfe4] bg-white p-[18px] xl:sticky xl:top-6">
               <h3 className="text-[18px] font-semibold text-[#101828]">
                 Receive Details
               </h3>
               <div className="mt-[14px] space-y-[14px]">
-                <Field label="Received date">
-                  <input
-                    value={receivedDate}
-                    onChange={(event) => setReceivedDate(event.target.value)}
-                    type="date"
-                    className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none"
-                  />
-                </Field>
-                <Field label="Condition on arrival">
-                  <select
-                    value={receivedCondition}
-                    onChange={(event) =>
-                      setReceivedCondition(event.target.value as ReceiveCondition)
-                    }
-                    className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none"
-                  >
-                    <option value="good">Good</option>
-                    <option value="damaged">Damaged</option>
-                    <option value="defective">Defective</option>
-                    <option value="missing">Missing</option>
-                  </select>
-                </Field>
+                <div className="grid gap-[12px] sm:grid-cols-2">
+                  <Field label="Received date">
+                    <input
+                      value={receivedDate}
+                      onChange={(event) => setReceivedDate(event.target.value)}
+                      type="date"
+                      className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none"
+                    />
+                  </Field>
+                  <Field label="Condition on arrival">
+                    <select
+                      value={receivedCondition}
+                      onChange={(event) =>
+                        setReceivedCondition(event.target.value as ReceiveCondition)
+                      }
+                      className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none"
+                    >
+                      <option value="good">Good</option>
+                      <option value="damaged">Damaged</option>
+                      <option value="defective">Defective</option>
+                      <option value="missing">Missing</option>
+                    </select>
+                  </Field>
+                </div>
                 <Field label="Quantity received">
                   <input
                     value={quantityReceived}
@@ -381,55 +398,62 @@ export function ReceiveSection() {
                   onAddCategory={handleAddCategory}
                   onAddType={handleAddType}
                 />
+                <div className="rounded-[12px] border border-[#dbe3ee] bg-[#f8fbff] p-4">
+                  <p className="text-[13px] font-semibold text-[#0f172a]">QR code, serial number, and link</p>
+                  <div className="mt-3 rounded-[10px] border border-[#dbeafe] bg-white p-3">
+                    <div className="flex flex-col items-center gap-3">
+                      <BrandedQrCode
+                        value={pendingQrLink || primaryQrEntry?.token || activeRow.itemCode}
+                        title={primaryQrEntry?.serialNumber ?? activeRow.itemCode}
+                        size={132}
+                        className="w-full max-w-[210px] shrink-0 p-2 shadow-none"
+                        showValue={false}
+                      />
+                      <div className="w-full rounded-[12px] border border-[#e2e8f0] bg-[#f8fbff] px-3 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8fa0ba]">
+                            QR Link
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!pendingQrLink) return;
+                              router.push(pendingQrLink);
+                            }}
+                            className="text-[11px] font-semibold text-[#2563eb] underline underline-offset-2"
+                          >
+                            Open
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!pendingQrLink) return;
+
+                            try {
+                              await navigator.clipboard.writeText(pendingQrLink);
+                              window.alert("Successfully copied to clipboard");
+                            } catch {
+                              window.alert("Failed to copy QR link");
+                            }
+                          }}
+                          className="mt-2 block w-full break-all text-left text-[11px] leading-5 text-[#475569] hover:text-[#2563eb]"
+                        >
+                          {pendingQrLink || primaryQrEntry?.token || activeRow.itemCode}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <Field label="Notes">
                   <textarea
                     value={receivedNote}
                     onChange={(event) => setReceivedNote(event.target.value)}
-                    rows={4}
+                    rows={3}
                     className="w-full rounded-[10px] border border-[#d0d5dd] px-[12px] py-[10px] text-[14px] outline-none"
                     placeholder="Add receive note..."
                   />
                 </Field>
-                <div className="rounded-[12px] border border-[#dbe3ee] bg-[#f8fbff] p-4">
-                  <p className="text-[13px] font-semibold text-[#0f172a]">QR generate and scan</p>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[10px] border border-[#dbeafe] bg-white p-3">
-                      <div className="flex justify-center">
-                        <QrPreview value={generatedQrCodes[0]?.token ?? activeRow.itemCode} />
-                      </div>
-                      <p className="mt-3 truncate text-center text-[11px] text-[#475569]">
-                        {generatedQrCodes[0]?.token ?? activeRow.itemCode}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <input
-                        value={scanValue}
-                        onChange={(event) => {
-                          const nextValue = event.target.value;
-                          setScanValue(nextValue);
-                          if (!nextValue) {
-                            setScanResult("idle");
-                            return;
-                          }
-                          setScanResult(
-                            generatedQrCodes.some((entry) => entry.token === nextValue)
-                              ? "success"
-                              : "error",
-                          );
-                        }}
-                        placeholder="Paste / scan QR token"
-                        className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none"
-                      />
-                      <p className={`text-[12px] ${scanResult === "success" ? "text-[#16a34a]" : scanResult === "error" ? "text-[#dc2626]" : "text-[#64748b]"}`}>
-                        {scanResult === "success"
-                          ? "QR verified locally."
-                          : scanResult === "error"
-                            ? "QR code does not match generated item token."
-                            : "Backendgui local QR verification."}
-                      </p>
-                    </div>
-                  </div>
-                </div>
                 <button
                   type="button"
                   disabled={!activeRow.selectable || Number(quantityReceived) <= 0}
@@ -484,8 +508,6 @@ export function ReceiveSection() {
                       setSelectedCategory,
                       setSelectedType,
                       setUploadedImage,
-                      setScanValue,
-                      setScanResult,
                     );
                   }}
                   className="fx-submit-button h-[48px] w-full px-4 text-[15px] font-medium"
@@ -574,8 +596,6 @@ export function ReceiveSection() {
               applyClassificationDefaults(row);
             }
             setUploadedImage(null);
-            setScanValue("");
-            setScanResult("idle");
           }}
         />
 
@@ -635,36 +655,14 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function QrPreview({ value }: { value: string }) {
-  const cells = Array.from({ length: 81 }, (_, index) => {
-    const charCode = value.charCodeAt(index % value.length) || 0;
-    return (charCode + index) % 2 === 0;
-  });
-
-  return (
-    <div className="grid grid-cols-9 gap-px rounded-[8px] bg-white p-2 shadow-[0_8px_20px_rgba(148,163,184,0.12)]">
-      {cells.map((filled, index) => (
-        <span
-          key={`${value}-${index}`}
-          className={`h-3 w-3 rounded-[1px] ${filled ? "bg-[#0f172a]" : "bg-[#dbeafe]"}`}
-        />
-      ))}
-    </div>
-  );
-}
-
 function resetDetailState(
   setSelectedRowId: (value: string | null) => void,
   setSelectedCategory: (value: string) => void,
   setSelectedType: (value: string) => void,
   setUploadedImage: (value: string | null) => void,
-  setScanValue: (value: string) => void,
-  setScanResult: (value: "idle" | "success" | "error") => void,
 ) {
   setSelectedRowId(null);
   setSelectedCategory("");
   setSelectedType("");
   setUploadedImage(null);
-  setScanValue("");
-  setScanResult("idle");
 }

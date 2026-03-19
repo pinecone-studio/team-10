@@ -168,6 +168,7 @@ input OrderItemInput {
 
 type Query {
   asset(id: ID, qrCode: String): StorageAsset
+  assetLabelPdf(assetCodes: [String!]!): AssetLabelPdf!
   catalogCategories: [CatalogCategory!]!
   catalogItemTypes(categoryId: ID): [CatalogItemType!]!
   catalogProduct(id: ID!): CatalogProduct
@@ -237,4 +238,11 @@ type StorageAsset {
   storageType: String
   unitCost: Float
   updatedAt: String!
+}
+
+type AssetLabelPdf {
+  assetCount: Int!
+  base64: String!
+  contentType: String!
+  fileName: String!
 }

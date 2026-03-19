@@ -1,4 +1,11 @@
 export const AssetTypeDefs = `
+  type AssetLabelPdf {
+    fileName: String!
+    contentType: String!
+    base64: String!
+    assetCount: Int!
+  }
+
   type StorageAsset {
     id: ID!
     assetCode: String!
@@ -28,6 +35,7 @@ export const AssetTypeDefs = `
   type Query {
     storageAssets: [StorageAsset!]!
     asset(id: ID, qrCode: String): StorageAsset
+    assetLabelPdf(assetCodes: [String!]!): AssetLabelPdf!
   }
 
   type Mutation {

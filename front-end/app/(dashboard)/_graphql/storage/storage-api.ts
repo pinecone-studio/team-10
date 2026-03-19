@@ -31,6 +31,13 @@ export type StorageAssetDto = {
   updatedAt: string;
 };
 
+export type AssetLabelPdfDto = {
+  fileName: string;
+  contentType: string;
+  base64: string;
+  assetCount: number;
+};
+
 function inferStorageCategory(itemName: string) {
   const normalized = itemName.toLowerCase();
 
@@ -157,6 +164,17 @@ const assetDetailQuery = gql`
   }
 `;
 
+const assetLabelPdfQuery = gql`
+  query AssetLabelPdf($assetCodes: [String!]!) {
+    assetLabelPdf(assetCodes: $assetCodes) {
+      fileName
+      contentType
+      base64
+      assetCount
+    }
+  }
+`;
+
 export async function fetchStorageAssetsRequest() {
   try {
     const { data } = await apolloClient.query<{ storageAssets: StorageAssetDto[] }>({
@@ -199,6 +217,26 @@ export async function fetchStorageAssetDetailRequest(input: {
       ) ?? null
     );
   }
+}
+
+export async function downloadAssetLabelsPdfRequest(assetCodes: string[]) {
+  const normalizedAssetCodes = assetCodes.map((assetCode) => assetCode.trim()).filter(Boolean);
+
+  if (normalizedAssetCodes.length === 0) {
+    throw new Error("Select at least one asset to print labels.");
+  }
+
+  const { data } = await apolloClient.query<{ assetLabelPdf: AssetLabelPdfDto }>({
+    query: assetLabelPdfQuery,
+    variables: { assetCodes: normalizedAssetCodes },
+    fetchPolicy: "no-cache",
+  });
+
+  if (!data?.assetLabelPdf) {
+    throw new Error("Asset label PDF did not return any data.");
+  }
+
+  return data.assetLabelPdf;
 }
 
 const updateStorageAssetMutation = gql`

@@ -3,13 +3,17 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
+  downloadAssetLabelsPdfRequest,
   fetchStorageAssetDetailRequest,
   type StorageAssetDto,
   updateStorageAssetRequest,
 } from "@/app/(dashboard)/_graphql/storage/storage-api";
+import { downloadBase64File } from "@/app/_lib/download-base64";
 import { formatCurrency, formatDisplayDate } from "@/app/_lib/order-store";
+import { buildRegisteredAssetScanUrl } from "@/app/_lib/qr-links";
 import { FrontendLoading } from "../shared/FrontendLoading";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
+import { BrandedQrCode } from "../shared/BrandedQrCode";
 import {
   STORAGE_CONDITION_OPTIONS,
   STORAGE_STATUS_OPTIONS,
@@ -28,6 +32,7 @@ export function StorageAssetDetailPage({
   const [asset, setAsset] = useState<StorageAssetDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,6 +92,24 @@ export function StorageAssetDetailPage({
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleDownloadLabels() {
+    if (!asset) return;
+
+    setIsDownloadingPdf(true);
+    setErrorMessage(null);
+
+    try {
+      const pdf = await downloadAssetLabelsPdfRequest([asset.assetCode]);
+      downloadBase64File(pdf);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to download label PDF.",
+      );
+    } finally {
+      setIsDownloadingPdf(false);
     }
   }
 
@@ -185,11 +208,41 @@ export function StorageAssetDetailPage({
             </div>
 
             <div className="rounded-[24px] border border-[#d7e4f2] bg-white p-5 shadow-[0_20px_48px_rgba(148,163,184,0.16)]">
-              <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-[#7c93b2]">
-                QR Snapshot
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-[#7c93b2]">
+                  QR Snapshot
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void handleDownloadLabels()}
+                  disabled={isDownloadingPdf}
+                  className="fx-submit-button h-10 px-4 text-[12px] font-medium disabled:opacity-60"
+                >
+                  <span className="fx-submit-icon-wrapper">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="fx-submit-icon"
+                    >
+                      <path d="M12 3v12" />
+                      <path d="m7 10 5 5 5-5" />
+                      <path d="M5 21h14" />
+                    </svg>
+                  </span>
+                  <span className="fx-submit-label">
+                    {isDownloadingPdf ? "Preparing..." : "Print Label PDF"}
+                  </span>
+                </button>
+              </div>
               <div className="mt-4 rounded-[18px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
-                <QrCard title={asset.assetCode} value={asset.qrCode} />
+                <QrCard title={asset.assetCode} value={asset.qrCode} role={role} />
               </div>
             </div>
           </section>
@@ -220,25 +273,22 @@ function InfoCard({
   );
 }
 
-function QrCard({ title, value }: { title: string; value: string }) {
-  const cells = Array.from(
-    { length: 81 },
-    (_, index) => ((value.charCodeAt(index % value.length) || 0) + index) % 2 === 0,
-  );
+function QrCard({
+  title,
+  value,
+  role,
+}: {
+  title: string;
+  value: string;
+  role: string;
+}) {
+  const scanUrl = buildRegisteredAssetScanUrl({
+    qrCode: value,
+    role,
+  });
 
   return (
-    <div className="rounded-[16px] bg-white p-4 shadow-[0_12px_24px_rgba(148,163,184,0.12)]">
-      <div className="grid grid-cols-9 gap-px rounded-[10px] bg-[#e8f0fb] p-2">
-        {cells.map((filled, index) => (
-          <span
-            key={`${value}-${index}`}
-            className={`h-4 w-4 rounded-[2px] ${filled ? "bg-[#0f172a]" : "bg-[#dbeafe]"}`}
-          />
-        ))}
-      </div>
-      <p className="mt-3 truncate text-[12px] font-semibold text-[#111827]">{title}</p>
-      <p className="mt-1 truncate text-[11px] text-[#64748b]">{value}</p>
-    </div>
+    <BrandedQrCode value={scanUrl} title={title} size={176} />
   );
 }
 

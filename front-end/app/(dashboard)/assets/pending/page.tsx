@@ -1,23 +1,28 @@
 import { notFound } from "next/navigation";
 import { RoleSidebar } from "@/app/_components/RoleSidebar";
-import { StorageAssetDetailPage } from "@/app/_components/role/StorageAssetDetailPage";
+import { PendingAssetPreviewPage } from "@/app/_components/role/PendingAssetPreviewPage";
 import { isAppRole } from "@/app/_lib/roles";
 
-type AssetDetailRouteProps = {
-  params: Promise<{ assetId: string }>;
-  searchParams?: Promise<{ role?: string }>;
+type PendingAssetRouteProps = {
+  searchParams?: Promise<{
+    role?: string;
+    assetName?: string;
+    serialNumber?: string;
+    token?: string;
+  }>;
 };
 
-export default async function AssetDetailRoute({
-  params,
+export default async function PendingAssetRoute({
   searchParams,
-}: AssetDetailRouteProps) {
-  const { assetId } = await params;
+}: PendingAssetRouteProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const requestedRole = resolvedSearchParams?.role;
   const role = requestedRole && isAppRole(requestedRole) ? requestedRole : "inventoryHead";
+  const assetName = resolvedSearchParams?.assetName ?? "";
+  const serialNumber = resolvedSearchParams?.serialNumber ?? "";
+  const token = resolvedSearchParams?.token ?? "";
 
-  if (!assetId) {
+  if (!assetName || !serialNumber || !token) {
     notFound();
   }
 
@@ -27,7 +32,12 @@ export default async function AssetDetailRoute({
         <div className="hidden lg:block">
           <RoleSidebar role={role} currentSection="storage" />
         </div>
-        <StorageAssetDetailPage assetId={assetId} role={role} />
+        <PendingAssetPreviewPage
+          role={role}
+          assetName={assetName}
+          serialNumber={serialNumber}
+          token={token}
+        />
       </section>
     </main>
   );

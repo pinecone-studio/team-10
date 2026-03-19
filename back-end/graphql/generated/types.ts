@@ -17,6 +17,14 @@ export type Scalars = {
   Float: { input: number; output: number; }
 };
 
+export type AssetLabelPdf = {
+  __typename?: 'AssetLabelPdf';
+  assetCount: Scalars['Int']['output'];
+  base64: Scalars['String']['output'];
+  contentType: Scalars['String']['output'];
+  fileName: Scalars['String']['output'];
+};
+
 export type CatalogAttributeInput = {
   attributeName: Scalars['String']['input'];
   attributeValue: Scalars['String']['input'];
@@ -369,6 +377,7 @@ export type OrderItemInput = {
 export type Query = {
   __typename?: 'Query';
   asset?: Maybe<StorageAsset>;
+  assetLabelPdf: AssetLabelPdf;
   catalogCategories: Array<CatalogCategory>;
   catalogItemTypes: Array<CatalogItemType>;
   catalogProduct?: Maybe<CatalogProduct>;
@@ -385,6 +394,11 @@ export type Query = {
 export type QueryAssetArgs = {
   id?: InputMaybe<Scalars['ID']['input']>;
   qrCode?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryAssetLabelPdfArgs = {
+  assetCodes: Array<Scalars['String']['input']>;
 };
 
 
@@ -553,6 +567,7 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = {
+  AssetLabelPdf: ResolverTypeWrapper<AssetLabelPdf>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   CatalogAttributeInput: CatalogAttributeInput;
   CatalogCategory: ResolverTypeWrapper<CatalogCategory>;
@@ -579,6 +594,7 @@ export type ResolversTypes = {
 
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = {
+  AssetLabelPdf: AssetLabelPdf;
   Boolean: Scalars['Boolean']['output'];
   CatalogAttributeInput: CatalogAttributeInput;
   CatalogCategory: CatalogCategory;
@@ -601,6 +617,14 @@ export type ResolversParentTypes = {
   ReceivedAsset: ReceivedAsset;
   StorageAsset: StorageAsset;
   String: Scalars['String']['output'];
+};
+
+export type AssetLabelPdfResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AssetLabelPdf'] = ResolversParentTypes['AssetLabelPdf']> = {
+  assetCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  base64?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  contentType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  fileName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
 export type CatalogCategoryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CatalogCategory'] = ResolversParentTypes['CatalogCategory']> = {
@@ -756,6 +780,7 @@ export type OrderItemResolvers<ContextType = GraphQLContext, ParentType extends 
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
   asset?: Resolver<Maybe<ResolversTypes['StorageAsset']>, ParentType, ContextType, Partial<QueryAssetArgs>>;
+  assetLabelPdf?: Resolver<ResolversTypes['AssetLabelPdf'], ParentType, ContextType, RequireFields<QueryAssetLabelPdfArgs, 'assetCodes'>>;
   catalogCategories?: Resolver<Array<ResolversTypes['CatalogCategory']>, ParentType, ContextType>;
   catalogItemTypes?: Resolver<Array<ResolversTypes['CatalogItemType']>, ParentType, ContextType, Partial<QueryCatalogItemTypesArgs>>;
   catalogProduct?: Resolver<Maybe<ResolversTypes['CatalogProduct']>, ParentType, ContextType, RequireFields<QueryCatalogProductArgs, 'id'>>;
@@ -832,6 +857,7 @@ export type StorageAssetResolvers<ContextType = GraphQLContext, ParentType exten
 };
 
 export type Resolvers<ContextType = GraphQLContext> = {
+  AssetLabelPdf?: AssetLabelPdfResolvers<ContextType>;
   CatalogCategory?: CatalogCategoryResolvers<ContextType>;
   CatalogItemType?: CatalogItemTypeResolvers<ContextType>;
   CatalogProduct?: CatalogProductResolvers<ContextType>;
