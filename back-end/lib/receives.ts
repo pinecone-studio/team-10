@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import {
   assets,
   conditionStatusValues,
@@ -11,6 +11,7 @@ import {
   storage,
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
+import { buildAssetCode } from "./asset-codes.ts";
 import {
   parseIntegerId,
   resolveOfficeId,
@@ -183,6 +184,26 @@ function parseConditionStatusFromReceiveCondition(
 
 function buildQrCode(orderId: number, itemCode: string, serialNumber: string) {
   return `QR-${orderId}-${itemCode}-${serialNumber}`;
+}
+
+async function getNextAssetCodeSequence(
+  db: AppDb,
+  assetName: string,
+  receivedAt: string,
+) {
+  const assetCodePrefix = buildAssetCode(assetName, receivedAt, 0).slice(0, -3);
+  const existingCodes = await db
+    .select({ assetCode: assets.assetCode })
+    .from(assets)
+    .where(sql`${assets.assetCode} like ${`${assetCodePrefix}%`}`);
+
+  return (
+    existingCodes.reduce((maxSequence, row) => {
+      const parts = row.assetCode.split("-");
+      const sequence = Number(parts.at(-1));
+      return Number.isInteger(sequence) ? Math.max(maxSequence, sequence) : maxSequence;
+    }, 0) + 1
+  );
 }
 
 function normalizeSerialNumbers(
@@ -619,6 +640,11 @@ export async function receiveOrderItem(
     quantityReceived,
     input.serialNumbers,
   );
+  const nextAssetCodeSequence = await getNextAssetCodeSequence(
+    db,
+    orderItem.itemName,
+    receivedAt,
+  );
 
   const [receive] = await db
     .insert(receives)
@@ -645,9 +671,11 @@ export async function receiveOrderItem(
 
   const assetValues = serialNumbers.map((serialNumber, index) => ({
     receiveItemId: receiveItem.id,
-    assetCode: `AST-${String(orderId).padStart(4, "0")}-${String(
-      receiveItem.id,
-    ).padStart(4, "0")}-${String(index + 1).padStart(3, "0")}`,
+    assetCode: buildAssetCode(
+      orderItem.itemName,
+      receivedAt,
+      nextAssetCodeSequence + index,
+    ),
     qrCode: buildQrCode(orderId, orderItem.itemCode, serialNumber),
     assetName: orderItem.itemName,
     category: orderItem.category,

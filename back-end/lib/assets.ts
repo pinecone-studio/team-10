@@ -1,6 +1,8 @@
 import { asc, eq, isNotNull, or } from "drizzle-orm";
 import {
   assets,
+  assetStatusValues,
+  conditionStatusValues,
   departments,
   orderItems,
   orders,
@@ -177,5 +179,76 @@ export async function getStorageAssetDetail(
   } catch (error) {
     console.warn("getStorageAssetDetail fallback triggered.", error);
     return null;
+  }
+}
+
+function parseAssetStatus(value: string) {
+  const normalized = value.trim();
+  if (!assetStatusValues.includes(normalized as (typeof assetStatusValues)[number])) {
+    throw new Error(`Asset status must be one of: ${assetStatusValues.join(", ")}.`);
+  }
+  return normalized;
+}
+
+function parseConditionStatus(value: string) {
+  const normalized = value.trim();
+  if (
+    !conditionStatusValues.includes(
+      normalized as (typeof conditionStatusValues)[number],
+    )
+  ) {
+    throw new Error(
+      `Condition status must be one of: ${conditionStatusValues.join(", ")}.`,
+    );
+  }
+  return normalized;
+}
+
+export async function updateStorageAsset(
+  db: AppDb,
+  input: {
+    id: string;
+    assetStatus?: string | null;
+    conditionStatus?: string | null;
+  },
+): Promise<StorageAssetRecord> {
+  try {
+    const assetId = parseIntegerId("Asset id", input.id);
+    const updates: Record<string, string> = {
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (input.assetStatus !== undefined && input.assetStatus !== null) {
+      updates.assetStatus = parseAssetStatus(input.assetStatus);
+    }
+
+    if (input.conditionStatus !== undefined && input.conditionStatus !== null) {
+      updates.conditionStatus = parseConditionStatus(input.conditionStatus);
+    }
+
+    if (Object.keys(updates).length === 1) {
+      throw new Error("Provide at least one asset field to update.");
+    }
+
+    const updatedRows = await db
+      .update(assets)
+      .set(updates)
+      .where(eq(assets.id, assetId))
+      .returning({ id: assets.id });
+
+    if (updatedRows.length === 0) {
+      throw new Error(`Asset ${input.id} was not found.`);
+    }
+
+    const detail = await getStorageAssetDetail(db, { id: input.id });
+    if (!detail) {
+      throw new Error(`Asset ${input.id} could not be reloaded after update.`);
+    }
+
+    return detail;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown asset update error.";
+    throw new Error(`Failed to update storage asset: ${message}`);
   }
 }

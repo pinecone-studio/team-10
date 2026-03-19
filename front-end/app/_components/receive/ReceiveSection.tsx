@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   createDemoReceivableOrder,
   createAssetIds,
@@ -41,7 +41,9 @@ export function ReceiveSection() {
   const [rowsPerPage, setRowsPerPage] =
     useState<(typeof ROWS_PER_PAGE_OPTIONS)[number]>(10);
   const [page, setPage] = useState(1);
-  const [receivedDate, setReceivedDate] = useState("");
+  const [receivedDate, setReceivedDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
   const [receivedCondition, setReceivedCondition] =
     useState<ReceiveCondition>("good");
   const [quantityReceived, setQuantityReceived] = useState("1");
@@ -49,10 +51,6 @@ export function ReceiveSection() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [scanValue, setScanValue] = useState("");
   const [scanResult, setScanResult] = useState<"idle" | "success" | "error">("idle");
-
-  useEffect(() => {
-    setReceivedDate(new Date().toISOString().slice(0, 10));
-  }, []);
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();

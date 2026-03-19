@@ -834,3 +834,97 @@ html[data-backend-busy="true"] button:not(:disabled) svg {
     transform: translate(0, 188px);
   }
 }
+
+.ios-checkbox {
+  --checkbox-size: 22px;
+  --checkbox-color: #4b8fe2;
+  --checkbox-bg: #dbeafe;
+  --checkbox-border: #a9c9ef;
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ios-checkbox input {
+  display: none;
+}
+
+.checkbox-wrapper {
+  position: relative;
+  display: block;
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+.checkbox-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  border: 2px solid var(--checkbox-border);
+  background: white;
+  transition: all 0.2s ease;
+  box-shadow:
+    0 4px 8px -4px rgba(15, 23, 42, 0.2),
+    0 2px 4px -2px rgba(15, 23, 42, 0.12);
+}
+
+.checkbox-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 80%;
+  height: 80%;
+  color: white;
+  transform: scale(0);
+  transition: transform 0.2s ease;
+}
+
+.check-path {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  transition: stroke-dashoffset 0.3s ease 0.1s;
+}
+
+.ios-checkbox input:checked + .checkbox-wrapper .checkbox-bg {
+  background: linear-gradient(180deg, #6aa8ef 0%, #4b8fe2 100%);
+  border-color: #4b8fe2;
+}
+
+.ios-checkbox input:checked + .checkbox-wrapper .checkbox-icon {
+  transform: scale(1);
+}
+
+.ios-checkbox input:checked + .checkbox-wrapper .check-path {
+  stroke-dashoffset: 0;
+}
+
+.ios-checkbox:hover .checkbox-wrapper {
+  transform: scale(1.05);
+}
+
+.ios-checkbox:active .checkbox-wrapper {
+  transform: scale(0.95);
+}
+
+.ios-checkbox input:focus + .checkbox-wrapper .checkbox-bg {
+  box-shadow: 0 0 0 4px var(--checkbox-bg);
+}
+
+.ios-checkbox input:checked + .checkbox-wrapper {
+  animation: checkbox-bounce 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes checkbox-bounce {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+}

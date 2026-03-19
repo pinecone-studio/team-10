@@ -93,6 +93,7 @@ export const conditionStatusValues = [
   "fair",
   "damaged",
   "defective",
+  "missing",
   "incomplete",
   "used",
 ] as const;
@@ -103,6 +104,7 @@ export const assetStatusValues = [
   "available",
   "pendingAssignment",
   "assigned",
+  "pendingRetrieval",
   "inRepair",
   "pendingDisposal",
   "sold",

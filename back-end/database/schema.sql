@@ -495,6 +495,7 @@ CREATE TABLE IF NOT EXISTS receive_items (
       'fair',
       'damaged',
       'defective',
+      'missing',
       'incomplete',
       'used'
     )
@@ -541,6 +542,7 @@ CREATE TABLE IF NOT EXISTS assets (
       'fair',
       'damaged',
       'defective',
+      'missing',
       'incomplete',
       'used'
     )
@@ -552,6 +554,7 @@ CREATE TABLE IF NOT EXISTS assets (
       'available',
       'pendingAssignment',
       'assigned',
+      'pendingRetrieval',
       'inRepair',
       'pendingDisposal',
       'sold',
