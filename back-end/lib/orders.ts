@@ -455,47 +455,6 @@ function mapOrder(
   };
 }
 
-function mapInputStatusToFront(status?: string | null): FrontOrderStatus {
-  try {
-    return mapDbStatusToFront(parseOrderStatus(status, "pendingFinanceApproval"));
-  } catch {
-    return "pending_finance";
-  }
-}
-
-function mapInputApprovalTargetToFront(
-  approvalTarget?: string | null,
-): FrontApprovalTarget {
-  try {
-    return mapApprovalTargetToFront(parseApprovalTarget(approvalTarget));
-  } catch {
-    return "finance";
-  }
-}
-
-function mapFallbackOrderItems(items: OrderLineItemInput[]): OrderLineItemRecord[] {
-  return items.map((item, index) => {
-    const quantity = Number.isInteger(Number(item.quantity)) && Number(item.quantity) > 0
-      ? Number(item.quantity)
-      : 1;
-    const unitPrice = Number.isFinite(Number(item.unitPrice)) && Number(item.unitPrice) >= 0
-      ? Number(item.unitPrice)
-      : 0;
-
-    return {
-      id: `fallback-item-${index + 1}`,
-      catalogId: item.catalogId?.trim() ?? "",
-      name: item.name.trim() || `Order item ${index + 1}`,
-      code: item.code.trim().toUpperCase() || `ITEM${String(index + 1).padStart(3, "0")}`,
-      unit: item.unit?.trim() || "pcs",
-      quantity,
-      unitPrice,
-      totalPrice: quantity * unitPrice,
-      currencyCode: "USD",
-    };
-  });
-}
-
 async function listOrderItemsByOrderIds(
   db: AppDb,
   orderIds: number[],
