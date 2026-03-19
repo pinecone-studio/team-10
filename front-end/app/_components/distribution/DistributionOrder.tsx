@@ -96,11 +96,12 @@ function StatusBadge(props: {
 
 export default function DistributionOrder() {
   return (
-    <div className="px-6 pb-6">
-      <div className="w-full rounded-[14px] border border-[#E2E8F0] bg-white p-5">
-        <div className="w-full overflow-x-auto">
-          <div className="min-w-[1051px]">
-            <div className="grid grid-cols-[1.5fr_2.4fr_1.3fr_1.6fr_0.9fr_1.2fr_1.3fr_0.7fr] border-b border-[#E5E7EB]">
+    <div className="flex w-full flex-col items-start px-6 pb-6">
+      <div className="flex w-full flex-col items-start gap-[30px] rounded-[12px] border border-[#E2E8F0] bg-white px-4 py-6">
+        <div className="flex w-full flex-col items-start gap-6 rounded-[14px] border border-[#E5E5E5] bg-white pt-4 pb-6">
+          <div className="w-full overflow-x-auto px-6">
+            <div className="min-w-[1051px]">
+              <div className="grid grid-cols-[1.5fr_2.4fr_1.3fr_1.6fr_0.9fr_1.2fr_1.3fr_0.7fr] border-b border-[#E5E7EB]">
               {[
                 "Distribution #",
                 "Recipient",
@@ -113,55 +114,56 @@ export default function DistributionOrder() {
               ].map((heading, index) => (
                 <div
                   key={heading}
-                  className={`px-4 py-4 text-[14px] font-medium leading-5 text-[#0A0A0A] ${index === 7 ? "text-right" : ""}`}
+                  className={`px-2 py-[10px] text-[14px] font-medium leading-5 text-[#0A0A0A] ${index === 7 ? "text-right" : ""}`}
                 >
                   {heading}
                 </div>
               ))}
-            </div>
-            <div className="flex flex-col">
-              {distributionRows.map((row) => (
-                <div
-                  key={row.id}
-                  className="grid grid-cols-[1.5fr_2.4fr_1.3fr_1.6fr_0.9fr_1.2fr_1.3fr_0.7fr] items-center border-b border-[#E5E7EB] last:border-b-0"
-                >
-                  <div className="px-4 py-4 font-mono text-[14px] font-medium leading-5 text-[#0A0A0A]">
-                    {row.id}
-                  </div>
-                  <div className="flex items-center gap-3 px-4 py-4">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F5F5F5] text-[12px] font-normal leading-4 text-[#0A0A0A]">
-                      {row.initials}
+              </div>
+              <div className="flex flex-col">
+                {distributionRows.map((row) => (
+                  <div
+                    key={row.id}
+                    className="grid grid-cols-[1.5fr_2.4fr_1.3fr_1.6fr_0.9fr_1.2fr_1.3fr_0.7fr] items-center border-b border-[#E5E7EB] last:border-b-0"
+                  >
+                    <div className="px-2 py-[14.5px] font-mono text-[14px] font-medium leading-5 text-[#0A0A0A]">
+                      {row.id}
                     </div>
-                    <span className="text-[14px] font-normal leading-5 text-[#0A0A0A]">
-                      {row.recipient}
-                    </span>
+                    <div className="flex items-center gap-2 px-2 py-[10.5px]">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F5F5F5] text-[12px] font-normal leading-4 text-[#0A0A0A]">
+                        {row.initials}
+                      </div>
+                      <span className="text-[14px] font-normal leading-5 text-[#0A0A0A]">
+                        {row.recipient}
+                      </span>
+                    </div>
+                    <div className="px-2 py-[14.5px] text-[14px] font-normal leading-5 text-[#737373]">
+                      {row.department}
+                    </div>
+                    <div className="px-2 py-[14.5px] text-[14px] font-normal leading-5 text-[#737373]">
+                      {row.location}
+                    </div>
+                    <div className="px-2 py-[14.5px] text-[14px] font-normal leading-5 text-[#0A0A0A]">
+                      {row.items}
+                    </div>
+                    <div className="flex items-center gap-1 px-2 py-[14.5px] text-[14px] font-normal leading-5 text-[#0A0A0A]">
+                      <CallendarIcon />
+                      <span>{row.date}</span>
+                    </div>
+                    <div className="px-2 py-[13.5px]">
+                      <StatusBadge status={row.status} />
+                    </div>
+                    <div className="flex justify-end px-2 py-[8.5px]">
+                      <button
+                        type="button"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-transparent text-[#0A0A0A] transition hover:border-[#E2E8F0] hover:bg-[#F8FAFC]"
+                      >
+                        <EyeIcon />
+                      </button>
+                    </div>
                   </div>
-                  <div className="px-4 py-4 text-[14px] font-normal leading-5 text-[#737373]">
-                    {row.department}
-                  </div>
-                  <div className="px-4 py-4 text-[14px] font-normal leading-5 text-[#737373]">
-                    {row.location}
-                  </div>
-                  <div className="px-4 py-4 text-[14px] font-normal leading-5 text-[#0A0A0A]">
-                    {row.items}
-                  </div>
-                  <div className="flex items-center gap-1 px-4 py-4 text-[14px] font-normal leading-5 text-[#0A0A0A]">
-                    <CallendarIcon />
-                    <span>{row.date}</span>
-                  </div>
-                  <div className="px-4 py-3">
-                    <StatusBadge status={row.status} />
-                  </div>
-                  <div className="flex justify-end px-4 py-4">
-                    <button
-                      type="button"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-transparent text-[#0A0A0A] transition hover:border-[#E2E8F0] hover:bg-[#F8FAFC]"
-                    >
-                      <EyeIcon />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
