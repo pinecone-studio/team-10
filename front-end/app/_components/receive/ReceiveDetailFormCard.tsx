@@ -122,7 +122,7 @@ export function ReceiveDetailFormCard(props: {
           type="button"
           disabled={!props.canSubmit}
           onClick={() => void props.onSubmit()}
-          className="inline-flex h-[48px] w-full cursor-pointer items-center justify-center gap-3 rounded-[10px] bg-[#5d88ce] px-4 text-[15px] font-medium text-white transition duration-150 hover:bg-[#4c78c1] active:scale-[0.98] active:bg-[#436cae] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#bfdbfe] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#cbd5e1] disabled:text-white disabled:opacity-100"
+          className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-[10px] bg-[#5d88ce] text-[14px] font-medium text-white transition duration-150 hover:bg-[#4c78c1] active:scale-[0.98] active:bg-[#436cae] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#bfdbfe] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#cbd5e1] disabled:text-white disabled:opacity-100"
         >
           <span className="fx-submit-icon-wrapper">
             <svg

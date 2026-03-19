@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   downloadAssetLabelsPdfRequest,
@@ -14,10 +15,15 @@ import {
 } from "@/app/(dashboard)/_graphql/distribution/distribution-api";
 import { downloadBase64File } from "@/app/_lib/download-base64";
 import { parseIntakeMetadata } from "@/app/_lib/intake-metadata";
-import { formatCurrency, formatDisplayDate, useOrdersStore } from "@/app/_lib/order-store";
+import {
+  formatCurrency,
+  formatDisplayDate,
+  useOrdersStore,
+} from "@/app/_lib/order-store";
 import { buildRegisteredAssetScanUrl } from "@/app/_lib/qr-links";
-import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
+import { EmptyState } from "../shared/WorkspacePrimitives";
 import { BrandedQrCode } from "../shared/BrandedQrCode";
+import { StorageWorkspaceFrame } from "../storage/StorageWorkspaceFrame";
 import {
   STORAGE_CONDITION_OPTIONS,
   STORAGE_STATUS_OPTIONS,
@@ -47,9 +53,10 @@ function getMatchingDistributionRecords(
         record.assetCode === asset.assetCode ||
         (!!asset.serialNumber && record.serialNumber === asset.serialNumber),
     )
-    .sort((left, right) =>
-      new Date(right.distributedAt || right.createdAt).getTime() -
-      new Date(left.distributedAt || left.createdAt).getTime(),
+    .sort(
+      (left, right) =>
+        new Date(right.distributedAt || right.createdAt).getTime() -
+        new Date(left.distributedAt || left.createdAt).getTime(),
     );
 }
 
@@ -80,7 +87,9 @@ export function StorageAssetDetailPage({
   const [mobileTab, setMobileTab] = useState<MobileTab>("details");
   const [registeredQrMode, setRegisteredQrMode] =
     useState<RegisteredQrMode>("employee");
-  const [distributionRecords, setDistributionRecords] = useState<DistributionRecordDto[]>([]);
+  const [distributionRecords, setDistributionRecords] = useState<
+    DistributionRecordDto[]
+  >([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -107,7 +116,9 @@ export function StorageAssetDetailPage({
       } catch (error) {
         if (!isMounted) return;
         setErrorMessage(
-          error instanceof Error ? error.message : "Failed to load asset detail.",
+          error instanceof Error
+            ? error.message
+            : "Failed to load asset detail.",
         );
       } finally {
         if (isMounted) {
@@ -158,7 +169,9 @@ export function StorageAssetDetailPage({
       downloadBase64File(pdf);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to download label PDF.",
+        error instanceof Error
+          ? error.message
+          : "Failed to download label PDF.",
       );
     } finally {
       setIsDownloadingPdf(false);
@@ -167,14 +180,18 @@ export function StorageAssetDetailPage({
 
   const unitCostLabel = useMemo(() => {
     if (!asset) return "-";
-    return formatCurrency(asset.unitCost ?? 0, parseCurrency(asset.currencyCode));
+    return formatCurrency(
+      asset.unitCost ?? 0,
+      parseCurrency(asset.currencyCode),
+    );
   }, [asset]);
   const linkedOrder = useMemo(
     () =>
       asset
-        ? orders.find(
-            (order) => order.id === asset.orderId || order.id === qrContext?.orderId,
-          ) ?? null
+        ? (orders.find(
+            (order) =>
+              order.id === asset.orderId || order.id === qrContext?.orderId,
+          ) ?? null)
         : null,
     [asset, orders, qrContext?.orderId],
   );
@@ -186,53 +203,61 @@ export function StorageAssetDetailPage({
     () => getMatchingDistributionRecords(asset, distributionRecords),
     [asset, distributionRecords],
   );
-  const ownershipSummary = useMemo(
-    () => {
-      const records = matchedHandoff ?? [];
-      const currentRecord = records.find((record) => record.status === "active") ?? null;
-      const latestRecord = records[0] ?? null;
-      const currentHolderName =
-        currentRecord?.employeeName ??
-        latestRecord?.employeeName ??
-        qrContext?.ownerName ??
-        linkedOrder?.assignedTo ??
-        linkedOrder?.requester ??
-        asset?.requester ??
-        "Unassigned";
-      const currentHolderRole =
-        currentRecord?.recipientRole ??
-        latestRecord?.recipientRole ??
-        qrContext?.ownerRole ??
-        linkedOrder?.assignedRole ??
-        "Unassigned";
-      const previousSessions = records
-        .filter((record) => !currentRecord || record.id !== currentRecord.id)
-        .map((record) =>
+  const ownershipSummary = useMemo(() => {
+    const records = matchedHandoff ?? [];
+    const currentRecord =
+      records.find((record) => record.status === "active") ?? null;
+    const latestRecord = records[0] ?? null;
+    const currentHolderName =
+      currentRecord?.employeeName ??
+      latestRecord?.employeeName ??
+      qrContext?.ownerName ??
+      linkedOrder?.assignedTo ??
+      linkedOrder?.requester ??
+      asset?.requester ??
+      "Unassigned";
+    const currentHolderRole =
+      currentRecord?.recipientRole ??
+      latestRecord?.recipientRole ??
+      qrContext?.ownerRole ??
+      linkedOrder?.assignedRole ??
+      "Unassigned";
+    const previousSessions = records
+      .filter((record) => !currentRecord || record.id !== currentRecord.id)
+      .map(
+        (record) =>
           `${record.employeeName} (${record.recipientRole || "Employee"}${asset?.department ? `, ${asset.department}` : ""})`,
-        )
-        .filter((holder, index, list) => holder && list.indexOf(holder) === index);
-      const usageNotes = records
-        .filter(
-          (record) =>
-            !!record.note?.trim() ||
-            !!record.usageYears?.trim() ||
-            !!record.returnCondition?.trim() ||
-            !!record.returnPower?.trim(),
-        )
-        .map(
-          (record, index) =>
-            `${index + 1}. ${record.employeeName} (${record.recipientRole || "Employee"})\nReceived: ${formatDateOnly(record.distributedAt || record.createdAt)}\nReturned: ${record.returnedAt ? formatDateOnly(record.returnedAt) : "-"}\nUsed: ${calculateUsageDuration(record.distributedAt || record.createdAt, record.returnedAt) || record.usageYears || "-"}\nCondition: ${record.returnCondition || "-"}\nPower: ${record.returnPower || "-"}\nNote: ${record.note?.trim() || "No notes"}`,
-        );
-      return {
+      )
+      .filter(
+        (holder, index, list) => holder && list.indexOf(holder) === index,
+      );
+    const usageNotes = records
+      .filter(
+        (record) =>
+          !!record.note?.trim() ||
+          !!record.usageYears?.trim() ||
+          !!record.returnCondition?.trim() ||
+          !!record.returnPower?.trim(),
+      )
+      .map(
+        (record, index) =>
+          `${index + 1}. ${record.employeeName} (${record.recipientRole || "Employee"})\nReceived: ${formatDateOnly(record.distributedAt || record.createdAt)}\nReturned: ${record.returnedAt ? formatDateOnly(record.returnedAt) : "-"}\nUsed: ${calculateUsageDuration(record.distributedAt || record.createdAt, record.returnedAt) || record.usageYears || "-"}\nCondition: ${record.returnCondition || "-"}\nPower: ${record.returnPower || "-"}\nNote: ${record.note?.trim() || "No notes"}`,
+      );
+    return {
       holder: currentHolderName,
       previousHolder:
         previousSessions.length > 0
-          ? previousSessions.map((holder, index) => `${index + 1}. ${holder}`).join("\n")
+          ? previousSessions
+              .map((holder, index) => `${index + 1}. ${holder}`)
+              .join("\n")
           : "-",
       holderRole: currentHolderRole,
       usageNotes: usageNotes.length > 0 ? usageNotes.join("\n\n") : "No notes",
       department:
-        linkedOrder?.department ?? qrContext?.department ?? asset?.department ?? "-",
+        linkedOrder?.department ??
+        qrContext?.department ??
+        asset?.department ??
+        "-",
       requestNumber:
         linkedOrder?.requestNumber ??
         qrContext?.requestNumber ??
@@ -246,12 +271,20 @@ export function StorageAssetDetailPage({
       specifications:
         intakeMetadata.specifications.length > 0
           ? intakeMetadata.specifications
-              .map((specification, index) => `${index + 1}. ${specification.name}: ${specification.value}`)
+              .map(
+                (specification, index) =>
+                  `${index + 1}. ${specification.name}: ${specification.value}`,
+              )
               .join("\n")
           : "No specifications",
-    };},
-    [asset, intakeMetadata.specifications, linkedOrder, matchedHandoff, qrContext],
-  );
+    };
+  }, [
+    asset,
+    intakeMetadata.specifications,
+    linkedOrder,
+    matchedHandoff,
+    qrContext,
+  ]);
 
   const detailItems = useMemo(() => {
     if (!asset) return [];
@@ -281,26 +314,22 @@ export function StorageAssetDetailPage({
   }, [asset, matchedHandoff]);
 
   const showEmployeeView = role === "employee";
+  const router = useRouter();
 
   return (
-    <WorkspaceShell
+    <StorageWorkspaceFrame
       title="Storage"
-      subtitle=""
-      backgroundClassName="bg-[linear-gradient(180deg,#dcebfb_0%,#eff7ff_58%,#ffffff_100%)]"
-      contentWidthClassName="max-w-[1280px]"
+      subtitle="Manage your inventory stock levels"
+      backLabel="Back to Storage Assets"
+      onBack={() => router.push(`/${role}?section=storage`)}
     >
-      <Link
-        href={`/${role}?section=storage`}
-        className="inline-flex items-center gap-2 text-[14px] font-medium text-[#334155]"
-      >
-        <span aria-hidden="true">{"<-"}</span>
-        <span>Back to Storage Assets</span>
-      </Link>
-
       {errorMessage && !asset ? (
-        <EmptyState title="Asset detail unavailable" description={errorMessage} />
+        <EmptyState
+          title="Asset detail unavailable"
+          description={errorMessage}
+        />
       ) : !hasResolvedAsset || !asset ? null : (
-        <>
+        <div className="mx-auto w-full max-w-[1280px]">
           <div className={showEmployeeView ? "" : "lg:hidden"}>
             <MobileAssetDetailView
               asset={asset}
@@ -318,241 +347,285 @@ export function StorageAssetDetailPage({
               showEmployeeView ? "hidden" : "hidden lg:grid"
             }`}
           >
-          <section className="overflow-hidden rounded-[20px] border border-[#d6e4f2] bg-white shadow-[0_20px_50px_rgba(148,163,184,0.16)]">
-            <div className="border-b border-[#dbe7f3] px-5 py-4">
-              <h2 className="text-[28px] font-semibold leading-tight text-[#101828]">
-                Strorage
-              </h2>
-            </div>
+            <section className="overflow-hidden rounded-[20px] border border-[#d6e4f2] bg-white shadow-[0_20px_50px_rgba(148,163,184,0.16)]">
+              <div className="border-b border-[#dbe7f3] px-5 py-4">
+                <h2 className="text-[16px] font-semibold leading-tight text-[#101828]">
+                  Storage
+                </h2>
+              </div>
 
-            <div className="px-5 py-5">
-              <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dfeeff] text-[12px] font-semibold text-[#1d4ed8]">
-                  {buildInitials(asset.assetName)}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[16px] font-semibold text-[#111827]">
-                    Storage Team
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="text-[13px] text-[#64748b]">
-                      Storage Coordinator
-                    </span>
-                    <span className="rounded-full bg-[#eef4ff] px-2 py-0.5 text-[11px] font-medium text-[#35589c]">
-                      Storage
-                    </span>
+              <div className="px-5 py-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dfeeff] text-[12px] font-semibold text-[#1d4ed8]">
+                    {buildInitials(asset.assetName)}
                   </div>
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-[16px] border border-[#e5edf6] bg-[#f8fbff] p-4">
-                <div className="flex min-h-[170px] items-center justify-center overflow-hidden rounded-[14px] bg-white p-3 shadow-[inset_0_0_0_1px_rgba(219,231,243,0.8)]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={asset.assetImageDataUrl || buildAssetIllustration(asset)}
-                    alt={asset.assetName}
-                    className="h-full max-h-[160px] w-full object-contain"
-                  />
-                </div>
-                <p className="mt-4 text-[13px] leading-5 text-[#475467]">
-                  {asset.receiveNote ||
-                    `${asset.assetName} is currently tracked in storage and ready for review, reassignment, or maintenance updates.`}
-                </p>
-                <p className="mt-4 text-[12px] text-[#8b99ac]">
-                  {formatDisplayDate(asset.updatedAt)} 11:10 PM
-                </p>
-              </div>
-
-              <div className="mt-4 space-y-0">
-                {detailItems.map((item, index) => (
-                  <div
-                    key={item.label}
-                    className={`flex items-center justify-between gap-4 border-[#dbe7f3] py-3 ${
-                      index === 0 ? "border-t" : ""
-                    } ${index === detailItems.length - 1 ? "border-b" : "border-b"}`}
-                  >
-                    <span className="text-[15px] text-[#667085]">{item.label}</span>
-                    <span className="text-right text-[15px] font-medium text-[#101828]">
-                      {item.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="overflow-hidden rounded-[20px] border border-[#d6e4f2] bg-white shadow-[0_20px_50px_rgba(148,163,184,0.16)]">
-            <div className="border-b border-[#dbe7f3] px-5 py-4">
-              <h3 className="text-[28px] font-semibold leading-tight text-[#101828]">
-                Audit Item
-              </h3>
-            </div>
-
-            <div className="space-y-5 px-5 py-5">
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <DisplayField label="Request ID" value={ownershipSummary.requestNumber} />
-                <DisplayField
-                  label="Request Date"
-                  value={formatDisplayDate(asset.requestDate)}
-                />
-                <DisplayField label="Owner Role" value={ownershipSummary.holderRole} />
-                <DisplayField label="Owner" value={ownershipSummary.holder} />
-                <DisplayField label="Previous Holder" value={ownershipSummary.previousHolder} />
-                <DisplayField label="Department" value={ownershipSummary.department} />
-                <DisplayField label="Storage" value={ownershipSummary.storage} />
-                <DisplayField label="Usage Notes" value={ownershipSummary.usageNotes} />
-                <DisplayField label="Specifications" value={ownershipSummary.specifications} />
-                <ControlField label="Confirmed Location">
-                  <select
-                    value={confirmedLocation}
-                    onChange={(event) => setConfirmedLocation(event.target.value)}
-                    className="h-12 w-full rounded-[12px] border border-[#d0d5dd] bg-white px-4 text-[14px] text-[#344054] outline-none shadow-[0_12px_30px_rgba(148,163,184,0.12)]"
-                  >
-                    {buildLocationOptions(asset.storageName).map((location) => (
-                      <option key={location} value={location}>
-                        {location}
-                      </option>
-                    ))}
-                  </select>
-                </ControlField>
-                <ControlField label="Condition">
-                  <StorageSelectMenu
-                    label=""
-                    value={asset.conditionStatus}
-                    options={STORAGE_CONDITION_OPTIONS}
-                    disabled={isSaving}
-                    onChange={(conditionStatus) =>
-                      void handleAssetUpdate({ conditionStatus })
-                    }
-                    compact
-                  />
-                </ControlField>
-                <ControlField label="Status">
-                  <StorageSelectMenu
-                    label=""
-                    value={normalizeStorageStatus(asset.assetStatus)}
-                    options={STORAGE_STATUS_OPTIONS}
-                    disabled={isSaving}
-                    onChange={(assetStatus) => void handleAssetUpdate({ assetStatus })}
-                    compact
-                  />
-                </ControlField>
-              </div>
-
-              <div className="rounded-[16px] border border-[#dbe7f3] bg-[#f8fbff] p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <h4 className="text-[18px] font-semibold text-[#101828]">Value</h4>
-                  <span className="rounded-full bg-[#e8f0ff] px-3 py-1 text-[11px] font-semibold text-[#35589c]">
-                    1 item
-                  </span>
-                </div>
-                <div className="mt-4 space-y-3 text-[15px]">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-[#667085]">Subtotal</span>
-                    <span className="font-medium text-[#101828]">{unitCostLabel}</span>
-                  </div>
-                  <div className="border-t border-[#dbe7f3] pt-3">
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-[18px] font-semibold text-[#101828]">Total</span>
-                      <span className="text-[28px] font-semibold leading-none text-[#101828]">
-                        {unitCostLabel}
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-semibold text-[#111827]">
+                      Storage Team
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="text-[12px] text-[#64748b]">
+                        Storage Coordinator
+                      </span>
+                      <span className="rounded-full bg-[#eef4ff] px-2 py-0.5 text-[12px] font-medium text-[#35589c]">
+                        Storage
                       </span>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <label className="block">
-                <span className="mb-2 block text-[13px] font-semibold text-[#111827]">
-                  Audit Result
-                </span>
-                <textarea
-                  value={auditResult}
-                  onChange={(event) => setAuditResult(event.target.value)}
-                  rows={4}
-                  placeholder="Add notes for approvers..."
-                  className="w-full rounded-[12px] border border-[#d0d5dd] bg-white px-4 py-3 text-[14px] text-[#101828] outline-none"
-                />
-              </label>
-
-              <div className="rounded-[16px] border border-[#dbe7f3] bg-[#f8fbff] p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-[13px] font-semibold text-[#0f172a]">
-                    Scan QR
+                <div className="mt-4 rounded-[16px] border border-[#e5edf6] bg-[#f8fbff] p-4">
+                  <div className="flex min-h-[170px] items-center justify-center overflow-hidden rounded-[14px] bg-white p-3 shadow-[inset_0_0_0_1px_rgba(219,231,243,0.8)]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={
+                        asset.assetImageDataUrl || buildAssetIllustration(asset)
+                      }
+                      alt={asset.assetName}
+                      className="h-full max-h-[160px] w-full object-contain"
+                    />
+                  </div>
+                  <p className="mt-4 text-[12px] leading-5 text-[#475467]">
+                    {asset.receiveNote ||
+                      `${asset.assetName} is currently tracked in storage and ready for review, reassignment, or maintenance updates.`}
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => void handleDownloadLabels()}
-                    disabled={isDownloadingPdf}
-                    className="rounded-[10px] border border-[#d7e2ef] bg-white px-3 py-2 text-[12px] font-medium text-[#334155] transition hover:bg-[#f8fbff] disabled:opacity-60"
-                  >
-                    {isDownloadingPdf ? "Preparing..." : "Print Label PDF"}
-                  </button>
+                  <p className="mt-4 text-[12px] text-[#8b99ac]">
+                    {formatDisplayDate(asset.updatedAt)} 11:10 PM
+                  </p>
                 </div>
-                <div className="mt-3 rounded-[10px] border border-[#dbeafe] bg-white p-3">
-                  <ReceiveStyleQrCard
-                    asset={asset}
-                    role={role}
-                    mode={registeredQrMode}
-                    onModeChange={setRegisteredQrMode}
-                    ownershipSummary={ownershipSummary}
-                  />
-                </div>
-              </div>
 
-              {errorMessage ? (
-                <p className="text-[13px] font-medium text-[#dc2626]">{errorMessage}</p>
-              ) : null}
-
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() =>
-                    void handleAssetUpdate({
-                      assetStatus: asset.assetStatus,
-                      conditionStatus: asset.conditionStatus,
-                    })
-                  }
-                  disabled={isSaving}
-                  className="fx-submit-button h-11 px-5 text-[13px] font-medium disabled:opacity-60"
-                >
-                  <span className="fx-submit-icon-wrapper">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="fx-submit-icon"
+                <div className="mt-4 space-y-0">
+                  {detailItems.map((item, index) => (
+                    <div
+                      key={item.label}
+                      className={`flex items-center justify-between gap-4 border-[#dbe7f3] py-3 ${
+                        index === 0 ? "border-t" : ""
+                      } ${index === detailItems.length - 1 ? "border-b" : "border-b"}`}
                     >
-                      <path d="m22 2-7 20-4-9-9-4Z" />
-                      <path d="M22 2 11 13" />
-                    </svg>
-                  </span>
-                  <span className="fx-submit-label">
-                    {isSaving ? "Saving..." : "Submit"}
-                  </span>
-                </button>
-              </div>
-
-              <div>
-                <h4 className="text-[18px] font-semibold text-[#101828]">History</h4>
-                <div className="mt-4 grid gap-3 xl:grid-cols-3">
-                  {historyItems.map((entry, index) => (
-                    <HistoryCard key={`${entry.title}-${entry.date}-${index}`} entry={entry} />
+                      <span className="text-[12px] text-[#667085]">
+                        {item.label}
+                      </span>
+                      <span className="text-right text-[12px] font-medium text-[#101828]">
+                        {item.value}
+                      </span>
+                    </div>
                   ))}
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
+
+            <section className="overflow-hidden rounded-[20px] border border-[#d6e4f2] bg-white shadow-[0_20px_50px_rgba(148,163,184,0.16)]">
+              <div className="border-b border-[#dbe7f3] px-5 py-4">
+                <h3 className="text-[16px] font-semibold leading-tight text-[#101828]">
+                  Audit Item
+                </h3>
+              </div>
+
+              <div className="space-y-5 px-5 py-5">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  <DisplayField
+                    label="Request ID"
+                    value={ownershipSummary.requestNumber}
+                  />
+                  <DisplayField
+                    label="Request Date"
+                    value={formatDisplayDate(asset.requestDate)}
+                  />
+                  <DisplayField
+                    label="Owner Role"
+                    value={ownershipSummary.holderRole}
+                  />
+                  <DisplayField label="Owner" value={ownershipSummary.holder} />
+                  <DisplayField
+                    label="Previous Holder"
+                    value={ownershipSummary.previousHolder}
+                  />
+                  <DisplayField
+                    label="Department"
+                    value={ownershipSummary.department}
+                  />
+                  <DisplayField
+                    label="Storage"
+                    value={ownershipSummary.storage}
+                  />
+                  <DisplayField
+                    label="Usage Notes"
+                    value={ownershipSummary.usageNotes}
+                  />
+                  <DisplayField
+                    label="Specifications"
+                    value={ownershipSummary.specifications}
+                  />
+                  <ControlField label="Confirmed Location">
+                    <select
+                      value={confirmedLocation}
+                      onChange={(event) =>
+                        setConfirmedLocation(event.target.value)
+                      }
+                      className="h-12 w-full rounded-[12px] border border-[#d0d5dd] bg-white px-4 text-[14px] text-[#344054] outline-none shadow-[0_12px_30px_rgba(148,163,184,0.12)]"
+                    >
+                      {buildLocationOptions(asset.storageName).map(
+                        (location) => (
+                          <option key={location} value={location}>
+                            {location}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </ControlField>
+                  <ControlField label="Condition">
+                    <StorageSelectMenu
+                      label=""
+                      value={asset.conditionStatus}
+                      options={STORAGE_CONDITION_OPTIONS}
+                      disabled={isSaving}
+                      onChange={(conditionStatus) =>
+                        void handleAssetUpdate({ conditionStatus })
+                      }
+                      compact
+                    />
+                  </ControlField>
+                  <ControlField label="Status">
+                    <StorageSelectMenu
+                      label=""
+                      value={normalizeStorageStatus(asset.assetStatus)}
+                      options={STORAGE_STATUS_OPTIONS}
+                      disabled={isSaving}
+                      onChange={(assetStatus) =>
+                        void handleAssetUpdate({ assetStatus })
+                      }
+                      compact
+                    />
+                  </ControlField>
+                </div>
+
+                <div className="rounded-[16px] border border-[#dbe7f3] bg-[#f8fbff] p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="text-[16px] font-semibold text-[#101828]">
+                      Value
+                    </h4>
+                    <span className="rounded-full bg-[#e8f0ff] px-3 py-1 text-[12px] font-semibold text-[#35589c]">
+                      1 item
+                    </span>
+                  </div>
+                  <div className="mt-4 space-y-3 text-[14px]">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[#667085]">Subtotal</span>
+                      <span className="font-medium text-[#101828]">
+                        {unitCostLabel}
+                      </span>
+                    </div>
+                    <div className="border-t border-[#dbe7f3] pt-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-[16px] font-semibold text-[#101828]">
+                          Total
+                        </span>
+                        <span className="text-[16px] font-semibold leading-none text-[#101828]">
+                          {unitCostLabel}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-[14px] font-semibold text-[#111827]">
+                    Audit Result
+                  </span>
+                  <textarea
+                    value={auditResult}
+                    onChange={(event) => setAuditResult(event.target.value)}
+                    rows={4}
+                    placeholder="Add notes for approvers..."
+                    className="w-full rounded-[12px] border border-[#d0d5dd] bg-white px-4 py-3 text-[12px] text-[#101828] outline-none"
+                  />
+                </label>
+
+                <div className="rounded-[16px] border border-[#dbe7f3] bg-[#f8fbff] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[12px] font-semibold text-[#0f172a]">
+                      Scan QR
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleDownloadLabels()}
+                      disabled={isDownloadingPdf}
+                      className="cursor-pointer rounded-[10px] border border-[#d7e2ef] bg-white px-3 py-2 text-[12px] font-medium text-[#334155] transition hover:bg-[#f8fbff] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isDownloadingPdf ? "Preparing..." : "Print Label PDF"}
+                    </button>
+                  </div>
+                  <div className="mt-3 rounded-[10px] border border-[#dbeafe] bg-white p-3">
+                    <ReceiveStyleQrCard
+                      asset={asset}
+                      role={role}
+                      mode={registeredQrMode}
+                      onModeChange={setRegisteredQrMode}
+                      ownershipSummary={ownershipSummary}
+                    />
+                  </div>
+                </div>
+
+                {errorMessage ? (
+                  <p className="text-[12px] font-medium text-[#dc2626]">
+                    {errorMessage}
+                  </p>
+                ) : null}
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleAssetUpdate({
+                        assetStatus: asset.assetStatus,
+                        conditionStatus: asset.conditionStatus,
+                      })
+                    }
+                    disabled={isSaving}
+                    className="inline-flex h-11 cursor-pointer items-center justify-center gap-3 rounded-[10px] bg-[#5d88ce] px-5 text-[14px] font-medium text-white transition duration-150 hover:bg-[#4c78c1] active:scale-[0.98] active:bg-[#436cae] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#bfdbfe] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#cbd5e1] disabled:text-white disabled:opacity-100"
+                  >
+                    <span className="fx-submit-icon-wrapper">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="fx-submit-icon"
+                      >
+                        <path d="m22 2-7 20-4-9-9-4Z" />
+                        <path d="M22 2 11 13" />
+                      </svg>
+                    </span>
+                    <span className="fx-submit-label">
+                      {isSaving ? "Saving..." : "Submit"}
+                    </span>
+                  </button>
+                </div>
+
+                <div>
+                  <h4 className="text-[16px] font-semibold text-[#101828]">
+                    History
+                  </h4>
+                  <div className="mt-4 grid gap-3 xl:grid-cols-3">
+                    {historyItems.map((entry, index) => (
+                      <HistoryCard
+                        key={`${entry.title}-${entry.date}-${index}`}
+                        entry={entry}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
-        </>
+        </div>
       )}
-    </WorkspaceShell>
+    </StorageWorkspaceFrame>
   );
 }
 
@@ -585,6 +658,7 @@ function MobileAssetDetailView({
   };
 }) {
   const heroImage = asset.assetImageDataUrl || buildAssetIllustration(asset);
+  const [isQrZoomOpen, setIsQrZoomOpen] = useState(false);
   const qrLink = buildRegisteredAssetScanUrl({
     qrCode: asset.qrCode,
     mode: qrMode,
@@ -609,7 +683,9 @@ function MobileAssetDetailView({
       </div>
 
       <div className="px-4 pb-5 pt-4">
-        <h2 className="text-[18px] font-semibold text-[#101828]">{asset.assetName}</h2>
+        <h2 className="text-[18px] font-semibold text-[#101828]">
+          {asset.assetName}
+        </h2>
         <p className="mt-1 text-[13px] text-[#667085]">
           {asset.assetCode} · {asset.itemType || "Asset"}
         </p>
@@ -634,7 +710,7 @@ function MobileAssetDetailView({
               key={tab.value}
               type="button"
               onClick={() => onTabChange(tab.value as MobileTab)}
-              className={`rounded-[10px] px-3 py-2 text-[13px] font-medium transition ${
+              className={`cursor-pointer rounded-[10px] px-3 py-2 text-[13px] font-medium transition ${
                 activeTab === tab.value
                   ? "bg-white text-[#101828] shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
                   : "text-[#667085]"
@@ -653,11 +729,26 @@ function MobileAssetDetailView({
             >
               <MobileInfoRow label="Role" value={ownershipSummary.holderRole} />
               <MobileInfoRow label="Holder" value={ownershipSummary.holder} />
-              <MobileInfoRow label="Previous holder" value={ownershipSummary.previousHolder} />
-              <MobileInfoRow label="Usage notes" value={ownershipSummary.usageNotes} />
-              <MobileInfoRow label="Specifications" value={ownershipSummary.specifications} />
-              <MobileInfoRow label="Department" value={ownershipSummary.department} />
-              <MobileInfoRow label="Request" value={ownershipSummary.requestNumber} />
+              <MobileInfoRow
+                label="Previous holder"
+                value={ownershipSummary.previousHolder}
+              />
+              <MobileInfoRow
+                label="Usage notes"
+                value={ownershipSummary.usageNotes}
+              />
+              <MobileInfoRow
+                label="Specifications"
+                value={ownershipSummary.specifications}
+              />
+              <MobileInfoRow
+                label="Department"
+                value={ownershipSummary.department}
+              />
+              <MobileInfoRow
+                label="Request"
+                value={ownershipSummary.requestNumber}
+              />
               <MobileInfoRow label="Storage" value={ownershipSummary.storage} />
             </MobileSection>
 
@@ -666,7 +757,9 @@ function MobileAssetDetailView({
               subtitle="Most recently recorded place"
             >
               <div className="rounded-[14px] border border-[#e4e7ec] bg-white px-4 py-3">
-                <p className="text-[14px] font-medium text-[#101828]">{ownershipSummary.storage}</p>
+                <p className="text-[14px] font-medium text-[#101828]">
+                  {ownershipSummary.storage}
+                </p>
               </div>
             </MobileSection>
 
@@ -678,17 +771,26 @@ function MobileAssetDetailView({
                 <div className="rounded-[16px] border border-[#dbeafe] bg-[#f8fbff] p-4">
                   <QrModeSwitch value={qrMode} onChange={onQrModeChange} />
                   <div className="flex flex-col items-center gap-3">
-                    <BrandedQrCode
-                      value={qrLink}
-                      title={asset.assetCode}
-                      size={132}
-                      className="w-full max-w-[210px] shrink-0 p-2 shadow-none"
-                      showValue={false}
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsQrZoomOpen(true)}
+                      className="inline-flex cursor-pointer items-center justify-center rounded-[16px]"
+                      aria-label="Open QR preview"
+                    >
+                      <BrandedQrCode
+                        value={qrLink}
+                        title={asset.assetCode}
+                        size={132}
+                        className="w-full max-w-[210px] shrink-0 p-2 shadow-none"
+                        showValue={false}
+                      />
+                    </button>
                     <div className="w-full rounded-[12px] border border-[#dbe7f3] bg-white px-3 py-3">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8fa0ba]">
-                          {qrMode === "employee" ? "Employee QR Link" : "Audit QR Link"}
+                          {qrMode === "employee"
+                            ? "Employee QR Link"
+                            : "Audit QR Link"}
                         </p>
                         <Link
                           href={qrLink}
@@ -708,6 +810,24 @@ function MobileAssetDetailView({
                     </p>
                   </div>
                 </div>
+                {isQrZoomOpen ? (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+                    <button
+                      type="button"
+                      onClick={() => setIsQrZoomOpen(false)}
+                      className="inline-flex cursor-pointer rounded-[24px] bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.24)]"
+                      aria-label="Close QR preview"
+                    >
+                      <BrandedQrCode
+                        value={qrLink}
+                        title={asset.assetCode}
+                        size={300}
+                        className="w-full max-w-[360px] p-2 shadow-none"
+                        showValue={false}
+                      />
+                    </button>
+                  </div>
+                ) : null}
               </MobileSection>
             ) : null}
           </div>
@@ -723,26 +843,37 @@ function MobileAssetDetailView({
               </div>
               <button
                 type="button"
-                className="text-[12px] font-medium text-[#667085]"
+                className="cursor-pointer text-[12px] font-medium text-[#667085]"
               >
                 See all
               </button>
             </div>
             <div className="space-y-4">
               {historyItems.map((entry, index) => (
-                <div key={`${entry.title}-${index}`} className="flex items-start gap-3">
-                  <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${historyToneClass(entry.title)}`}>
-                    <span className="text-[15px] text-white">{historyIcon(entry.title)}</span>
+                <div
+                  key={`${entry.title}-${index}`}
+                  className="flex items-start gap-3"
+                >
+                  <div
+                    className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${historyToneClass(entry.title)}`}
+                  >
+                    <span className="text-[15px] text-white">
+                      {historyIcon(entry.title)}
+                    </span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-[15px] font-medium text-[#101828]">{entry.title}</p>
+                        <p className="text-[15px] font-medium text-[#101828]">
+                          {entry.title}
+                        </p>
                         <p className="text-[13px] text-[#667085]">
                           {entry.owner} · {entry.location}
                         </p>
                       </div>
-                      <span className="shrink-0 text-[12px] text-[#667085]">{entry.date}</span>
+                      <span className="shrink-0 text-[12px] text-[#667085]">
+                        {entry.date}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -779,9 +910,15 @@ function MobileInfoRow({ label, value }: { label: string; value: string }) {
   const lines = value.split("\n").filter(Boolean);
   const normalizedLabel = label.toLowerCase();
   const segments = value.split("\n\n").filter(Boolean);
-  const isPreviousHolderList = normalizedLabel === "previous holder" && lines.length > 1;
-  const isUsageNotesList = normalizedLabel === "usage notes" && segments.length > 1;
-  const isSpecificationList = normalizedLabel === "specifications" && lines.length > 1;
+  const hasUsageNotes =
+    normalizedLabel === "usage notes" &&
+    value.trim() !== "" &&
+    value.trim().toLowerCase() !== "no notes";
+  const isPreviousHolderList =
+    normalizedLabel === "previous holder" && lines.length > 1;
+  const isUsageNotesList = hasUsageNotes && segments.length > 1;
+  const isSpecificationList =
+    normalizedLabel === "specifications" && lines.length > 1;
   return (
     <div className="flex items-start justify-between gap-4 border-b border-[#eef2f6] py-3 last:border-b-0">
       <span className="text-[13px] text-[#667085]">{label}</span>
@@ -808,7 +945,7 @@ function MobileInfoRow({ label, value }: { label: string; value: string }) {
           ))}
         </div>
       ) : isUsageNotesList ? (
-        <div className="max-w-[62%] space-y-2 text-left">
+        <div className="max-w-[62%] space-y-2 overflow-y-auto text-left max-h-[300px] pr-1">
           {segments.map((segment) => (
             <div
               key={segment}
@@ -817,6 +954,10 @@ function MobileInfoRow({ label, value }: { label: string; value: string }) {
               {segment}
             </div>
           ))}
+        </div>
+      ) : hasUsageNotes ? (
+        <div className="max-w-[62%] max-h-[300px] overflow-y-auto rounded-[10px] border border-[#dbe7f3] bg-[#f8fbff] px-3 py-2 text-[13px] leading-5 text-[#101828] whitespace-pre-wrap break-words text-left">
+          {value}
         </div>
       ) : (
         <span className="max-w-[62%] whitespace-pre-wrap text-right text-[14px] font-medium leading-5 text-[#101828]">
@@ -832,18 +973,24 @@ function DisplayField({ label, value }: { label: string; value: string }) {
   const lines = value.split("\n").filter(Boolean);
   const normalizedLabel = label.toLowerCase();
   const segments = value.split("\n\n").filter(Boolean);
-  const isPreviousHolderList = normalizedLabel === "previous holder" && lines.length > 1;
-  const isUsageNotesList = normalizedLabel === "usage notes" && segments.length > 1;
-  const isSpecificationList = normalizedLabel === "specifications" && lines.length > 1;
+  const hasUsageNotes =
+    normalizedLabel === "usage notes" &&
+    value.trim() !== "" &&
+    value.trim().toLowerCase() !== "no notes";
+  const isPreviousHolderList =
+    normalizedLabel === "previous holder" && lines.length > 1;
+  const isUsageNotesList = hasUsageNotes && segments.length > 1;
+  const isSpecificationList =
+    normalizedLabel === "specifications" && lines.length > 1;
   return (
     <div>
-      <p className="mb-2 text-[13px] font-semibold text-[#111827]">{label}</p>
+      <p className="mb-2 text-[12px] font-semibold text-[#111827]">{label}</p>
       {isPreviousHolderList ? (
         <div className="space-y-2 rounded-[12px] border border-[#d0d5dd] bg-[#f8fbff] p-3">
           {lines.map((line) => (
             <div
               key={line}
-              className="rounded-[10px] border border-[#dbe7f3] bg-white px-3 py-2 text-[14px] font-medium leading-5 text-[#344054]"
+              className="rounded-[10px] border border-[#dbe7f3] bg-white px-3 py-2 text-[12px] font-medium leading-5 text-[#344054]"
             >
               {line}
             </div>
@@ -854,26 +1001,30 @@ function DisplayField({ label, value }: { label: string; value: string }) {
           {lines.map((line) => (
             <div
               key={line}
-              className="rounded-[10px] border border-[#dbe7f3] bg-white px-3 py-2 text-[14px] leading-5 text-[#344054]"
+              className="rounded-[10px] border border-[#dbe7f3] bg-white px-3 py-2 text-[12px] leading-5 text-[#344054]"
             >
               {line}
             </div>
           ))}
         </div>
       ) : isUsageNotesList ? (
-        <div className="space-y-3 rounded-[12px] border border-[#d0d5dd] bg-[#f8fbff] p-3">
+        <div className="max-h-[300px] space-y-3 overflow-y-auto rounded-[12px] border border-[#d0d5dd] bg-[#f8fbff] p-3 pr-2">
           {segments.map((segment) => (
             <div
               key={segment}
-              className="rounded-[10px] border border-[#dbe7f3] bg-white px-3 py-3 text-[14px] leading-6 text-[#344054] whitespace-pre-wrap break-words"
+              className="rounded-[10px] border border-[#dbe7f3] bg-white px-3 py-3 text-[12px] leading-6 text-[#344054] whitespace-pre-wrap break-words"
             >
               {segment}
             </div>
           ))}
         </div>
+      ) : hasUsageNotes ? (
+        <div className="max-h-[300px] overflow-y-auto rounded-[12px] border border-[#d0d5dd] bg-[#f8fbff] px-4 py-3 pr-3 text-[12px] leading-6 text-[#344054] whitespace-pre-wrap break-words">
+          {value}
+        </div>
       ) : (
         <div
-          className={`rounded-[12px] border border-[#d0d5dd] px-4 py-3 text-[14px] leading-6 text-[#344054] ${
+          className={`rounded-[12px] border border-[#d0d5dd] px-4 py-3 text-[12px] leading-6 text-[#344054] ${
             isMultiline
               ? "min-h-[96px] whitespace-pre-wrap break-words bg-[#f8fbff]"
               : "flex min-h-12 items-center bg-white"
@@ -890,15 +1041,28 @@ function formatDateOnly(value?: string | null) {
   if (!value) return "-";
   const source = value.includes("T") ? value.slice(0, 10) : value;
   const [year, month, day] = source.split("-");
-  return year && month && day ? `${year}.${month}.${day}` : formatDisplayDate(value);
+  return year && month && day
+    ? `${year}.${month}.${day}`
+    : formatDisplayDate(value);
 }
 
-function calculateUsageDuration(distributedAt?: string | null, returnedAt?: string | null) {
+function calculateUsageDuration(
+  distributedAt?: string | null,
+  returnedAt?: string | null,
+) {
   if (!distributedAt || !returnedAt) return "-";
   const start = new Date(distributedAt);
   const end = new Date(returnedAt);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return "-";
-  const totalDays = Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86_400_000));
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    end <= start
+  )
+    return "-";
+  const totalDays = Math.max(
+    1,
+    Math.floor((end.getTime() - start.getTime()) / 86_400_000),
+  );
   if (totalDays < 30) return `${totalDays} day`;
   if (totalDays < 365) return `${Math.floor(totalDays / 30)} mo`;
   return `${(totalDays / 365).toFixed(1).replace(/\.0$/, "")} yr`;
@@ -941,6 +1105,7 @@ function ReceiveStyleQrCard({
     storage: string;
   };
 }) {
+  const [isQrZoomOpen, setIsQrZoomOpen] = useState(false);
   const qrLink = buildRegisteredAssetScanUrl({
     qrCode: asset.qrCode,
     mode,
@@ -956,13 +1121,20 @@ function ReceiveStyleQrCard({
   return (
     <div className="flex flex-col items-center gap-3">
       <QrModeSwitch value={mode} onChange={onModeChange} />
-      <BrandedQrCode
-        value={qrLink}
-        title={asset.assetCode}
-        size={132}
-        className="w-full max-w-[210px] shrink-0 p-2 shadow-none"
-        showValue={false}
-      />
+      <button
+        type="button"
+        onClick={() => setIsQrZoomOpen(true)}
+        className="inline-flex cursor-pointer items-center justify-center rounded-[16px]"
+        aria-label="Open QR preview"
+      >
+        <BrandedQrCode
+          value={qrLink}
+          title={asset.assetCode}
+          size={132}
+          className="w-full max-w-[210px] shrink-0 p-2 shadow-none"
+          showValue={false}
+        />
+      </button>
       <div className="w-full rounded-[12px] border border-[#e2e8f0] bg-[#f8fbff] px-3 py-3">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8fa0ba]">
@@ -984,6 +1156,24 @@ function ReceiveStyleQrCard({
           ? "Employee phone-oor scan hiij asset detail neene."
           : "Audit team scan hiigeed storage record shalgana."}
       </p>
+      {isQrZoomOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <button
+            type="button"
+            onClick={() => setIsQrZoomOpen(false)}
+            className="inline-flex cursor-pointer rounded-[24px] bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.24)]"
+            aria-label="Close QR preview"
+          >
+            <BrandedQrCode
+              value={qrLink}
+              title={asset.assetCode}
+              size={300}
+              className="w-full max-w-[360px] p-2 shadow-none"
+              showValue={false}
+            />
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1005,7 +1195,7 @@ function QrModeSwitch({
           key={option.value}
           type="button"
           onClick={() => onChange(option.value as RegisteredQrMode)}
-          className={`rounded-[10px] px-3 py-2 text-[12px] font-semibold transition ${
+          className={`cursor-pointer rounded-[10px] px-3 py-2 text-[12px] font-semibold transition ${
             value === option.value
               ? "bg-white text-[#0f172a] shadow-[0_8px_18px_rgba(148,163,184,0.2)]"
               : "text-[#5b6b84]"
@@ -1023,10 +1213,14 @@ function HistoryCard({ entry }: { entry: HistoryEntry }) {
     <div className="rounded-[16px] border border-[#dbe7f3] bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[16px] font-semibold text-[#111827]">{entry.title}</p>
+          <p className="text-[14px] font-semibold text-[#111827]">
+            {entry.title}
+          </p>
           <p className="mt-1 text-[12px] text-[#8b99ac]">{entry.date}</p>
         </div>
-        <StorageConditionBadge value={entry.status} />
+        <div className="shrink-0">
+          <StorageConditionBadge value={entry.status} compact iconOnly />
+        </div>
       </div>
       <div className="mt-4 space-y-2 text-[13px]">
         <div className="flex items-center justify-between gap-4">
@@ -1044,11 +1238,17 @@ function HistoryCard({ entry }: { entry: HistoryEntry }) {
 
 function buildInitials(value: string) {
   const words = value.trim().split(/\s+/).filter(Boolean);
-  return words.slice(0, 2).map((word) => word[0]?.toUpperCase() ?? "").join("") || "AS";
+  return (
+    words
+      .slice(0, 2)
+      .map((word) => word[0]?.toUpperCase() ?? "")
+      .join("") || "AS"
+  );
 }
 
 function buildAssetIllustration(asset: StorageAssetDto) {
-  const type = `${asset.assetName} ${asset.itemType} ${asset.category}`.toLowerCase();
+  const type =
+    `${asset.assetName} ${asset.itemType} ${asset.category}`.toLowerCase();
   const accent = "#2563eb";
   const accentSoft = "#dbeafe";
   const frame = "#1e293b";
@@ -1160,7 +1360,10 @@ function buildHistoryEntries(
     if (record.note?.trim()) {
       entries.push({
         title: "Returned with note",
-        status: (record.returnCondition || "").toLowerCase() === "damaged" ? "issue" : "good",
+        status:
+          (record.returnCondition || "").toLowerCase() === "damaged"
+            ? "issue"
+            : "good",
         owner: record.employeeName || "Employee",
         location: `${record.usageYears || "-"} | ${record.returnCondition || "-"} | ${record.returnPower || "-"} | ${record.note}`,
         date: formatDisplayDate(record.returnedAt || record.updatedAt),
@@ -1268,7 +1471,11 @@ function parseCurrency(value: string) {
 }
 
 function normalizeStorageStatus(value: string) {
-  if (value === "inStorage" || value === "received" || value === "pendingAssignment") {
+  if (
+    value === "inStorage" ||
+    value === "received" ||
+    value === "pendingAssignment"
+  ) {
     return "available";
   }
 

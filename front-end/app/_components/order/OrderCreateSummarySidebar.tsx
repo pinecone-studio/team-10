@@ -95,7 +95,7 @@ export function OrderCreateSummarySidebar(
           type="button"
           onClick={() => setIsConfirmOpen(true)}
           disabled={!props.canSubmitDraft}
-          className="mt-auto inline-flex h-11 w-full items-center justify-center gap-3 rounded-[10px] bg-[#5d88ce] text-[14px] font-medium text-white transition duration-150 hover:bg-[#4c78c1] active:scale-[0.98] active:bg-[#436cae] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#bfdbfe] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#cbd5e1] disabled:text-white disabled:opacity-100"
+          className="mt-auto inline-flex h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-[10px] bg-[#5d88ce] text-[14px] font-medium text-white transition duration-150 hover:bg-[#4c78c1] active:scale-[0.98] active:bg-[#436cae] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#bfdbfe] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#cbd5e1] disabled:text-white disabled:opacity-100"
         >
           <svg
             viewBox="0 0 20 20"
@@ -127,7 +127,7 @@ export function OrderCreateSummarySidebar(
                 <button
                   type="button"
                   onClick={() => setIsConfirmOpen(false)}
-                  className="inline-flex h-9 items-center justify-center rounded-[6px] border border-[#dbe3ee] px-4 text-[13px] font-medium text-[#0f172a] transition hover:bg-[#f8fafc]"
+                  className="inline-flex h-9 cursor-pointer items-center justify-center rounded-[6px] border border-[#dbe3ee] px-4 text-[13px] font-medium text-[#0f172a] transition hover:bg-[#f8fafc]"
                 >
                   Cancel
                 </button>
@@ -137,7 +137,7 @@ export function OrderCreateSummarySidebar(
                     setIsConfirmOpen(false);
                     await props.onSubmit();
                   }}
-                  className="inline-flex h-9 items-center justify-center rounded-[6px] bg-black px-4 text-[13px] font-medium text-white transition hover:bg-[#1f2937]"
+                  className="inline-flex h-9 cursor-pointer items-center justify-center rounded-[6px] bg-black px-4 text-[13px] font-medium text-white transition hover:bg-[#1f2937]"
                 >
                   Confirm
                 </button>

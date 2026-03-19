@@ -116,11 +116,11 @@ export function OrderHistoryDateRangePicker(props: {
       {isOpen ? (
         <div className="absolute right-0 top-[56px] z-20 w-[300px] rounded-[16px] border border-[#dbe2ea] bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.12)]">
           <div className="mb-3 flex items-center justify-between">
-            <button type="button" onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1))} className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#475569] transition hover:bg-[#f8fafc] active:scale-[0.98]">
+            <button type="button" onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1))} className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#475569] transition hover:bg-[#f8fafc] active:scale-[0.98]">
               <Arrow direction="left" />
             </button>
             <p className="text-[14px] font-semibold text-[#111827]">{monthLabel}</p>
-            <button type="button" onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1))} className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#475569] transition hover:bg-[#f8fafc] active:scale-[0.98]">
+            <button type="button" onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1))} className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#475569] transition hover:bg-[#f8fafc] active:scale-[0.98]">
               <Arrow direction="right" />
             </button>
           </div>
@@ -139,7 +139,7 @@ export function OrderHistoryDateRangePicker(props: {
                   key={value}
                   type="button"
                   onClick={() => selectDate(date)}
-                  className={`inline-flex h-9 items-center justify-center rounded-[10px] text-[12px] transition duration-150 ${isStart || isEnd ? "bg-[#111827] font-semibold text-white" : inRange ? "bg-[#eef2ff] text-[#111827]" : inMonth ? "text-[#334155] hover:bg-[#f8fafc]" : "text-[#cbd5e1] hover:bg-[#f8fafc]"}`}
+                  className={`inline-flex h-9 cursor-pointer items-center justify-center rounded-[10px] text-[12px] transition duration-150 ${isStart || isEnd ? "bg-[#111827] font-semibold text-white" : inRange ? "bg-[#eef2ff] text-[#111827]" : inMonth ? "text-[#334155] hover:bg-[#f8fafc]" : "text-[#cbd5e1] hover:bg-[#f8fafc]"}`}
                 >
                   {date.getDate()}
                 </button>
@@ -148,7 +148,7 @@ export function OrderHistoryDateRangePicker(props: {
           </div>
           <div className="mt-4 flex items-center justify-between">
             <p className="text-[12px] text-[#94a3b8]">{draftStartDate && !draftEndDate ? "Choose an end date" : "Select a range"}</p>
-            <button type="button" onClick={clearRange} className="inline-flex h-9 items-center justify-center rounded-[10px] px-3 text-[12px] font-medium text-[#475569] transition hover:bg-[#f8fafc] active:scale-[0.98]">
+            <button type="button" onClick={clearRange} className="inline-flex h-9 cursor-pointer items-center justify-center rounded-[10px] px-3 text-[12px] font-medium text-[#475569] transition hover:bg-[#f8fafc] active:scale-[0.98]">
               Clear
             </button>
           </div>

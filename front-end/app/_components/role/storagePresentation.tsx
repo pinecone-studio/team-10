@@ -79,14 +79,44 @@ export const STORAGE_CONDITION_OPTIONS: StorageOption[] = [
   },
 ];
 
-export function StorageStatusBadge({ value }: { value: string }) {
+export function StorageStatusBadge({
+  value,
+  compact = false,
+  iconOnly = false,
+}: {
+  value: string;
+  compact?: boolean;
+  iconOnly?: boolean;
+}) {
   const option = getStorageOption(STORAGE_STATUS_OPTIONS, value);
-  return <StorageBadge option={option} kind="status" />;
+  return (
+    <StorageBadge
+      option={option}
+      kind="status"
+      compact={compact}
+      iconOnly={iconOnly}
+    />
+  );
 }
 
-export function StorageConditionBadge({ value }: { value: string }) {
+export function StorageConditionBadge({
+  value,
+  compact = false,
+  iconOnly = false,
+}: {
+  value: string;
+  compact?: boolean;
+  iconOnly?: boolean;
+}) {
   const option = getStorageOption(STORAGE_CONDITION_OPTIONS, value);
-  return <StorageBadge option={option} kind="condition" />;
+  return (
+    <StorageBadge
+      option={option}
+      kind="condition"
+      compact={compact}
+      iconOnly={iconOnly}
+    />
+  );
 }
 
 export function StorageSelectMenu({
@@ -106,7 +136,10 @@ export function StorageSelectMenu({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const selected = useMemo(() => getStorageOption(options, value), [options, value]);
+  const selected = useMemo(
+    () => getStorageOption(options, value),
+    [options, value],
+  );
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -125,7 +158,9 @@ export function StorageSelectMenu({
   return (
     <div ref={containerRef} className="relative">
       {label ? (
-        <p className={`text-[12px] font-medium text-[#8fa0ba] ${compact ? "mb-0" : "mb-2"}`}>
+        <p
+          className={`text-[12px] font-medium text-[#8fa0ba] ${compact ? "mb-0" : "mb-2"}`}
+        >
           {label}
         </p>
       ) : null}
@@ -140,6 +175,7 @@ export function StorageSelectMenu({
         <StorageBadge
           option={selected}
           kind={options === STORAGE_CONDITION_OPTIONS ? "condition" : "status"}
+          compact={compact}
         />
         <svg
           width="16"
@@ -231,7 +267,7 @@ export function StorageCheckbox({
 
 export function StorageCategoryBadge({ label }: { label: string }) {
   return (
-    <span className="inline-flex h-8 min-w-[124px] items-center justify-center rounded-full border border-[#d7e2ef] bg-[#fbfcfe] px-3 text-[12px] font-medium leading-none text-[#6b7280]">
+    <span className="inline-flex h-8 min-w-[108px] items-center justify-center rounded-full border border-[#d7e2ef] bg-[#fbfcfe] px-2.5 text-[12px] font-medium leading-none text-[#6b7280]">
       <span className="whitespace-nowrap">{label}</span>
     </span>
   );
@@ -258,25 +294,35 @@ function humanizeStorageValue(value: string) {
 function StorageBadge({
   option,
   kind = "status",
+  compact = false,
+  iconOnly = false,
 }: {
   option: StorageOption;
   kind?: "status" | "condition";
+  compact?: boolean;
+  iconOnly?: boolean;
 }) {
   return (
     <span
-      className={`inline-flex h-8 items-center gap-[6px] rounded-full border px-3 text-[12px] font-medium leading-none ${
+      className={`inline-flex max-w-full items-center rounded-full border font-medium leading-none ${
+        iconOnly
+          ? "h-7 w-7 justify-center px-0 text-[12px]"
+          : compact
+            ? "h-7 gap-1 px-2 text-[12px]"
+            : "h-8 gap-[6px] px-3 text-[12px]"
+      } ${
         kind === "condition"
-          ? `justify-start text-[#6b7280] ${option.toneClassName}`
+          ? `${iconOnly ? "justify-center" : "justify-start"} text-[#6b7280] ${option.toneClassName}`
           : option.toneClassName
       }`}
     >
       <span
-        className={`${kind === "condition" ? option.menuIconClassName : ""} shrink-0`}
+        className={`${kind === "condition" ? option.menuIconClassName : ""} flex shrink-0`}
         aria-hidden="true"
       >
         {option.icon}
       </span>
-      <span className="whitespace-nowrap">{option.label}</span>
+      {iconOnly ? null : <span className="whitespace-nowrap">{option.label}</span>}
     </span>
   );
 }
@@ -299,10 +345,28 @@ function CubeIcon() {
 function BriefcaseIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <rect x="3" y="4" width="10" height="9" rx="2" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M6 4V2.8H10V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <rect
+        x="3"
+        y="4"
+        width="10"
+        height="9"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M6 4V2.8H10V4"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
       <path d="M3 8H13" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M7 9.5H9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M7 9.5H9"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -324,11 +388,35 @@ function WrenchIcon() {
 function TrashIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M2.8 4H13.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M6 2.6H10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M4.2 4L4.8 12.6C4.86 13.43 5.55 14.08 6.38 14.08H9.62C10.45 14.08 11.14 13.43 11.2 12.6L11.8 4" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M6.5 6.5V11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M9.5 6.5V11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M2.8 4H13.2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M6 2.6H10"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4.2 4L4.8 12.6C4.86 13.43 5.55 14.08 6.38 14.08H9.62C10.45 14.08 11.14 13.43 11.2 12.6L11.8 4"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M6.5 6.5V11"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9.5 6.5V11"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -336,9 +424,25 @@ function TrashIcon() {
 function ReturnIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M6.2 4.2L3.5 6.9L6.2 9.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12.5 11.2V7.8C12.5 7.3 12.1 6.9 11.6 6.9H3.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M9.7 11.2H12.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M6.2 4.2L3.5 6.9L6.2 9.6"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12.5 11.2V7.8C12.5 7.3 12.1 6.9 11.6 6.9H3.8"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9.7 11.2H12.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -346,7 +450,12 @@ function ReturnIcon() {
 function SparkIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M8 2.2L9.2 5.2L12.2 6.4L9.2 7.6L8 10.6L6.8 7.6L3.8 6.4L6.8 5.2L8 2.2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path
+        d="M8 2.2L9.2 5.2L12.2 6.4L9.2 7.6L8 10.6L6.8 7.6L3.8 6.4L6.8 5.2L8 2.2Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -354,9 +463,25 @@ function SparkIcon() {
 function DamageIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M8 2.2L9.2 5.2L12.2 6.4L9.2 7.6L8 10.6L6.8 7.6L3.8 6.4L6.8 5.2L8 2.2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-      <path d="M8 10.8V13.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M6.8 12L8 10.8L9.2 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M8 2.2L9.2 5.2L12.2 6.4L9.2 7.6L8 10.6L6.8 7.6L3.8 6.4L6.8 5.2L8 2.2Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 10.8V13.2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M6.8 12L8 10.8L9.2 12"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -365,8 +490,18 @@ function DefectiveIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="5.2" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M5.7 5.7L10.3 10.3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M10.3 5.7L5.7 10.3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M5.7 5.7L10.3 10.3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10.3 5.7L5.7 10.3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -378,7 +513,12 @@ function MissingIcon() {
       <path d="M9 3H13V7H11.6V4.4H9V3Z" fill="currentColor" />
       <path d="M3 9H4.4V11.6H7V13H3V9Z" fill="currentColor" />
       <path d="M11.6 9H13V13H9V11.6H11.6V9Z" fill="currentColor" />
-      <path d="M4 12L12 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <path
+        d="M4 12L12 4"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

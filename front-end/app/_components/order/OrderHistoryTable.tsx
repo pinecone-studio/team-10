@@ -151,7 +151,7 @@ export function OrderHistoryTable(props: {
                           event.stopPropagation();
                           void props.onDeleteOrder(order.id);
                         }}
-                        className="inline-flex min-w-[82px] items-center justify-center rounded-[10px] border border-[#fecaca] bg-[#fff1f2] px-3 py-2 text-sm font-medium text-[#dc2626] transition duration-150 hover:border-[#fda4af] hover:bg-[#ffe4e6] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fecdd3] focus-visible:ring-offset-2"
+                        className="inline-flex min-w-[82px] cursor-pointer items-center justify-center rounded-[10px] border border-[#fecaca] bg-[#fff1f2] px-3 py-2 text-sm font-medium text-[#dc2626] transition duration-150 hover:border-[#fda4af] hover:bg-[#ffe4e6] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fecdd3] focus-visible:ring-offset-2"
                       >
                         Delete
                       </button>

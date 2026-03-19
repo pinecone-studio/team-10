@@ -16,7 +16,7 @@ function Field(props: {
           <button
             type="button"
             onClick={() => props.onRemove(props.field.id)}
-            className="text-[11px] font-medium text-[#dc2626]"
+            className="cursor-pointer text-[11px] font-medium text-[#dc2626]"
           >
             Remove
           </button>
@@ -75,7 +75,7 @@ export function ReceiveSpecificationFields(props: {
                 key={fieldName}
                 type="button"
                 onClick={() => props.onAddField(fieldName)}
-                className="rounded-full border border-[#dbe4ee] bg-white px-3 py-1 text-[11px] font-medium text-[#35589c]"
+                className="cursor-pointer rounded-full border border-[#dbe4ee] bg-white px-3 py-1 text-[11px] font-medium text-[#35589c]"
               >
                 + {fieldName}
               </button>
@@ -97,7 +97,7 @@ export function ReceiveSpecificationFields(props: {
               props.onAddField(nextName);
               setCustomFieldName("");
             }}
-            className="rounded-[10px] border border-[#dbe4ee] bg-white px-4 text-[13px] font-medium text-[#0f172a]"
+            className="cursor-pointer rounded-[10px] border border-[#dbe4ee] bg-white px-4 text-[13px] font-medium text-[#0f172a]"
           >
             Add
           </button>
