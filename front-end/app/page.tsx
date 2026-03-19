@@ -13,10 +13,12 @@ export default async function Home({ searchParams }: HomePageProps) {
   const role = requestedRole && isAppRole(requestedRole) ? requestedRole : undefined;
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#eef5fb] text-slate-900">
-      <section className="flex min-h-screen overflow-x-hidden">
+    <main className="h-screen overflow-hidden bg-[#eef5fb] text-slate-900">
+      <section className="flex h-full items-stretch overflow-hidden">
         <RoleSidebar role={role} currentSection="home" />
-        {role === "employee" ? <EmployeeHomeDashboard /> : <HomeDashboard />}
+        <div className="min-w-0 flex-1 overflow-y-auto">
+          {role === "employee" ? <EmployeeHomeDashboard /> : <HomeDashboard />}
+        </div>
       </section>
     </main>
   );

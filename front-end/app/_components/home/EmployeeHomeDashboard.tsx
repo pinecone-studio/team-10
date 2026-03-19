@@ -57,7 +57,7 @@ export function EmployeeHomeDashboard() {
   );
 
   return (
-    <div className="min-h-screen flex-1 overflow-y-auto bg-[linear-gradient(180deg,#eef6ff_0%,#f8fbff_24%,#ffffff_100%)]">
+    <div className="min-h-full bg-[linear-gradient(180deg,#eef6ff_0%,#f8fbff_24%,#ffffff_100%)]">
       <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
         <header className="rounded-[24px] border border-[#DCE7F6] bg-[linear-gradient(135deg,#ffffff_0%,#eef6ff_48%,#f8fbff_100%)] px-6 py-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
           <p className="text-[12px] font-semibold uppercase tracking-[0.22em] text-[#5B84C4]">
