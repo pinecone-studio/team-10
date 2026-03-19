@@ -80,7 +80,7 @@ export function getProcessedTone(order: StoredOrder) {
 }
 
 export function formatOrderMeta(order: StoredOrder) {
-  return `${order.requester} · ${order.department} · ${formatDisplayDate(order.requestDate)}`;
+  return `${order.requester} · ${order.department} · Delivery ${formatDisplayDate(order.deliveryDate)}`;
 }
 
 export function formatMoney(value: number, currencyCode: CurrencyCode) {
