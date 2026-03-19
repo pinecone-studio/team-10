@@ -19,7 +19,7 @@ export function OrderCreateView(props: OrderCreateViewProps) {
       <div className="border-t border-[#d9e9fb]" />
       <div className="px-[40px] pb-12 pt-10">
         <div className="mx-auto grid max-w-[1440px] gap-6 xl:grid-cols-[minmax(0,1fr)_350px] xl:items-start">
-          <div className="overflow-hidden rounded-[22px] border border-[#dbeafb] bg-white shadow-[0_14px_40px_rgba(125,170,232,0.18),0_8px_18px_rgba(15,23,42,0.08)] xl:h-[800px]">
+          <div className="flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-[#dbeafb] bg-white shadow-[0_14px_40px_rgba(125,170,232,0.18),0_8px_18px_rgba(15,23,42,0.08)] xl:h-[800px]">
             <OrderCreateDetailsCard
               draftOrder={props.draftOrder}
               onOrderChange={props.onOrderChange}
@@ -27,7 +27,6 @@ export function OrderCreateView(props: OrderCreateViewProps) {
             <OrderCreateItemsEditor
               goodsDrafts={props.goodsDrafts}
               canAddItems={props.canAddItems}
-              draftItems={props.draftItems}
               onGoodsDraftChange={props.onGoodsDraftChange}
               onAddItem={props.onAddItem}
               onRemoveItem={props.onRemoveDraftRow}
