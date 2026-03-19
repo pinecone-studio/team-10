@@ -121,7 +121,6 @@ export function HRDistributionSection() {
     await returnAssetDistributionRequest({
       distributionId: asset.distributionId,
       storageLocation: "Main warehouse / Intake",
-      usageYears: draft.years,
       returnCondition: draft.condition,
       returnPower: draft.power,
       note: draft.notes,
