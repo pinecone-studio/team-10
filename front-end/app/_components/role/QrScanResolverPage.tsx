@@ -8,10 +8,22 @@ export function QrScanResolverPage({
   qrCode,
   role,
   mode,
+  orderId,
+  requestNumber,
+  department,
+  storageLocation,
+  ownerName,
+  ownerRole,
 }: {
   qrCode: string;
   role: string;
   mode?: string;
+  orderId?: string;
+  requestNumber?: string;
+  department?: string;
+  storageLocation?: string;
+  ownerName?: string;
+  ownerRole?: string;
 }) {
   const [status, setStatus] = useState<"missing" | "error" | null>(null);
 
@@ -42,6 +54,30 @@ export function QrScanResolverPage({
           searchParams.set("mode", mode);
         }
 
+        if (orderId) {
+          searchParams.set("orderId", orderId);
+        }
+
+        if (requestNumber) {
+          searchParams.set("requestNumber", requestNumber);
+        }
+
+        if (department) {
+          searchParams.set("department", department);
+        }
+
+        if (storageLocation) {
+          searchParams.set("storageLocation", storageLocation);
+        }
+
+        if (ownerName) {
+          searchParams.set("ownerName", ownerName);
+        }
+
+        if (ownerRole) {
+          searchParams.set("ownerRole", ownerRole);
+        }
+
         window.location.replace(`/assets/${asset.id}?${searchParams.toString()}`);
       } catch {
         if (isMounted) {
@@ -53,7 +89,17 @@ export function QrScanResolverPage({
     return () => {
       isMounted = false;
     };
-  }, [mode, qrCode, role]);
+  }, [
+    department,
+    mode,
+    orderId,
+    ownerName,
+    ownerRole,
+    qrCode,
+    requestNumber,
+    role,
+    storageLocation,
+  ]);
 
   const message =
     status === "missing"

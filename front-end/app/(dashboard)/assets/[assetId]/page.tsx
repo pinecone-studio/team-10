@@ -5,7 +5,15 @@ import { isAppRole } from "@/app/_lib/roles";
 
 type AssetDetailRouteProps = {
   params: Promise<{ assetId: string }>;
-  searchParams?: Promise<{ role?: string }>;
+  searchParams?: Promise<{
+    role?: string;
+    orderId?: string;
+    requestNumber?: string;
+    department?: string;
+    storageLocation?: string;
+    ownerName?: string;
+    ownerRole?: string;
+  }>;
 };
 
 export default async function AssetDetailRoute({
@@ -27,7 +35,18 @@ export default async function AssetDetailRoute({
         <div className="hidden lg:block">
           <RoleSidebar role={role} currentSection="storage" />
         </div>
-        <StorageAssetDetailPage assetId={assetId} role={role} />
+        <StorageAssetDetailPage
+          assetId={assetId}
+          role={role}
+          qrContext={{
+            orderId: resolvedSearchParams?.orderId,
+            requestNumber: resolvedSearchParams?.requestNumber,
+            department: resolvedSearchParams?.department,
+            storageLocation: resolvedSearchParams?.storageLocation,
+            ownerName: resolvedSearchParams?.ownerName,
+            ownerRole: resolvedSearchParams?.ownerRole,
+          }}
+        />
       </section>
     </main>
   );
