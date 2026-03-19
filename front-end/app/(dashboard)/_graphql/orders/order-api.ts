@@ -390,6 +390,10 @@ export async function fetchOrdersRequest() {
     fetchPolicy: "no-cache",
   });
 
+  if (!data?.orders) {
+    throw new Error("Orders query did not return any data.");
+  }
+
   return (data?.orders ?? []).map(mapOrder);
 }
 

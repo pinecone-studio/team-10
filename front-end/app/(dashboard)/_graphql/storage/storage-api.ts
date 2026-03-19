@@ -58,6 +58,34 @@ function inferStorageCategory(itemName: string) {
   return "Other Assets";
 }
 
+function normalizeStorageLoadError(error: unknown) {
+  const message = error instanceof Error ? error.message : "Unknown storage load error.";
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("authentication error")) {
+    return "Backend authentication failed while loading storage data. Check the deployed backend Cloudflare/D1 credentials and redeploy the backend.";
+  }
+
+  if (
+    normalizedMessage.includes("backend_unavailable") ||
+    normalizedMessage.includes("could not reach the backend") ||
+    normalizedMessage.includes("failed to fetch") ||
+    normalizedMessage.includes("network")
+  ) {
+    return "The frontend could not reach the backend. Check the deployed backend URL and deployment health.";
+  }
+
+  if (
+    normalizedMessage.includes("service_configuration_error") ||
+    normalizedMessage.includes("backend_url_missing") ||
+    normalizedMessage.includes("missing required environment variable")
+  ) {
+    return "The deployed backend is missing required configuration. Check backend environment variables and redeploy.";
+  }
+
+  return message;
+}
+
 function buildLocalStorageAssets(): Promise<StorageAssetDto[]> {
   return fetchOrdersRequest().then((orders) =>
     orders
@@ -254,10 +282,15 @@ export async function fetchStorageAssetsRequest() {
       return data!.storageAssets;
     }
 
-    return buildLocalStorageAssets();
+    const fallbackAssets = await buildLocalStorageAssets();
+    return fallbackAssets;
   } catch (error) {
-    console.warn("Falling back to local storage assets.", error);
-    return buildLocalStorageAssets();
+    console.warn("Storage assets query failed, trying order-derived fallback.", error);
+    try {
+      return await buildLocalStorageAssets();
+    } catch (fallbackError) {
+      throw new Error(normalizeStorageLoadError(fallbackError));
+    }
   }
 }
 
