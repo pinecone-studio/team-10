@@ -1,6 +1,7 @@
 "use client";
 
 import type { OrderItem } from "../../_lib/order-types";
+import type { GoodsDraft } from "./orderDraftState";
 import type { StoredOrder } from "../../_lib/order-store";
 
 export function filterOrders(
@@ -27,4 +28,35 @@ export function createOrderItem(
   currencyCode: OrderItem["currencyCode"],
 ) {
   return { catalogId, name, code, unit, quantity, unitPrice, totalPrice: quantity * unitPrice, currencyCode };
+}
+
+export function hasDraftContent(draft: GoodsDraft) {
+  return Boolean(
+    draft.itemName.trim() ||
+      draft.code.trim() ||
+      draft.unit.trim() ||
+      draft.quantity.trim() ||
+      draft.unitPrice.trim(),
+  );
+}
+
+export function isDraftSubmittable(draft: GoodsDraft) {
+  return Boolean(
+    draft.itemName.trim() &&
+      draft.code.trim() &&
+      Number(draft.quantity) > 0 &&
+      Number(draft.unitPrice) > 0,
+  );
+}
+
+export function convertGoodsDraftToOrderItem(draft: GoodsDraft) {
+  return createOrderItem(
+    draft.id,
+    draft.itemName.trim(),
+    draft.code.trim(),
+    draft.unit.trim() || "pcs",
+    Number(draft.quantity),
+    Number(draft.unitPrice),
+    draft.currencyCode,
+  );
 }

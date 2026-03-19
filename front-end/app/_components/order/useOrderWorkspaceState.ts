@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { createOrder, deletePendingOrder, useOrdersStore } from "../../_lib/order-store";
-import type { OrderItem } from "../../_lib/order-types";
 import { buildDemoDraftItems } from "./orderDemoData";
 import {
   DEFAULT_ORDER_REQUESTER,
@@ -14,7 +13,12 @@ import {
 import {
   getHigherUpApproverById,
 } from "./orderApprovers";
-import { createOrderItem, filterOrders } from "./orderWorkspaceHelpers";
+import {
+  convertGoodsDraftToOrderItem,
+  filterOrders,
+  hasDraftContent,
+  isDraftSubmittable,
+} from "./orderWorkspaceHelpers";
 
 type Stage = "history" | "create" | "detail";
 type Filter = "all" | "pending" | "completed" | "cancelled";
@@ -26,27 +30,22 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [draftOrder, setDraftOrder] = useState(createDraftOrder);
   const [goodsDrafts, setGoodsDrafts] = useState(() => [createGoodsDraft()]);
-  const [draftItems, setDraftItems] = useState<OrderItem[]>([]);
   const [permissionMessage, setPermissionMessage] = useState("");
 
   function getNextGoodsCode(extraCodes: string[] = []) {
     return generateFourDigitItemCode([
       ...orders.map((order) => order.items.map((item) => item.code)).flat(),
-      ...draftItems.map((item) => item.code),
       ...goodsDrafts.map((draft) => draft.code),
       ...extraCodes,
     ]);
   }
 
   const selectedOrder = orders.find((order) => order.id === selectedOrderId) ?? null;
-  const canAddItems = goodsDrafts.map((goodsDraft) =>
-    Boolean(
-      goodsDraft.itemName.trim() &&
-        goodsDraft.code.trim() &&
-        Number(goodsDraft.quantity) > 0 &&
-        Number(goodsDraft.unitPrice) > 0,
-    ),
+  const draftItems = useMemo(
+    () => goodsDrafts.filter(isDraftSubmittable).map(convertGoodsDraftToOrderItem),
+    [goodsDrafts],
   );
+  const canAddItems = goodsDrafts.map(isDraftSubmittable);
   const canSubmitDraft = Boolean(
     draftOrder.deliveryDate &&
       draftItems.length > 0,
@@ -60,7 +59,6 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
   function resetDraft() {
     setDraftOrder(createDraftOrder());
     setGoodsDrafts([createGoodsDraft(getNextGoodsCode())]);
-    setDraftItems([]);
     setPermissionMessage("");
   }
 
@@ -89,26 +87,12 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
     updateGoodsDraft(draftId, { [key]: nextValue });
   }
 
-  function addDraftItem(draftId: string) {
-    const goodsDraft = goodsDrafts.find((draft) => draft.id === draftId);
-    if (!goodsDraft || Number(goodsDraft.quantity) <= 0 || Number(goodsDraft.unitPrice) <= 0) return;
-    setDraftItems((current) => [
-      ...current,
-      createOrderItem(
-        goodsDraft.id,
-        goodsDraft.itemName.trim(),
-        goodsDraft.code.trim(),
-        goodsDraft.unit.trim() || "pcs",
-        Number(goodsDraft.quantity),
-        Number(goodsDraft.unitPrice),
-        goodsDraft.currencyCode,
-      ),
-    ]);
-    setGoodsDrafts((current) =>
-      current.map((draft) =>
-        draft.id === draftId ? createGoodsDraft(getNextGoodsCode([goodsDraft.code])) : draft,
-      ),
-    );
+  function addDraftItem() {
+    setGoodsDrafts((current) => {
+      const hasEmptyRow = current.some((draft) => !hasDraftContent(draft));
+      if (hasEmptyRow) return current;
+      return [...current, createGoodsDraft(getNextGoodsCode())];
+    });
   }
 
   async function handleDeleteOrder(orderId: string) {
@@ -161,22 +145,47 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
         ...current,
         createGoodsDraft(getNextGoodsCode()),
       ]),
-    removeDraftRow: (draftId: string) => setGoodsDrafts((current) => current.length > 1 ? current.filter((draft) => draft.id !== draftId) : current),
-    updateItemQuantity: (index: number, value: string) => {
+    removeDraftRow: (draftId: string) =>
+      setGoodsDrafts((current) => {
+        if (current.length === 1) {
+          return [createGoodsDraft(current[0]?.code || getNextGoodsCode())];
+        }
+
+        return current.filter((draft) => draft.id !== draftId);
+      }),
+    updateItemQuantity: (draftId: string, value: string) => {
       const nextQuantity = Math.max(0, Number(value));
       if (!Number.isInteger(nextQuantity)) return;
-      setDraftItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: nextQuantity, totalPrice: nextQuantity * item.unitPrice } : item));
+      updateGoodsDraft(draftId, { quantity: String(nextQuantity) });
     },
-    removeItem: (index: number) => setDraftItems((current) => current.filter((_, itemIndex) => itemIndex !== index)),
+    removeItem: (draftId: string) =>
+      setGoodsDrafts((current) => {
+        if (current.length === 1) {
+          return [createGoodsDraft(current[0]?.code || getNextGoodsCode())];
+        }
+
+        return current.filter((draft) => draft.id !== draftId);
+      }),
     loadDemo: async () => {
+      const demoDraftItems = await buildDemoDraftItems();
       setDraftOrder({
         ...createDraftOrder(),
         requester: DEFAULT_ORDER_REQUESTER,
         deliveryDate: getOffsetDateInputValue(3),
         requestedApproverId: "finance-review",
       });
-      setDraftItems(await buildDemoDraftItems());
-      setGoodsDrafts([createGoodsDraft(getNextGoodsCode())]);
+      setGoodsDrafts([
+        ...demoDraftItems.map((item) => ({
+          id: item.catalogId,
+          itemName: item.name,
+          code: item.code,
+          quantity: String(item.quantity),
+          unit: item.unit,
+          unitPrice: String(item.unitPrice),
+          currencyCode: item.currencyCode,
+        })),
+        createGoodsDraft(getNextGoodsCode(demoDraftItems.map((item) => item.code))),
+      ]);
     },
     submit: async () => {
       const resolvedRequester = draftOrder.requester.trim() || DEFAULT_ORDER_REQUESTER;

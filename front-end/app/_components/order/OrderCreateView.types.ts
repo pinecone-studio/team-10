@@ -24,11 +24,11 @@ export type OrderCreateViewProps = {
     value: GoodsDraft[Key],
   ) => void;
   onPermissionMessageChange: (value: string) => void;
-  onAddItem: (draftId: string) => void;
+  onAddItem: () => void;
   onAddDraftRow: () => void;
   onRemoveDraftRow: (draftId: string) => void;
-  onUpdateItemQuantity: (index: number, value: string) => void;
-  onRemoveItem: (index: number) => void;
+  onUpdateItemQuantity: (draftId: string, value: string) => void;
+  onRemoveItem: (draftId: string) => void;
   onOpenDetail: (orderId: string) => void;
   onSubmit: () => void;
 };
