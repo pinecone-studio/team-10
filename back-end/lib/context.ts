@@ -88,7 +88,7 @@ export async function createGraphQLContext(
         process.env.CLOUDFLARE_API_TOKEN?.trim()),
   );
 
-  if (!resolvedDb && !hasRuntimeHttpDatabaseConfig) {
+  if (!resolvedDb) {
     try {
       const cloudflareContext = await getCloudflareContext({ async: true });
       const bindingDatabase = (
@@ -108,6 +108,10 @@ export async function createGraphQLContext(
     } catch {
       resolvedDb = undefined;
     }
+  }
+
+  if (!resolvedDb && hasRuntimeHttpDatabaseConfig) {
+    resolvedDb = getDatabase();
   }
 
   return createGraphQLContextValue({
