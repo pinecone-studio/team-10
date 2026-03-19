@@ -94,12 +94,14 @@ export function StorageSelectMenu({
   value,
   options,
   disabled = false,
+  compact = false,
   onChange,
 }: {
   label: string;
   value: string;
   options: StorageOption[];
   disabled?: boolean;
+  compact?: boolean;
   onChange: (value: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -122,12 +124,18 @@ export function StorageSelectMenu({
 
   return (
     <div ref={containerRef} className="relative">
-      <p className="mb-2 text-[12px] font-medium text-[#8fa0ba]">{label}</p>
+      {label ? (
+        <p className={`text-[12px] font-medium text-[#8fa0ba] ${compact ? "mb-0" : "mb-2"}`}>
+          {label}
+        </p>
+      ) : null}
       <button
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
-        className="flex w-full items-center justify-between rounded-[16px] border border-[#d8e6f4] bg-white px-3 py-3 text-left shadow-[0_12px_30px_rgba(148,163,184,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
+        className={`flex w-full items-center justify-between border border-[#d8e6f4] bg-white px-3 text-left shadow-[0_12px_30px_rgba(148,163,184,0.12)] disabled:cursor-not-allowed disabled:opacity-60 ${
+          compact ? "h-12 rounded-[12px]" : "rounded-[16px] py-3"
+        }`}
       >
         <StorageBadge
           option={selected}

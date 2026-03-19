@@ -48,6 +48,8 @@ export const ReceiveTypeDefs = `
       receivedNote: String
       storageLocation: String
       serialNumbers: [String!]
+      assetImageDataUrl: String
+      assetImageFileName: String
       receivedByUserId: ID
       officeId: ID
     ): ReceiveOrderItemPayload!

@@ -5,4 +5,4 @@ export const storageAssets: NonNullable<QueryResolvers["storageAssets"]> = (
   _parent,
   _args,
   context,
-) => listStorageAssets(context.db);
+) => listStorageAssets(context.db, context.runtimeConfig);

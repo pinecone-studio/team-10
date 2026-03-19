@@ -355,6 +355,7 @@ function mapOrder(order: OrderDto): StoredOrder {
     receivedCondition: parseReceivedCondition(order.receivedCondition),
     receivedNote: order.receivedNote ?? "",
     storageLocation: order.storageLocation ?? "",
+    receivedImageDataUrl: null,
     serialNumbers: Array.isArray(order.serialNumbers) ? order.serialNumbers : [],
     assetIds: [],
     assignedTo: order.assignedTo,

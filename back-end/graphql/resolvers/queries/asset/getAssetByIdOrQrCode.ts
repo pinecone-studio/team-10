@@ -6,7 +6,7 @@ export const asset: NonNullable<QueryResolvers["asset"]> = (
   args,
   context,
 ) =>
-  getStorageAssetDetail(context.db, {
+  getStorageAssetDetail(context.db, context.runtimeConfig, {
     id: args.id ?? null,
     qrCode: args.qrCode ?? null,
   });

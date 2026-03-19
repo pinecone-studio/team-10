@@ -12,6 +12,8 @@ import {
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
 import { buildAssetCode } from "./asset-codes.ts";
+import { deleteAssetImageFromR2, uploadAssetImageToR2 } from "./asset-images.ts";
+import type { RuntimeConfig } from "./context.ts";
 import {
   parseIntegerId,
   resolveOfficeId,
@@ -108,6 +110,8 @@ export type ReceiveOrderItemInput = {
   receivedNote?: string | null;
   storageLocation?: string | null;
   serialNumbers?: string[] | null;
+  assetImageDataUrl?: string | null;
+  assetImageFileName?: string | null;
   receivedByUserId?: string | null;
   officeId?: string | null;
 };
@@ -182,8 +186,8 @@ function parseConditionStatusFromReceiveCondition(
   throw new Error("Received condition must be one of: complete, issue.");
 }
 
-function buildQrCode(orderId: number, itemCode: string, serialNumber: string) {
-  return `QR-${orderId}-${itemCode}-${serialNumber}`;
+function buildQrCode(assetCode: string, serialNumber: string) {
+  return `QR-${assetCode}-${serialNumber}`;
 }
 
 async function getNextAssetCodeSequence(
@@ -584,6 +588,7 @@ export async function createReceive(
 export async function receiveOrderItem(
   db: AppDb,
   input: ReceiveOrderItemInput,
+  runtimeConfig: RuntimeConfig,
   currentUserId?: string | null,
 ): Promise<ReceiveOrderItemRecord> {
   const orderId = parseIntegerId("orderId", input.orderId);
@@ -645,112 +650,168 @@ export async function receiveOrderItem(
     orderItem.itemName,
     receivedAt,
   );
+  let receiveId: number | null = null;
+  let receiveItemId: number | null = null;
+  let uploadedImage:
+    | {
+        objectKey: string;
+        fileName: string;
+        contentType: string;
+      }
+    | null = null;
 
-  const [receive] = await db
-    .insert(receives)
-    .values({
+  try {
+    const [receive] = await db
+      .insert(receives)
+      .values({
+        orderId,
+        receivedByUserId,
+        officeId,
+        status: receiveStatus,
+        receivedAt,
+        note: input.receivedNote?.trim() || null,
+      })
+      .returning({ id: receives.id });
+
+    receiveId = receive.id;
+
+    const [receiveItem] = await db
+      .insert(receiveItems)
+      .values({
+        receiveId: receive.id,
+        orderItemId: orderItem.id,
+        quantityReceived,
+        conditionStatus,
+        note: input.receivedNote?.trim() || null,
+      })
+      .returning({ id: receiveItems.id });
+
+    receiveItemId = receiveItem.id;
+
+    if (input.assetImageDataUrl?.trim()) {
+      uploadedImage = await uploadAssetImageToR2(runtimeConfig, {
+        assetCode: buildAssetCode(orderItem.itemName, receivedAt, nextAssetCodeSequence),
+        fileName: input.assetImageFileName,
+        dataUrl: input.assetImageDataUrl,
+      });
+    }
+
+    const assetValues = serialNumbers.map((serialNumber, index) => {
+      const assetCode = buildAssetCode(
+        orderItem.itemName,
+        receivedAt,
+        nextAssetCodeSequence + index,
+      );
+
+      return {
+        receiveItemId: receiveItem.id,
+        assetCode,
+        qrCode: buildQrCode(assetCode, serialNumber),
+        assetName: orderItem.itemName,
+        category: orderItem.category,
+        itemType: orderItem.itemType,
+        catalogItemTypeId: orderItem.catalogItemTypeId,
+        catalogProductId: orderItem.catalogProductId,
+        serialNumber,
+        assetImageObjectKey: uploadedImage?.objectKey ?? null,
+        assetImageFileName: uploadedImage?.fileName ?? null,
+        assetImageContentType: uploadedImage?.contentType ?? null,
+        conditionStatus,
+        assetStatus: "received" as const,
+        currentStorageId: null,
+      };
+    });
+
+    let createdAssetIds: number[] = [];
+    if (assetValues.length > 0) {
+      const createdAssets = await db
+        .insert(assets)
+        .values(assetValues)
+        .returning({ id: assets.id });
+
+      createdAssetIds = createdAssets.map((asset) => asset.id);
+    }
+
+    const { remainingQuantity, remainingTotalCost } = await computeRemainingOrderState(
+      db,
       orderId,
-      receivedByUserId,
-      officeId,
-      status: receiveStatus,
-      receivedAt,
-      note: input.receivedNote?.trim() || null,
-    })
-    .returning({ id: receives.id });
+    );
+    const mergedSerialNumbers = [
+      ...parseJsonStringArray(order.serialNumbersJson),
+      ...serialNumbers,
+    ];
+    const nextStatus =
+      remainingQuantity === 0 ? "received" : "partiallyReceived";
+    const nextReceivedCondition =
+      remainingQuantity === 0
+        ? order.receivedCondition === "issue" || input.receivedCondition === "issue"
+          ? "issue"
+          : "complete"
+        : null;
 
-  const [receiveItem] = await db
-    .insert(receiveItems)
-    .values({
-      receiveId: receive.id,
-      orderItemId: orderItem.id,
-      quantityReceived,
-      conditionStatus,
-      note: input.receivedNote?.trim() || null,
-    })
-    .returning({ id: receiveItems.id });
+    await db
+      .update(orders)
+      .set({
+        status: nextStatus,
+        totalCost: remainingTotalCost,
+        receivedAt: remainingQuantity === 0 ? receivedAt : null,
+        receivedCondition: nextReceivedCondition,
+        receivedNote:
+          remainingQuantity === 0 ? input.receivedNote?.trim() || null : null,
+        storageLocation:
+          remainingQuantity === 0
+            ? input.storageLocation?.trim() || "Main warehouse / Intake"
+            : null,
+        serialNumbersJson: JSON.stringify(mergedSerialNumbers),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(orders.id, orderId))
+      .run();
 
-  const assetValues = serialNumbers.map((serialNumber, index) => ({
-    receiveItemId: receiveItem.id,
-    assetCode: buildAssetCode(
-      orderItem.itemName,
-      receivedAt,
-      nextAssetCodeSequence + index,
-    ),
-    qrCode: buildQrCode(orderId, orderItem.itemCode, serialNumber),
-    assetName: orderItem.itemName,
-    category: orderItem.category,
-    itemType: orderItem.itemType,
-    catalogItemTypeId: orderItem.catalogItemTypeId,
-    catalogProductId: orderItem.catalogProductId,
-    serialNumber,
-    conditionStatus,
-    assetStatus: "received" as const,
-    currentStorageId: null,
-  }));
+    await moveReceivedAssetsToStorage(db, createdAssetIds, storageId);
 
-  let createdAssetIds: number[] = [];
-  if (assetValues.length > 0) {
-    const createdAssets = await db
-      .insert(assets)
-      .values(assetValues)
-      .returning({ id: assets.id });
+    const nextOrder = await getOrderById(db, input.orderId);
+    if (!nextOrder) {
+      throw new Error("Failed to load order after receive intake.");
+    }
 
-    createdAssetIds = createdAssets.map((asset) => asset.id);
+    const nextReceive = await getReceiveById(db, String(receive.id));
+    if (!nextReceive) {
+      throw new Error("Failed to load receive after receive intake.");
+    }
+
+    return {
+      receive: nextReceive,
+      order: nextOrder,
+      assets: await mapReceivedAssetsByReceiveItemId(db, receiveItem.id),
+    };
+  } catch (error) {
+    if (uploadedImage?.objectKey) {
+      try {
+        await deleteAssetImageFromR2(runtimeConfig, uploadedImage.objectKey);
+      } catch (cleanupError) {
+        console.warn("Failed to clean up uploaded asset image after receive error.", cleanupError);
+      }
+    }
+
+    if (receiveId !== null) {
+      try {
+        await db.delete(receives).where(eq(receives.id, receiveId)).run();
+      } catch (cleanupError) {
+        console.warn("Failed to roll back receive after receive error.", cleanupError);
+      }
+    } else if (receiveItemId !== null) {
+      try {
+        await db.delete(receiveItems).where(eq(receiveItems.id, receiveItemId)).run();
+      } catch (cleanupError) {
+        console.warn("Failed to roll back receive item after receive error.", cleanupError);
+      }
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Unknown receive intake error.";
+    throw new Error(`Failed to receive order item: ${message}`);
   }
-
-  const { remainingQuantity, remainingTotalCost } = await computeRemainingOrderState(
-    db,
-    orderId,
-  );
-  const mergedSerialNumbers = [
-    ...parseJsonStringArray(order.serialNumbersJson),
-    ...serialNumbers,
-  ];
-  const nextStatus =
-    remainingQuantity === 0 ? "received" : "partiallyReceived";
-  const nextReceivedCondition =
-    remainingQuantity === 0
-      ? order.receivedCondition === "issue" || input.receivedCondition === "issue"
-        ? "issue"
-        : "complete"
-      : null;
-
-  await db
-    .update(orders)
-    .set({
-      status: nextStatus,
-      totalCost: remainingTotalCost,
-      receivedAt: remainingQuantity === 0 ? receivedAt : null,
-      receivedCondition: nextReceivedCondition,
-      receivedNote:
-        remainingQuantity === 0 ? input.receivedNote?.trim() || null : null,
-      storageLocation:
-        remainingQuantity === 0
-          ? input.storageLocation?.trim() || "Main warehouse / Intake"
-          : null,
-      serialNumbersJson: JSON.stringify(mergedSerialNumbers),
-      updatedAt: new Date().toISOString(),
-    })
-    .where(eq(orders.id, orderId))
-    .run();
-
-  await moveReceivedAssetsToStorage(db, createdAssetIds, storageId);
-
-  const nextOrder = await getOrderById(db, input.orderId);
-  if (!nextOrder) {
-    throw new Error("Failed to load order after receive intake.");
-  }
-
-  const nextReceive = await getReceiveById(db, String(receive.id));
-  if (!nextReceive) {
-    throw new Error("Failed to load receive after receive intake.");
-  }
-
-  return {
-    receive: nextReceive,
-    order: nextOrder,
-    assets: await mapReceivedAssetsByReceiveItemId(db, receiveItem.id),
-  };
 }
 
 export async function updateReceive(

@@ -12,6 +12,8 @@ import {
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
 import { parseIntegerId } from "./reference-resolvers.ts";
+import { loadAssetImageDataUrlFromR2 } from "./asset-images.ts";
+import type { RuntimeConfig } from "./context.ts";
 
 type StorageAssetRow = {
   id: number;
@@ -21,6 +23,8 @@ type StorageAssetRow = {
   category: string;
   itemType: string;
   serialNumber: string | null;
+  assetImageObjectKey: string | null;
+  assetImageContentType: string | null;
   conditionStatus: string;
   assetStatus: string;
   storageId: number | null;
@@ -47,6 +51,7 @@ export type StorageAssetRecord = {
   category: string;
   itemType: string;
   serialNumber: string | null;
+  assetImageDataUrl: string | null;
   conditionStatus: string;
   assetStatus: string;
   storageId: string | null;
@@ -73,6 +78,8 @@ const storageAssetSelection = {
   category: assets.category,
   itemType: assets.itemType,
   serialNumber: assets.serialNumber,
+  assetImageObjectKey: assets.assetImageObjectKey,
+  assetImageContentType: assets.assetImageContentType,
   conditionStatus: assets.conditionStatus,
   assetStatus: assets.assetStatus,
   storageId: storage.id,
@@ -91,11 +98,27 @@ const storageAssetSelection = {
   updatedAt: assets.updatedAt,
 };
 
-function mapStorageAsset(row: StorageAssetRow): StorageAssetRecord {
+async function mapStorageAsset(
+  row: StorageAssetRow,
+  runtimeConfig?: RuntimeConfig,
+): Promise<StorageAssetRecord> {
   const fallbackRequestDate = row.requestDate ?? row.receivedAt.slice(0, 10);
   const fallbackRequestNumber = `REQ-${fallbackRequestDate.replaceAll("-", "")}-${String(
     row.orderId,
   ).padStart(3, "0")}`;
+  let assetImageDataUrl: string | null = null;
+
+  if (runtimeConfig && row.assetImageObjectKey) {
+    try {
+      assetImageDataUrl = await loadAssetImageDataUrlFromR2(
+        runtimeConfig,
+        row.assetImageObjectKey,
+        row.assetImageContentType,
+      );
+    } catch (error) {
+      console.warn("Asset image load fallback triggered.", error);
+    }
+  }
 
   return {
     id: String(row.id),
@@ -105,6 +128,7 @@ function mapStorageAsset(row: StorageAssetRow): StorageAssetRecord {
     category: row.category,
     itemType: row.itemType,
     serialNumber: row.serialNumber,
+    assetImageDataUrl,
     conditionStatus: row.conditionStatus,
     assetStatus: row.assetStatus,
     storageId: row.storageId === null ? null : String(row.storageId),
@@ -138,13 +162,14 @@ function buildStorageAssetsBaseQuery(db: AppDb) {
 
 export async function listStorageAssets(
   db: AppDb,
+  runtimeConfig?: RuntimeConfig,
 ): Promise<StorageAssetRecord[]> {
   try {
     const rows = await buildStorageAssetsBaseQuery(db)
       .where(isNotNull(assets.currentStorageId))
       .orderBy(asc(storage.storageName), asc(assets.assetName), asc(assets.id));
 
-    return rows.map(mapStorageAsset);
+    return Promise.all(rows.map((row) => mapStorageAsset(row, runtimeConfig)));
   } catch (error) {
     console.warn("listStorageAssets fallback triggered.", error);
     return [];
@@ -153,6 +178,7 @@ export async function listStorageAssets(
 
 export async function getStorageAssetDetail(
   db: AppDb,
+  runtimeConfig: RuntimeConfig,
   input: { id?: string | null; qrCode?: string | null },
 ): Promise<StorageAssetRecord | null> {
   try {
@@ -165,7 +191,11 @@ export async function getStorageAssetDetail(
 
     const filters = [];
     if (normalizedId) {
-      filters.push(eq(assets.id, parseIntegerId("Asset id", normalizedId)));
+      if (/^\d+$/.test(normalizedId)) {
+        filters.push(eq(assets.id, parseIntegerId("Asset id", normalizedId)));
+      } else {
+        filters.push(eq(assets.assetCode, normalizedId));
+      }
     }
     if (normalizedQrCode) {
       filters.push(eq(assets.qrCode, normalizedQrCode));
@@ -175,7 +205,7 @@ export async function getStorageAssetDetail(
       .where(or(...filters))
       .limit(1);
 
-    return row ? mapStorageAsset(row) : null;
+    return row ? mapStorageAsset(row, runtimeConfig) : null;
   } catch (error) {
     console.warn("getStorageAssetDetail fallback triggered.", error);
     return null;
@@ -206,6 +236,7 @@ function parseConditionStatus(value: string) {
 
 export async function updateStorageAsset(
   db: AppDb,
+  runtimeConfig: RuntimeConfig,
   input: {
     id: string;
     assetStatus?: string | null;
@@ -240,7 +271,7 @@ export async function updateStorageAsset(
       throw new Error(`Asset ${input.id} was not found.`);
     }
 
-    const detail = await getStorageAssetDetail(db, { id: input.id });
+    const detail = await getStorageAssetDetail(db, runtimeConfig, { id: input.id });
     if (!detail) {
       throw new Error(`Asset ${input.id} could not be reloaded after update.`);
     }

@@ -14,6 +14,7 @@ export const AssetTypeDefs = `
     category: String!
     itemType: String!
     serialNumber: String
+    assetImageDataUrl: String
     conditionStatus: String!
     assetStatus: String!
     storageId: ID
@@ -32,10 +33,22 @@ export const AssetTypeDefs = `
     updatedAt: String!
   }
 
+  type AssetAuditEntry {
+    id: ID!
+    assetId: ID!
+    title: String!
+    status: String!
+    owner: String!
+    location: String!
+    date: String!
+    note: String
+  }
+
   type Query {
     storageAssets: [StorageAsset!]!
     asset(id: ID, qrCode: String): StorageAsset
     assetLabelPdf(assetCodes: [String!]!): AssetLabelPdf!
+    assetAuditHistory(assetId: ID!): [AssetAuditEntry!]!
   }
 
   type Mutation {
@@ -44,5 +57,12 @@ export const AssetTypeDefs = `
       assetStatus: String
       conditionStatus: String
     ): StorageAsset!
+    createAssetAudit(
+      assetIds: [ID!]!
+      confirmedLocation: String
+      conditionStatus: String
+      assetStatus: String
+      note: String
+    ): [AssetAuditEntry!]!
   }
 `;

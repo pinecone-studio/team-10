@@ -36,6 +36,8 @@ const receiveOrderItemMutation = gql`
     $receivedNote: String
     $storageLocation: String
     $serialNumbers: [String!]
+    $assetImageDataUrl: String
+    $assetImageFileName: String
   ) {
     receiveOrderItem(
       orderId: $orderId
@@ -47,6 +49,8 @@ const receiveOrderItemMutation = gql`
       receivedNote: $receivedNote
       storageLocation: $storageLocation
       serialNumbers: $serialNumbers
+      assetImageDataUrl: $assetImageDataUrl
+      assetImageFileName: $assetImageFileName
     ) {
       receive {
         id
@@ -83,6 +87,8 @@ export async function receiveOrderItemRequest(input: ReceiveOrderInput) {
       receivedNote: input.receivedNote,
       storageLocation: input.storageLocation,
       serialNumbers: input.serialNumbers,
+      assetImageDataUrl: input.assetImageDataUrl ?? null,
+      assetImageFileName: input.assetImageFileName ?? null,
     },
     fetchPolicy: "no-cache",
   });

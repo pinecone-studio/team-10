@@ -4,4 +4,9 @@ import { receiveOrderItem as receiveOrderItemRecord } from "../../../../lib/rece
 export const receiveOrderItem: NonNullable<
   MutationResolvers["receiveOrderItem"]
 > = (_parent, args, context) =>
-  receiveOrderItemRecord(context.db, args, context.currentUserId);
+  receiveOrderItemRecord(
+    context.db,
+    args,
+    context.runtimeConfig,
+    context.currentUserId,
+  );

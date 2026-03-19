@@ -254,7 +254,7 @@ export function StorageAssetDetailPage({
                 <div className="flex min-h-[170px] items-center justify-center overflow-hidden rounded-[14px] bg-white p-3 shadow-[inset_0_0_0_1px_rgba(219,231,243,0.8)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={buildAssetIllustration(asset)}
+                    src={asset.assetImageDataUrl || buildAssetIllustration(asset)}
                     alt={asset.assetName}
                     className="h-full max-h-[160px] w-full object-contain"
                   />
@@ -469,7 +469,7 @@ function MobileAssetDetailView({
   qrMode: RegisteredQrMode;
   onQrModeChange: (value: RegisteredQrMode) => void;
 }) {
-  const heroImage = buildAssetIllustration(asset);
+  const heroImage = asset.assetImageDataUrl || buildAssetIllustration(asset);
   const [verifyState, setVerifyState] = useState<"idle" | "verifying" | "verified">(
     "idle",
   );
@@ -666,7 +666,7 @@ function MobileAssetDetailView({
                     <div className="flex h-[88px] items-center justify-center bg-[#f8fbff] p-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={buildAssetIllustration(relatedAsset)}
+                        src={relatedAsset.assetImageDataUrl || buildAssetIllustration(relatedAsset)}
                         alt={relatedAsset.assetName}
                         className="h-full w-full object-contain"
                       />

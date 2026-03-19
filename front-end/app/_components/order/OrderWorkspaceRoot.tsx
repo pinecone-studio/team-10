@@ -45,6 +45,7 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
           missingSubmitFields={state.missingSubmitFields}
           summaryTotal={state.summaryTotal}
           permissionMessage={state.permissionMessage}
+          submitError={state.submitError}
           onFillDemo={state.loadDemo}
           onOpenHistory={state.openHistory}
           onOrderChange={state.updateDraftOrder}

@@ -31,6 +31,7 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
   const [draftOrder, setDraftOrder] = useState(createDraftOrder);
   const [goodsDrafts, setGoodsDrafts] = useState(() => [createGoodsDraft()]);
   const [permissionMessage, setPermissionMessage] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   function getNextGoodsCode(extraCodes: string[] = []) {
     return generateFourDigitItemCode([
@@ -60,18 +61,25 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
     setDraftOrder(createDraftOrder());
     setGoodsDrafts([createGoodsDraft(getNextGoodsCode())]);
     setPermissionMessage("");
+    setSubmitError(null);
   }
 
   function updateDraftOrder<Key extends keyof typeof draftOrder>(
     key: Key,
     value: (typeof draftOrder)[Key],
   ) {
+    if (submitError) {
+      setSubmitError(null);
+    }
     setDraftOrder((current) => {
       return { ...current, [key]: value };
     });
   }
 
   function updateGoodsDraft(draftId: string, updates: Partial<(typeof goodsDrafts)[number]>) {
+    if (submitError) {
+      setSubmitError(null);
+    }
     setGoodsDrafts((current) =>
       current.map((draft) => (draft.id === draftId ? { ...draft, ...updates } : draft)),
     );
@@ -88,6 +96,9 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
   }
 
   function addDraftItem() {
+    if (submitError) {
+      setSubmitError(null);
+    }
     setGoodsDrafts((current) => {
       const hasEmptyRow = current.some((draft) => !hasDraftContent(draft));
       if (hasEmptyRow) return current;
@@ -127,6 +138,7 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
     goodsDrafts,
     draftItems,
     permissionMessage,
+    submitError,
     canAddItems,
     canSubmitDraft,
     missingSubmitFields,
@@ -137,35 +149,55 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
     openDetail: (orderId: string) => { setSelectedOrderId(orderId); setStage("detail"); },
     deleteOrder: handleDeleteOrder,
     updateDraftOrder,
-    setPermissionMessage,
+    setPermissionMessage: (value: string) => {
+      setPermissionMessage(value);
+      if (submitError) {
+        setSubmitError(null);
+      }
+    },
     updateGoodsDraftField,
     addDraftItem,
     addDraftRow: () =>
-      setGoodsDrafts((current) => [
-        ...current,
-        createGoodsDraft(getNextGoodsCode()),
-      ]),
-    removeDraftRow: (draftId: string) =>
-      setGoodsDrafts((current) => {
-        if (current.length === 1) {
-          return [createGoodsDraft(current[0]?.code || getNextGoodsCode())];
+      {
+        if (submitError) {
+          setSubmitError(null);
         }
+        setGoodsDrafts((current) => [
+          ...current,
+          createGoodsDraft(getNextGoodsCode()),
+        ]);
+      },
+    removeDraftRow: (draftId: string) =>
+      {
+        if (submitError) {
+          setSubmitError(null);
+        }
+        setGoodsDrafts((current) => {
+          if (current.length === 1) {
+            return [createGoodsDraft(current[0]?.code || getNextGoodsCode())];
+          }
 
-        return current.filter((draft) => draft.id !== draftId);
-      }),
+          return current.filter((draft) => draft.id !== draftId);
+        });
+      },
     updateItemQuantity: (draftId: string, value: string) => {
       const nextQuantity = Math.max(0, Number(value));
       if (!Number.isInteger(nextQuantity)) return;
       updateGoodsDraft(draftId, { quantity: String(nextQuantity) });
     },
     removeItem: (draftId: string) =>
-      setGoodsDrafts((current) => {
-        if (current.length === 1) {
-          return [createGoodsDraft(current[0]?.code || getNextGoodsCode())];
+      {
+        if (submitError) {
+          setSubmitError(null);
         }
+        setGoodsDrafts((current) => {
+          if (current.length === 1) {
+            return [createGoodsDraft(current[0]?.code || getNextGoodsCode())];
+          }
 
-        return current.filter((draft) => draft.id !== draftId);
-      }),
+          return current.filter((draft) => draft.id !== draftId);
+        });
+      },
     loadDemo: async () => {
       const demoDraftItems = await buildDemoDraftItems();
       setDraftOrder({
@@ -188,29 +220,36 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
       ]);
     },
     submit: async () => {
-      const resolvedRequester = draftOrder.requester.trim() || DEFAULT_ORDER_REQUESTER;
-      const resolvedOrderName =
-        draftOrder.orderName.trim() ||
-        draftItems[0]?.name ||
-        `${draftOrder.department} inventory request`;
-      const selectedApprover = getHigherUpApproverById(draftOrder.requestedApproverId);
-      const nextOrder = await createOrder({
-        orderName: resolvedOrderName,
-        requestNumber: draftOrder.requestNumber,
-        requestDate: draftOrder.requestDate,
-        department: draftOrder.department,
-        requester: resolvedRequester,
-        deliveryDate: draftOrder.deliveryDate,
-        approvalTarget: "finance",
-        items: draftItems,
-        requestedApproverId: "finance-review",
-        requestedApproverName: selectedApprover?.fullName ?? "Finance",
-        requestedApproverRole: selectedApprover?.positionLabel ?? "Finance Reviewer",
-        approvalMessage: permissionMessage,
-      });
-      setSelectedOrderId(nextOrder.id);
-      resetDraft();
-      setStage(canViewHistory ? "history" : "detail");
+      setSubmitError(null);
+      try {
+        const resolvedRequester = draftOrder.requester.trim() || DEFAULT_ORDER_REQUESTER;
+        const resolvedOrderName =
+          draftOrder.orderName.trim() ||
+          draftItems[0]?.name ||
+          `${draftOrder.department} inventory request`;
+        const selectedApprover = getHigherUpApproverById(draftOrder.requestedApproverId);
+        const nextOrder = await createOrder({
+          orderName: resolvedOrderName,
+          requestNumber: draftOrder.requestNumber,
+          requestDate: draftOrder.requestDate,
+          department: draftOrder.department,
+          requester: resolvedRequester,
+          deliveryDate: draftOrder.deliveryDate,
+          approvalTarget: "finance",
+          items: draftItems,
+          requestedApproverId: "finance-review",
+          requestedApproverName: selectedApprover?.fullName ?? "Finance",
+          requestedApproverRole: selectedApprover?.positionLabel ?? "Finance Reviewer",
+          approvalMessage: permissionMessage,
+        });
+        setSelectedOrderId(nextOrder.id);
+        resetDraft();
+        setStage(canViewHistory ? "history" : "detail");
+      } catch (error) {
+        setSubmitError(
+          error instanceof Error ? error.message : "Failed to create order.",
+        );
+      }
     },
   };
 }

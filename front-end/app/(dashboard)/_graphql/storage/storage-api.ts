@@ -13,6 +13,7 @@ export type StorageAssetDto = {
   category: string;
   itemType: string;
   serialNumber: string | null;
+  assetImageDataUrl: string | null;
   conditionStatus: string;
   assetStatus: string;
   storageId: string | null;
@@ -88,11 +89,12 @@ function buildLocalStorageAssets(): Promise<StorageAssetDto[]> {
             return {
               id: `${order.id}-storage-${itemIndex}-${assetIndex}`,
               assetCode,
-              qrCode: `QR-${order.id}-${item.code}-${serialNumber}`,
+              qrCode: `QR-${assetCode}-${serialNumber}`,
               assetName: item.name,
               category: intakeMetadata.category || inferStorageCategory(item.name),
               itemType: intakeMetadata.itemType || "Inventory Item",
               serialNumber,
+              assetImageDataUrl: order.receivedImageDataUrl ?? null,
               conditionStatus: order.receivedCondition === "issue" ? "damaged" : "good",
               assetStatus: "inStorage",
               storageId: "local-storage",
@@ -116,8 +118,44 @@ function buildLocalStorageAssets(): Promise<StorageAssetDto[]> {
   );
 }
 
-const storageAssetFields = gql`
-  fragment StorageAssetFields on StorageAsset {
+async function findLocalStorageAssetDetail(input: {
+  id?: string | null;
+  qrCode?: string | null;
+}) {
+  const normalizedId = input.id?.trim() || null;
+  const normalizedQrCode = input.qrCode?.trim() || null;
+  const localAssets = await buildLocalStorageAssets();
+
+  return (
+    localAssets.find(
+      (asset) =>
+        (normalizedId &&
+          (asset.id === normalizedId || asset.assetCode === normalizedId)) ||
+        (normalizedQrCode && asset.qrCode === normalizedQrCode),
+    ) ?? null
+  );
+}
+
+function shouldUseLocalStorageAssetFallback(input: {
+  id?: string | null;
+  qrCode?: string | null;
+}) {
+  const normalizedId = input.id?.trim() || "";
+  const normalizedQrCode = input.qrCode?.trim() || "";
+
+  if (normalizedId && !/^\d+$/.test(normalizedId)) {
+    return true;
+  }
+
+  if (normalizedQrCode.startsWith("QR-local-")) {
+    return true;
+  }
+
+  return false;
+}
+
+const storageAssetListFields = gql`
+  fragment StorageAssetListFields on StorageAsset {
     id
     assetCode
     qrCode
@@ -125,6 +163,36 @@ const storageAssetFields = gql`
     category
     itemType
     serialNumber
+    assetImageDataUrl
+    conditionStatus
+    assetStatus
+    storageId
+    storageName
+    storageType
+    receivedAt
+    receiveNote
+    orderId
+    requestNumber
+    requestDate
+    requester
+    department
+    unitCost
+    currencyCode
+    createdAt
+    updatedAt
+  }
+`;
+
+const storageAssetDetailFields = gql`
+  fragment StorageAssetDetailFields on StorageAsset {
+    id
+    assetCode
+    qrCode
+    assetName
+    category
+    itemType
+    serialNumber
+    assetImageDataUrl
     conditionStatus
     assetStatus
     storageId
@@ -145,21 +213,21 @@ const storageAssetFields = gql`
 `;
 
 const storageAssetsQuery = gql`
-  ${storageAssetFields}
+  ${storageAssetListFields}
 
   query StorageAssets {
     storageAssets {
-      ...StorageAssetFields
+      ...StorageAssetListFields
     }
   }
 `;
 
 const assetDetailQuery = gql`
-  ${storageAssetFields}
+  ${storageAssetDetailFields}
 
   query AssetDetail($id: ID, $qrCode: String) {
     asset(id: $id, qrCode: $qrCode) {
-      ...StorageAssetFields
+      ...StorageAssetDetailFields
     }
   }
 `;
@@ -195,6 +263,10 @@ export async function fetchStorageAssetDetailRequest(input: {
 }) {
   const normalizedId = input.id?.trim() || null;
   const normalizedQrCode = input.qrCode?.trim() || null;
+  const allowLocalFallback = shouldUseLocalStorageAssetFallback({
+    id: normalizedId,
+    qrCode: normalizedQrCode,
+  });
   try {
     const { data } = await apolloClient.query<{ asset: StorageAssetDto | null }>({
       query: assetDetailQuery,
@@ -205,17 +277,28 @@ export async function fetchStorageAssetDetailRequest(input: {
       fetchPolicy: "no-cache",
     });
 
-    return data?.asset ?? null;
+    if (data?.asset) {
+      return data.asset;
+    }
+
+    return allowLocalFallback
+      ? findLocalStorageAssetDetail({
+          id: normalizedId,
+          qrCode: normalizedQrCode,
+        })
+      : null;
   } catch (error) {
     console.warn("Falling back to local storage asset detail.", error);
-    const localAssets = await buildLocalStorageAssets();
-    return (
-      localAssets.find(
-        (asset) =>
-          (normalizedId && asset.id === normalizedId) ||
-          (normalizedQrCode && asset.qrCode === normalizedQrCode),
-      ) ?? null
-    );
+    if (!allowLocalFallback) {
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to load storage asset detail.");
+    }
+
+    return findLocalStorageAssetDetail({
+      id: normalizedId,
+      qrCode: normalizedQrCode,
+    });
   }
 }
 
@@ -240,7 +323,7 @@ export async function downloadAssetLabelsPdfRequest(assetCodes: string[]) {
 }
 
 const updateStorageAssetMutation = gql`
-  ${storageAssetFields}
+  ${storageAssetDetailFields}
 
   mutation UpdateStorageAsset(
     $id: ID!
@@ -252,7 +335,7 @@ const updateStorageAssetMutation = gql`
       assetStatus: $assetStatus
       conditionStatus: $conditionStatus
     ) {
-      ...StorageAssetFields
+      ...StorageAssetDetailFields
     }
   }
 `;

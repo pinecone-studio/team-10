@@ -91,6 +91,7 @@ export type StoredOrder = {
   receivedCondition: ReceivedCondition | null;
   receivedNote: string;
   storageLocation: string;
+  receivedImageDataUrl: string | null;
   serialNumbers: string[];
   assetIds: string[];
   assignedTo: string | null;
@@ -130,6 +131,8 @@ export type ReceiveOrderInput = {
   receivedCondition: ReceivedCondition;
   receivedNote: string;
   storageLocation: string;
+  assetImageDataUrl?: string | null;
+  assetImageFileName?: string | null;
   serialNumbers: string[];
   assetIds: string[];
 };

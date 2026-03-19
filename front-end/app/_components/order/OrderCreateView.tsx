@@ -37,6 +37,7 @@ export function OrderCreateView(props: OrderCreateViewProps) {
             draftOrder={props.draftOrder}
             draftItems={props.draftItems}
             permissionMessage={props.permissionMessage}
+            submitError={props.submitError}
             canSubmitDraft={props.canSubmitDraft}
             missingSubmitFields={props.missingSubmitFields}
             onFillDemo={props.onFillDemo}

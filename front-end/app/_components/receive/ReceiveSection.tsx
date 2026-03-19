@@ -35,12 +35,15 @@ export function ReceiveSection() {
   const catalog = useCatalogStore();
   const receiveOrders = useMemo(
     () =>
-      orders.filter(
-        (order) =>
-          order.status === "approved_finance" ||
-          order.status === "received_inventory" ||
-          order.status === "assigned_hr",
-      ),
+      orders.filter((order) => {
+        const isPersistedOrder = /^\d+$/.test(order.id.trim());
+        return (
+          isPersistedOrder &&
+          (order.status === "approved_finance" ||
+            order.status === "received_inventory" ||
+            order.status === "assigned_hr")
+        );
+      }),
     [orders],
   );
   const rows = useMemo(() => buildReceiveRows(receiveOrders), [receiveOrders]);
@@ -62,6 +65,8 @@ export function ReceiveSection() {
     {},
   );
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedImageName, setUploadedImageName] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -188,6 +193,7 @@ export function ReceiveSection() {
     setReceivedNote(`Demo intake for ${row.assetName}.`);
     applyClassificationDefaults(row);
     setUploadedImage(null);
+    setUploadedImageName(null);
   }
 
   async function handleQuickCreate() {
@@ -238,6 +244,7 @@ export function ReceiveSection() {
                   setSelectedCategory,
                   setSelectedType,
                   setUploadedImage,
+                  setUploadedImageName,
                 )
               }
               className="inline-flex w-fit items-center gap-2 text-[14px] font-medium text-[#344054]"
@@ -338,7 +345,11 @@ export function ReceiveSection() {
                     const file = event.target.files?.[0];
                     if (!file) return;
                     const reader = new FileReader();
-                    reader.onload = () => setUploadedImage(String(reader.result));
+                    reader.onload = () => {
+                      setUploadedImage(String(reader.result));
+                      setUploadedImageName(file.name);
+                      setSubmitError(null);
+                    };
                     reader.readAsDataURL(file);
                   }}
                 />
@@ -448,24 +459,35 @@ export function ReceiveSection() {
                 <Field label="Notes">
                   <textarea
                     value={receivedNote}
-                    onChange={(event) => setReceivedNote(event.target.value)}
+                    onChange={(event) => {
+                      setReceivedNote(event.target.value);
+                      setSubmitError(null);
+                    }}
                     rows={3}
                     className="w-full rounded-[10px] border border-[#d0d5dd] px-[12px] py-[10px] text-[14px] outline-none"
                     placeholder="Add receive note..."
                   />
                 </Field>
+                {submitError ? (
+                  <div className="rounded-[10px] border border-[#fecaca] bg-[#fef2f2] px-3 py-3 text-[13px] font-medium text-[#b42318]">
+                    {submitError}
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   disabled={!activeRow.selectable || Number(quantityReceived) <= 0}
                   onClick={async () => {
-                    const nextCompletedRowIds = Array.from(
-                      new Set([...completedRowIds, activeRow.id]),
-                    );
-                    setCompletedRowIds(nextCompletedRowIds);
+                    setSubmitError(null);
                     const order = orders.find(
                       (entry) => entry.id === activeRow.orderId,
                     );
-                    if (order) {
+
+                    if (!order) {
+                      setSubmitError("The selected order could not be found.");
+                      return;
+                    }
+
+                    try {
                       const resolvedQuantity = Math.max(
                         1,
                         Math.min(activeRow.quantity, Number(quantityReceived) || 1),
@@ -492,6 +514,8 @@ export function ReceiveSection() {
                           itemType: selectedType,
                         }),
                         storageLocation: "Main warehouse / Intake",
+                        assetImageDataUrl: uploadedImage,
+                        assetImageFileName: uploadedImageName,
                         serialNumbers:
                           generatedQrCodes.length > 0
                             ? generatedQrCodes.map((entry) => entry.serialNumber)
@@ -502,13 +526,25 @@ export function ReceiveSection() {
                           resolvedQuantity,
                         ),
                       });
+
+                      const nextCompletedRowIds = Array.from(
+                        new Set([...completedRowIds, activeRow.id]),
+                      );
+                      setCompletedRowIds(nextCompletedRowIds);
+                      resetDetailState(
+                        setSelectedRowId,
+                        setSelectedCategory,
+                        setSelectedType,
+                        setUploadedImage,
+                        setUploadedImageName,
+                      );
+                    } catch (error) {
+                      setSubmitError(
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to receive this asset.",
+                      );
                     }
-                    resetDetailState(
-                      setSelectedRowId,
-                      setSelectedCategory,
-                      setSelectedType,
-                      setUploadedImage,
-                    );
                   }}
                   className="fx-submit-button h-[48px] w-full px-4 text-[15px] font-medium"
                 >
@@ -592,10 +628,12 @@ export function ReceiveSection() {
             setQuantityReceived(`${row?.quantity ?? 1}`);
             setReceivedCondition("good");
             setReceivedNote("");
+            setSubmitError(null);
             if (row) {
               applyClassificationDefaults(row);
             }
             setUploadedImage(null);
+            setUploadedImageName(null);
           }}
         />
 
@@ -660,9 +698,11 @@ function resetDetailState(
   setSelectedCategory: (value: string) => void,
   setSelectedType: (value: string) => void,
   setUploadedImage: (value: string | null) => void,
+  setUploadedImageName: (value: string | null) => void,
 ) {
   setSelectedRowId(null);
   setSelectedCategory("");
   setSelectedType("");
   setUploadedImage(null);
+  setUploadedImageName(null);
 }
