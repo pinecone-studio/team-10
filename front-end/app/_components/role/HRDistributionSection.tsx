@@ -27,7 +27,16 @@ export function HRDistributionSection() {
       return [];
     }
   });
-  const [assetState, setAssetState] = useState<Record<string, AssetState>>({});
+  const [assetState, setAssetState] = useState<Record<string, AssetState>>(() => {
+    if (typeof window === "undefined") return {};
+
+    try {
+      const saved = window.localStorage.getItem(KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [activeView, setActiveView] = useState<"available" | "assigned" | "pending">("available");
   const [searchValue, setSearchValue] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All categories");
@@ -47,11 +56,6 @@ export function HRDistributionSection() {
         } catch {}
       })
       .catch(() => live && setAssets((current) => current));
-
-    try {
-      const saved = window.localStorage.getItem(KEY);
-      if (saved) setAssetState(JSON.parse(saved));
-    } catch {}
     return () => {
       live = false;
     };
@@ -81,7 +85,12 @@ export function HRDistributionSection() {
 
   const available = filteredAssets.filter((asset) => !assetState[asset.id]?.holder);
   const assigned = filteredAssets.filter((asset) => assetState[asset.id]?.holder);
-  const pending = assigned.filter((asset) => assetState[asset.id]?.holder === selectedEmployee && assetState[asset.id]?.role === selectedRole);
+  const pending = assigned.filter((asset) => {
+    const state = assetState[asset.id];
+    if (!state?.holder) return false;
+    if (state.holder !== selectedEmployee) return false;
+    return !state.role || state.role === selectedRole;
+  });
 
   function assign(asset: StorageAssetDto) {
     setAssetState((current) => {

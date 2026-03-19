@@ -24,6 +24,12 @@ export function buildRegisteredAssetScanUrl(input: {
   qrCode: string;
   mode?: "employee" | "audit";
   role?: string;
+  orderId?: string;
+  requestNumber?: string;
+  department?: string;
+  storageLocation?: string;
+  ownerName?: string;
+  ownerRole?: string;
 }) {
   const baseOrigin = getQrAppBaseUrl(input.origin);
   const searchParams = new URLSearchParams({
@@ -36,6 +42,30 @@ export function buildRegisteredAssetScanUrl(input: {
 
   if (input.role) {
     searchParams.set("role", input.role);
+  }
+
+  if (input.orderId) {
+    searchParams.set("orderId", input.orderId);
+  }
+
+  if (input.requestNumber) {
+    searchParams.set("requestNumber", input.requestNumber);
+  }
+
+  if (input.department) {
+    searchParams.set("department", input.department);
+  }
+
+  if (input.storageLocation) {
+    searchParams.set("storageLocation", input.storageLocation);
+  }
+
+  if (input.ownerName) {
+    searchParams.set("ownerName", input.ownerName);
+  }
+
+  if (input.ownerRole) {
+    searchParams.set("ownerRole", input.ownerRole);
   }
 
   return `${baseOrigin}/scan?${searchParams.toString()}`;

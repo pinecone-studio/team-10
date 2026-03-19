@@ -10,6 +10,12 @@ type ScanRouteProps = {
     serialNumber?: string;
     mode?: string;
     role?: string;
+    orderId?: string;
+    requestNumber?: string;
+    department?: string;
+    storageLocation?: string;
+    ownerName?: string;
+    ownerRole?: string;
   }>;
 };
 
@@ -27,6 +33,12 @@ export default async function ScanRoute({ searchParams }: ScanRouteProps) {
   const state = resolvedSearchParams?.state?.trim() ?? "";
   const assetName = resolvedSearchParams?.assetName?.trim() ?? "";
   const serialNumber = resolvedSearchParams?.serialNumber?.trim() ?? "";
+  const orderId = resolvedSearchParams?.orderId?.trim() ?? "";
+  const requestNumber = resolvedSearchParams?.requestNumber?.trim() ?? "";
+  const department = resolvedSearchParams?.department?.trim() ?? "";
+  const storageLocation = resolvedSearchParams?.storageLocation?.trim() ?? "";
+  const ownerName = resolvedSearchParams?.ownerName?.trim() ?? "";
+  const ownerRole = resolvedSearchParams?.ownerRole?.trim() ?? "";
 
   if (!qr) {
     notFound();
@@ -42,5 +54,17 @@ export default async function ScanRoute({ searchParams }: ScanRouteProps) {
     );
   }
 
-  return <QrScanResolverPage qrCode={qr} role={role} mode={mode} />;
+  return (
+    <QrScanResolverPage
+      qrCode={qr}
+      role={role}
+      mode={mode}
+      orderId={orderId}
+      requestNumber={requestNumber}
+      department={department}
+      storageLocation={storageLocation}
+      ownerName={ownerName}
+      ownerRole={ownerRole}
+    />
+  );
 }
