@@ -11,6 +11,7 @@ import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 
 const ACTIONS = ["Dispose", "Census", "Missing", "Audit"] as const;
 const CATEGORIES = [
+  "All Categories",
   "IT Equipment",
   "Office Equipment",
   "Mobile Devices",
@@ -19,7 +20,7 @@ const CATEGORIES = [
   "Other Assets",
 ] as const;
 const GRID =
-  "grid grid-cols-[42px_96px_1.45fr_112px_116px_122px_108px_108px_110px_48px]";
+  "grid grid-cols-[42px_96px_1.45fr_112px_150px_122px_108px_108px_110px_48px]";
 
 export function InventoryStorageSection() {
   const [assets, setAssets] = useState<StorageAssetDto[]>([]);
@@ -27,6 +28,10 @@ export function InventoryStorageSection() {
   const [selectedAsset, setSelectedAsset] = useState<StorageAssetDto | null>(null);
   const [lookupValue, setLookupValue] = useState("");
   const [searchValue, setSearchValue] = useState("");
+  const [selectedCategory, setSelectedCategory] =
+    useState<(typeof CATEGORIES)[number]>("All Categories");
+  const [selectedType, setSelectedType] = useState("All Types");
+  const [sortMode, setSortMode] = useState<"recent" | "name" | "cost_desc">("recent");
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -46,9 +51,7 @@ export function InventoryStorageSection() {
       } catch (error) {
         if (!isMounted) return;
         setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Failed to load storage assets.",
+          error instanceof Error ? error.message : "Failed to load storage assets.",
         );
       } finally {
         if (isMounted) {
@@ -81,9 +84,7 @@ export function InventoryStorageSection() {
       } catch (error) {
         if (!isMounted) return;
         setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Failed to load asset detail.",
+          error instanceof Error ? error.message : "Failed to load asset detail.",
         );
       } finally {
         if (isMounted) {
@@ -97,7 +98,7 @@ export function InventoryStorageSection() {
     };
   }, [selectedAssetId]);
 
-  const visibleAssets = useMemo(() => {
+  const searchedAssets = useMemo(() => {
     const normalizedQuery = searchValue.trim().toLowerCase();
     if (!normalizedQuery) return assets;
 
@@ -109,6 +110,8 @@ export function InventoryStorageSection() {
         asset.requestNumber,
         asset.requester,
         asset.department,
+        asset.category,
+        asset.itemType,
         asset.storageName,
         asset.serialNumber ?? "",
         asset.qrCode,
@@ -120,9 +123,67 @@ export function InventoryStorageSection() {
     () =>
       CATEGORIES.map((category) => ({
         category,
-        count: visibleAssets.filter((asset) => mapCategory(asset.category) === category)
-          .length,
+        count:
+          category === "All Categories"
+            ? searchedAssets.length
+            : searchedAssets.filter((asset) => mapCategory(asset.category) === category).length,
       })),
+    [searchedAssets],
+  );
+
+  const typeOptions = useMemo(() => {
+    const categoryScopedAssets =
+      selectedCategory === "All Categories"
+        ? searchedAssets
+        : searchedAssets.filter((asset) => mapCategory(asset.category) === selectedCategory);
+
+    return [
+      "All Types",
+      ...new Set(
+        categoryScopedAssets
+          .map((asset) => normalizeItemType(asset.itemType))
+          .filter(Boolean),
+      ),
+    ];
+  }, [searchedAssets, selectedCategory]);
+
+  const visibleAssets = useMemo(() => {
+    const categoryFilteredAssets =
+      selectedCategory === "All Categories"
+        ? searchedAssets
+        : searchedAssets.filter((asset) => mapCategory(asset.category) === selectedCategory);
+    const typeFilteredAssets =
+      selectedType === "All Types"
+        ? categoryFilteredAssets
+        : categoryFilteredAssets.filter(
+            (asset) => normalizeItemType(asset.itemType) === selectedType,
+          );
+
+    return [...typeFilteredAssets].sort((left, right) => {
+      if (sortMode === "name") {
+        return left.assetName.localeCompare(right.assetName);
+      }
+
+      if (sortMode === "cost_desc") {
+        return (right.unitCost ?? 0) - (left.unitCost ?? 0);
+      }
+
+      return right.receivedAt.localeCompare(left.receivedAt);
+    });
+  }, [searchedAssets, selectedCategory, selectedType, sortMode]);
+
+  const typeBreakdown = useMemo(
+    () =>
+      Array.from(
+        visibleAssets.reduce((accumulator, asset) => {
+          const key = normalizeItemType(asset.itemType) || "Unclassified";
+          accumulator.set(key, (accumulator.get(key) ?? 0) + 1);
+          return accumulator;
+        }, new Map<string, number>()),
+      )
+        .map(([type, count]) => ({ type, count }))
+        .sort((left, right) => right.count - left.count)
+        .slice(0, 6),
     [visibleAssets],
   );
 
@@ -148,9 +209,7 @@ export function InventoryStorageSection() {
       setSelectedAssetId(detail.id);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Failed to look up asset detail.",
+        error instanceof Error ? error.message : "Failed to look up asset detail.",
       );
     } finally {
       setIsDetailLoading(false);
@@ -200,6 +259,8 @@ export function InventoryStorageSection() {
                   ["Asset Code", selectedAsset.assetCode],
                   ["Asset Name", selectedAsset.assetName],
                   ["Department", selectedAsset.department],
+                  ["Category", mapCategory(selectedAsset.category)],
+                  ["Type", normalizeItemType(selectedAsset.itemType) || "-"],
                   ["Location", selectedAsset.storageName],
                   ["Condition", formatCondition(selectedAsset.conditionStatus)],
                   [
@@ -276,6 +337,13 @@ export function InventoryStorageSection() {
                 />
                 <Field label="Stored At" value={selectedAsset.storageName} />
               </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Field label="Category" value={mapCategory(selectedAsset.category)} />
+                <Field
+                  label="Type"
+                  value={normalizeItemType(selectedAsset.itemType) || "-"}
+                />
+              </div>
               <div className="rounded-[14px] border border-[#e4ebf3] bg-white px-4 py-4 text-[13px] text-[#475569]">
                 <div className="flex justify-between">
                   <span>Requester</span>
@@ -310,7 +378,7 @@ export function InventoryStorageSection() {
         <EmptyState title="Storage data unavailable" description={errorMessage} />
       ) : isLoading ? (
         <StorageLoadingState />
-      ) : visibleAssets.length === 0 ? (
+      ) : assets.length === 0 ? (
         <EmptyState
           title="No stored goods yet"
           description="Received items will appear here right after the receive step."
@@ -327,7 +395,9 @@ export function InventoryStorageSection() {
                 />
                 <span className="fx-highlight" />
                 <span className="fx-bar" />
-                <span className="fx-label">Search by QR, asset, requester, or department...</span>
+                <span className="fx-label">
+                  Search by QR, asset, category, type, requester, or department...
+                </span>
               </div>
               {ACTIONS.map((action) => (
                 <button
@@ -356,22 +426,93 @@ export function InventoryStorageSection() {
                 </button>
               ))}
             </div>
-            <div className="mt-5 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <select
+                value={selectedType}
+                onChange={(event) => setSelectedType(event.target.value)}
+                className="h-10 min-w-[180px] rounded-[10px] border border-[#dbe8f5] bg-white px-3 text-[13px] text-[#334155] shadow-[0_4px_12px_rgba(148,163,184,0.08)]"
+              >
+                {typeOptions.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={sortMode}
+                onChange={(event) => setSortMode(event.target.value as typeof sortMode)}
+                className="h-10 min-w-[180px] rounded-[10px] border border-[#dbe8f5] bg-white px-3 text-[13px] text-[#334155] shadow-[0_4px_12px_rgba(148,163,184,0.08)]"
+              >
+                <option value="recent">Sort: Latest received</option>
+                <option value="name">Sort: Asset name</option>
+                <option value="cost_desc">Sort: Highest cost</option>
+              </select>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
               {categoryCounts.map(({ category, count }) => (
-                <div
+                <button
                   key={category}
-                  className="rounded-[16px] border border-[#dbe8f5] bg-[linear-gradient(180deg,#f4f9ff_0%,#e7f1fb_100%)] px-4 py-4 shadow-[0_6px_18px_rgba(148,163,184,0.12)]"
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory(category);
+                    setSelectedType("All Types");
+                  }}
+                  className={`min-w-[148px] rounded-[14px] border px-3 py-3 text-left shadow-[0_4px_12px_rgba(148,163,184,0.10)] ${
+                    selectedCategory === category
+                      ? "border-[#93c5fd] bg-[linear-gradient(135deg,#eaf3ff_0%,#f9fbff_100%)]"
+                      : "border-[#dbe8f5] bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_100%)]"
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-[12px] font-semibold leading-5 text-[#334155]">
-                      {category}
-                    </p>
-                    <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[rgba(37,99,235,0.14)] px-2 text-[11px] text-[#2563eb]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-semibold leading-5 text-[#334155]">
+                        {category}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-[#64748b]">
+                        {category === "All Categories" ? "All assets" : "Filter"}
+                      </p>
+                    </div>
+                    <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-[rgba(37,99,235,0.12)] px-2 text-[11px] font-medium text-[#2563eb]">
                       {count}
                     </span>
                   </div>
-                </div>
+                </button>
               ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {typeBreakdown.length > 0 ? (
+                typeBreakdown.map(({ type, count }) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setSelectedType(type)}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[12px] ${
+                      selectedType === type
+                        ? "border-[#93c5fd] bg-white text-[#1d4ed8]"
+                        : "border-[#dbe3ee] bg-[#f8fbff] text-[#475569]"
+                    }`}
+                  >
+                    <span>{type}</span>
+                    <span className="rounded-full bg-[rgba(37,99,235,0.10)] px-2 py-[1px] text-[11px] text-[#2563eb]">
+                      {count}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <span className="text-[12px] text-[#64748b]">
+                  No type breakdown available for this selection.
+                </span>
+              )}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[12px] text-[#64748b]">
+              <span>
+                Showing {visibleAssets.length} asset{visibleAssets.length === 1 ? "" : "s"}
+              </span>
+              <span>
+                {selectedCategory === "All Categories"
+                  ? "All categories"
+                  : `${selectedCategory}${selectedType === "All Types" ? "" : ` / ${selectedType}`}`}
+              </span>
             </div>
           </div>
           <div className="space-y-4 px-4 pb-3">
@@ -382,7 +523,7 @@ export function InventoryStorageSection() {
               <span>ID</span>
               <span>Asset Name</span>
               <span>Date</span>
-              <span>Category</span>
+              <span>Category / Type</span>
               <span>Location</span>
               <span>Condition</span>
               <span>Status</span>
@@ -390,55 +531,71 @@ export function InventoryStorageSection() {
               <span />
             </div>
             <div className="overflow-hidden rounded-[14px] border border-[#dbe7f3] bg-white shadow-[0_8px_22px_rgba(148,163,184,0.10)]">
-              <div className="divide-y divide-[#edf2f7]">
-                {visibleAssets.map((asset, index) => (
-                  <button
-                    key={asset.id}
-                    type="button"
-                    onClick={() => setSelectedAssetId(asset.id)}
-                    className={`${GRID} w-full items-center px-3 py-3 text-left text-[11px] text-[#334155] hover:bg-[#f8fbff]`}
-                  >
-                    <span>{index + 1}</span>
-                    <span>{asset.id}</span>
-                    <span>
-                      <span className="block font-medium text-[#111827]">
-                        {asset.assetName}
+              {visibleAssets.length === 0 ? (
+                <div className="px-6 py-10 text-center">
+                  <p className="text-[16px] font-semibold text-[#0f172a]">
+                    No assets in this selection
+                  </p>
+                  <p className="mt-2 text-[13px] text-[#64748b]">
+                    {selectedCategory === "All Categories"
+                      ? "Try another search or type filter."
+                      : `No stored items match ${selectedCategory}${selectedType === "All Types" ? "" : ` / ${selectedType}`}.`}
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#edf2f7]">
+                  {visibleAssets.map((asset, index) => (
+                    <button
+                      key={asset.id}
+                      type="button"
+                      onClick={() => setSelectedAssetId(asset.id)}
+                      className={`${GRID} w-full items-center px-3 py-3 text-left text-[11px] text-[#334155] hover:bg-[#f8fbff]`}
+                    >
+                      <span>{index + 1}</span>
+                      <span>{asset.id}</span>
+                      <span>
+                        <span className="block font-medium text-[#111827]">
+                          {asset.assetName}
+                        </span>
+                        <span className="mt-1 block text-[#94a3b8]">
+                          {asset.requestNumber}
+                        </span>
                       </span>
-                      <span className="mt-1 block text-[#94a3b8]">
-                        {asset.requestNumber}
+                      <span>{formatDisplayDate(asset.receivedAt)}</span>
+                      <span>
+                        <span className="inline-flex rounded-full border border-[#dbe3ee] bg-[#f8fafc] px-2 py-[2px] text-[10px]">
+                          {mapCategory(asset.category)}
+                        </span>
+                        <span className="mt-1 block text-[10px] text-[#64748b]">
+                          {normalizeItemType(asset.itemType) || "Unclassified"}
+                        </span>
                       </span>
-                    </span>
-                    <span>{formatDisplayDate(asset.receivedAt)}</span>
-                    <span>
-                      <span className="inline-flex rounded-full border border-[#dbe3ee] bg-[#f8fafc] px-2 py-[2px] text-[10px]">
-                        {mapCategory(asset.category)}
+                      <span>{asset.storageName}</span>
+                      <span>
+                        <ToneBadge
+                          tone={asset.conditionStatus === "damaged" ? "warning" : "success"}
+                        >
+                          {formatCondition(asset.conditionStatus)}
+                        </ToneBadge>
                       </span>
-                    </span>
-                    <span>{asset.storageName}</span>
-                    <span>
-                      <ToneBadge
-                        tone={asset.conditionStatus === "damaged" ? "warning" : "success"}
-                      >
-                        {formatCondition(asset.conditionStatus)}
-                      </ToneBadge>
-                    </span>
-                    <span>
-                      <ToneBadge
-                        tone={isAssignedStatus(asset.assetStatus) ? "info" : "neutral"}
-                      >
-                        {formatAssetStatus(asset.assetStatus)}
-                      </ToneBadge>
-                    </span>
-                    <span>
-                      {formatCurrency(
-                        asset.unitCost ?? 0,
-                        parseCurrency(asset.currencyCode),
-                      )}
-                    </span>
-                    <span className="text-right text-[16px] text-[#94a3b8]">...</span>
-                  </button>
-                ))}
-              </div>
+                      <span>
+                        <ToneBadge
+                          tone={isAssignedStatus(asset.assetStatus) ? "info" : "neutral"}
+                        >
+                          {formatAssetStatus(asset.assetStatus)}
+                        </ToneBadge>
+                      </span>
+                      <span>
+                        {formatCurrency(
+                          asset.unitCost ?? 0,
+                          parseCurrency(asset.currencyCode),
+                        )}
+                      </span>
+                      <span className="text-right text-[16px] text-[#94a3b8]">...</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-between px-1 pt-3 text-[10px] text-[#64748b]">
               <span>0 of {visibleAssets.length} row(s) selected.</span>
@@ -465,6 +622,10 @@ function mapCategory(value: string) {
   if (normalized.includes("furniture")) return "Furniture";
 
   return "Other Assets";
+}
+
+function normalizeItemType(value: string) {
+  return value.trim();
 }
 
 function parseCurrency(value: string) {

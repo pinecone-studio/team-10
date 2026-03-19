@@ -13,6 +13,7 @@ export type ReceiveRow = {
   orderId: string;
   orderStatus: "approved_finance" | "received_inventory" | "assigned_hr";
   requestNumber: string;
+  department: string;
   index: number;
   assetName: string;
   itemCode: string;
