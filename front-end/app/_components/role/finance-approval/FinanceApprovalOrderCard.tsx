@@ -41,14 +41,27 @@ export function FinanceApprovalOrderCard(props: {
             ))}
           </div>
           <div className="overflow-hidden rounded-[16px] border border-[#E2ECFA] bg-white shadow-[0_4px_12px_rgba(148,163,184,0.08)]">
-            <table className="w-full table-fixed text-[12px] text-[#334155]">
-              <thead className="bg-[#EAF3FF] text-[#5C7394]"><tr><Th>No</Th><Th>Item</Th><Th>Code</Th><Th>Qty</Th><Th>Unit price</Th><Th right>Total</Th><Th center>Decision</Th></tr></thead>
+            <table className="w-full table-fixed text-[14px] text-[#334155]">
+              <colgroup>
+                <col className="w-[30px]" />
+                <col className="w-[28%]" />
+                <col className="w-[22%]" />
+                <col className="w-[6%]" />
+                <col className="w-[15%]" />
+                <col className="w-[12%]" />
+                <col className="w-[17%]" />
+              </colgroup>
+              <thead className="bg-[#EAF3FF] text-[#5C7394]"><tr className="h-[39px]"><Th className="w-[30px]">No</Th><Th>Item</Th><Th>Code</Th><Th>Qty</Th><Th>Unit price</Th><Th right>Total</Th><Th center>Decision</Th></tr></thead>
               <tbody>{props.order.items.map((item, index) => {
                 const decision = getItemDecision(props.decisionState, props.order.id, item.catalogId, item.code);
-                return <tr key={`${props.order.id}-${item.code}-${index}`} className="border-t border-[#edf2f7]">
-                  <Td>{index + 1}</Td><Td strong>{item.name}<div className="mt-1 text-[11px] text-[#8fa0ba]">{item.unit}</div></Td><Td>{item.code}</Td><Td>{item.quantity}</Td>
-                  <Td>{formatMoney(item.unitPrice, item.currencyCode)}</Td><Td right strong>{formatMoney(item.totalPrice, item.currencyCode)}</Td>
-                  <Td center><div className="mx-auto grid max-w-[234px] grid-cols-2 rounded-[10px] border border-[#CFE0F8] bg-white p-1 shadow-[0_6px_14px_rgba(148,163,184,0.12)]">
+                return <tr key={`${props.order.id}-${item.code}-${index}`} className="h-[39px] border-t border-[#D8E8FF] bg-white">
+                  <Td className="w-[30px]" boxed>{index + 1}</Td>
+                  <Td strong boxed>{item.name}</Td>
+                  <Td boxed>{item.code}</Td>
+                  <Td boxed>{item.quantity}</Td>
+                  <Td boxed>{formatMoney(item.unitPrice, item.currencyCode)}</Td>
+                  <Td right strong boxed>{formatMoney(item.totalPrice, item.currencyCode)}</Td>
+                  <Td center><div className="mx-auto grid w-full max-w-[248px] grid-cols-2 rounded-[10px] border border-[#CFE0F8] bg-white p-1 shadow-[0_6px_14px_rgba(148,163,184,0.12)]">
                     <DecisionButton active={decision === "rejected"} tone="orange" onClick={() => props.onSetDecision(props.order.id, item.catalogId, item.code, "rejected")}>Reject</DecisionButton>
                     <DecisionButton active={decision === "approved"} tone="green" onClick={() => props.onSetDecision(props.order.id, item.catalogId, item.code, "approved")}>Approve</DecisionButton>
                   </div></Td></tr>;
@@ -70,7 +83,11 @@ function Button(props: { children: React.ReactNode; onClick?: () => void | Promi
 }
 function DecisionButton(props: { children: React.ReactNode; active: boolean; tone: "green" | "orange"; onClick: () => void }) {
   const activeClass = "bg-[#DCEBFF] text-[#64748B] shadow-[0_4px_8px_rgba(148,163,184,0.16)]";
-  return <button type="button" onClick={props.onClick} className={`rounded-[8px] px-2 py-[6px] text-[14px] font-normal ${props.active ? activeClass : "text-[#64748b]"}`}>{props.children}</button>;
+  return <button type="button" onClick={props.onClick} className={`flex w-full items-center justify-center whitespace-nowrap rounded-[8px] px-2 py-[6px] text-[14px] font-normal transition-colors ${props.active ? activeClass : "bg-transparent text-[#64748B]"}`}>{props.children}</button>;
 }
-function Th(props: { children: React.ReactNode; right?: boolean; center?: boolean }) { return <th className={`px-3 py-3 text-[14px] font-normal ${props.right ? "text-right" : props.center ? "text-center" : "text-left"}`}>{props.children}</th>; }
-function Td(props: { children: React.ReactNode; right?: boolean; center?: boolean; strong?: boolean }) { return <td className={`px-3 py-3 align-middle text-[14px] ${props.right ? "text-right" : props.center ? "text-center" : "text-left"} ${props.strong ? "font-medium text-[#111827]" : ""}`}>{props.children}</td>; }
+function Th(props: { children: React.ReactNode; right?: boolean; center?: boolean; className?: string }) { return <th className={`${props.className ?? ""} h-[39px] whitespace-nowrap px-2 py-0 text-[14px] font-normal ${props.right ? "text-right" : props.center ? "text-center" : "text-left"}`}>{props.children}</th>; }
+function Td(props: { children: React.ReactNode; right?: boolean; center?: boolean; strong?: boolean; boxed?: boolean; className?: string }) {
+  return <td className={`${props.className ?? ""} h-[39px] whitespace-nowrap px-2 py-0 align-middle text-[14px] ${props.right ? "text-right" : props.center ? "text-center" : "text-left"} ${props.strong ? "font-normal text-[#111827]" : "text-[#334155]"}`}>
+    {props.boxed ? <div className={`flex h-[32px] w-full items-center whitespace-nowrap rounded-[6px] border border-[rgba(0,0,0,0)] bg-[rgba(255,255,255,0)] px-[10px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] ${props.right ? "justify-end" : props.center ? "justify-center" : "justify-start"}`}>{props.children}</div> : props.children}
+  </td>;
+}

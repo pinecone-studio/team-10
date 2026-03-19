@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --font-geist: "Geist", "Segoe UI", sans-serif;
   --font-inter: "Inter", "Segoe UI", sans-serif;
   --font-manrope: "Manrope", "Segoe UI", sans-serif;
 }
@@ -26,6 +27,10 @@ body {
   color: var(--foreground);
   font-family: var(--font-inter), var(--font-manrope), "Segoe UI", sans-serif;
   overflow-x: hidden;
+}
+
+.font-geist {
+  font-family: var(--font-geist), "Segoe UI", sans-serif;
 }
 
 button {

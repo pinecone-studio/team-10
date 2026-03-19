@@ -76,7 +76,7 @@ export function getProcessedStatusLabel(order: StoredOrder) {
 export function getProcessedTone(order: StoredOrder) {
   return order.status === "rejected_finance"
     ? "border-[#fed7d7] bg-[#fff1f2] text-[#dc2626]"
-    : "border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]";
+    : "bg-[#DCFCE7] text-[#15803D]";
 }
 
 export function formatOrderMeta(order: StoredOrder) {
