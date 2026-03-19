@@ -316,6 +316,7 @@ function parseReceivedCondition(value: string | null): ReceivedCondition | null 
 
 function mapOrderItem(item: OrderItemDto): OrderItem {
   return {
+    id: item.id,
     catalogId: item.catalogId,
     name: item.name,
     code: item.code,
@@ -355,6 +356,7 @@ function mapOrder(order: OrderDto): StoredOrder {
     receivedCondition: parseReceivedCondition(order.receivedCondition),
     receivedNote: order.receivedNote ?? "",
     storageLocation: order.storageLocation ?? "",
+    receivedImageDataUrl: null,
     serialNumbers: Array.isArray(order.serialNumbers) ? order.serialNumbers : [],
     assetIds: [],
     assignedTo: order.assignedTo,

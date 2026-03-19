@@ -22,10 +22,23 @@ export function getQrAppBaseUrl(origin?: string) {
 export function buildRegisteredAssetScanUrl(input: {
   origin?: string;
   qrCode: string;
-  role: string;
+  mode?: "employee" | "audit";
+  role?: string;
 }) {
   const baseOrigin = getQrAppBaseUrl(input.origin);
-  return `${baseOrigin}/scan?qr=${encodeURIComponent(input.qrCode)}&role=${encodeURIComponent(input.role)}`;
+  const searchParams = new URLSearchParams({
+    qr: input.qrCode,
+  });
+
+  if (input.mode) {
+    searchParams.set("mode", input.mode);
+  }
+
+  if (input.role) {
+    searchParams.set("role", input.role);
+  }
+
+  return `${baseOrigin}/scan?${searchParams.toString()}`;
 }
 
 export function buildPendingAssetScanUrl(input: {

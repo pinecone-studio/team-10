@@ -43,6 +43,7 @@ export type GoodsCatalogItem = {
 };
 
 export type OrderItem = {
+  id?: string;
   catalogId: string;
   name: string;
   code: string;
@@ -91,6 +92,7 @@ export type StoredOrder = {
   receivedCondition: ReceivedCondition | null;
   receivedNote: string;
   storageLocation: string;
+  receivedImageDataUrl: string | null;
   serialNumbers: string[];
   assetIds: string[];
   assignedTo: string | null;
@@ -123,6 +125,7 @@ export type CreateOrderInput = {
 
 export type ReceiveOrderInput = {
   orderId: string;
+  orderItemId?: string;
   catalogId: string;
   itemCode: string;
   quantityReceived: number;
@@ -130,6 +133,8 @@ export type ReceiveOrderInput = {
   receivedCondition: ReceivedCondition;
   receivedNote: string;
   storageLocation: string;
+  assetImageDataUrl?: string | null;
+  assetImageFileName?: string | null;
   serialNumbers: string[];
   assetIds: string[];
 };

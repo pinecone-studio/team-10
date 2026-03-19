@@ -40,6 +40,7 @@ export const ReceiveTypeDefs = `
   type Mutation {
     receiveOrderItem(
       orderId: ID!
+      orderItemId: ID
       catalogId: ID
       itemCode: String!
       quantityReceived: Int!
@@ -48,6 +49,8 @@ export const ReceiveTypeDefs = `
       receivedNote: String
       storageLocation: String
       serialNumbers: [String!]
+      assetImageDataUrl: String
+      assetImageFileName: String
       receivedByUserId: ID
       officeId: ID
     ): ReceiveOrderItemPayload!

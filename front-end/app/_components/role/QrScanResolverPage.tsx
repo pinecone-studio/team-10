@@ -8,9 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function QrScanResolverPage({
   qrCode,
   role,
+  mode,
 }: {
   qrCode: string;
   role: string;
+  mode?: string;
 }) {
   const [status, setStatus] = useState<"loading" | "missing" | "error">("loading");
 
@@ -29,7 +31,19 @@ export function QrScanResolverPage({
           return;
         }
 
-        window.location.replace(`/assets/${asset.id}?role=${encodeURIComponent(role)}`);
+        if (mode === "audit") {
+          window.alert("Successfully audited and verified");
+        }
+
+        const searchParams = new URLSearchParams({
+          role,
+        });
+
+        if (mode) {
+          searchParams.set("mode", mode);
+        }
+
+        window.location.replace(`/assets/${asset.id}?${searchParams.toString()}`);
       } catch {
         if (isMounted) {
           setStatus("error");
@@ -40,7 +54,7 @@ export function QrScanResolverPage({
     return () => {
       isMounted = false;
     };
-  }, [qrCode, role]);
+  }, [mode, qrCode, role]);
 
   const message =
     status === "missing"

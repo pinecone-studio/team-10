@@ -30,6 +30,10 @@ export function createOrderItem(
   return { catalogId, name, code, unit, quantity, unitPrice, totalPrice: quantity * unitPrice, currencyCode };
 }
 
+function normalizeCatalogId(value: string) {
+  return /^\d+$/.test(value.trim()) ? value.trim() : "";
+}
+
 export function hasDraftContent(draft: GoodsDraft) {
   return Boolean(
     draft.itemName.trim() ||
@@ -51,7 +55,7 @@ export function isDraftSubmittable(draft: GoodsDraft) {
 
 export function convertGoodsDraftToOrderItem(draft: GoodsDraft) {
   return createOrderItem(
-    draft.id,
+    normalizeCatalogId(draft.id),
     draft.itemName.trim(),
     draft.code.trim(),
     draft.unit.trim() || "pcs",

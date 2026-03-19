@@ -10,6 +10,8 @@ import {
 import type { AppDb } from "./db.ts";
 import { parseIntegerId } from "./reference-resolvers.ts";
 
+type ConditionStatus = (typeof conditionStatusValues)[number];
+type AssetStatus = (typeof assetStatusValues)[number];
 type AssetAuditRow = {
   id: number;
   createdAt: string;
@@ -51,7 +53,7 @@ function parseConditionStatus(value?: string | null) {
     );
   }
 
-  return normalized;
+  return normalized as ConditionStatus;
 }
 
 function parseAssetStatus(value?: string | null) {
@@ -61,7 +63,7 @@ function parseAssetStatus(value?: string | null) {
     throw new Error(`Asset status must be one of: ${assetStatusValues.join(", ")}.`);
   }
 
-  return normalized;
+  return normalized as AssetStatus;
 }
 
 function parseAuditPayload(payloadJson: string | null) {
@@ -77,12 +79,6 @@ function parseAuditPayload(payloadJson: string | null) {
   } catch {
     return null;
   }
-}
-
-function humanizeStatus(value: string) {
-  return value
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/^./, (char) => char.toUpperCase());
 }
 
 function mapAuditRow(row: AssetAuditRow): AssetAuditEntryRecord {

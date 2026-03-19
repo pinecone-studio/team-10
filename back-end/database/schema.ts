@@ -771,6 +771,9 @@ export const assets = sqliteTable(
       { onDelete: "set null" },
     ),
     serialNumber: text("serial_number"),
+    assetImageObjectKey: text("asset_image_object_key"),
+    assetImageFileName: text("asset_image_file_name"),
+    assetImageContentType: text("asset_image_content_type"),
     conditionStatus: text("condition_status", {
       enum: conditionStatusValues,
     }).notNull(),

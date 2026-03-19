@@ -537,6 +537,9 @@ CREATE TABLE IF NOT EXISTS assets (
   catalog_item_type_id INTEGER,
   catalog_product_id INTEGER,
   serial_number TEXT,
+  asset_image_object_key TEXT,
+  asset_image_file_name TEXT,
+  asset_image_content_type TEXT,
   condition_status TEXT NOT NULL CHECK (
     condition_status IN (
       'good',

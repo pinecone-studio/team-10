@@ -12,6 +12,7 @@ export type OrderCreateViewProps = {
   missingSubmitFields: string[];
   summaryTotal: number;
   permissionMessage: string;
+  submitError: string | null;
   onFillDemo: () => void | Promise<void>;
   onOpenHistory: () => void;
   onOrderChange: <Key extends keyof DraftOrder>(

@@ -14,6 +14,7 @@ export const AssetTypeDefs = `
     category: String!
     itemType: String!
     serialNumber: String
+    assetImageDataUrl: String
     conditionStatus: String!
     assetStatus: String!
     storageId: ID

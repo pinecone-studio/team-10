@@ -17,6 +17,18 @@ export type Scalars = {
   Float: { input: number; output: number; }
 };
 
+export type AssetAuditEntry = {
+  __typename?: 'AssetAuditEntry';
+  assetId: Scalars['ID']['output'];
+  date: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  location: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  owner: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+};
+
 export type AssetLabelPdf = {
   __typename?: 'AssetLabelPdf';
   assetCount: Scalars['Int']['output'];
@@ -102,6 +114,7 @@ export type CatalogProductImage = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  createAssetAudit: Array<AssetAuditEntry>;
   createCatalogCategory: CatalogCategory;
   createCatalogProduct: CatalogProduct;
   createOrder: Order;
@@ -116,6 +129,15 @@ export type Mutation = {
   updateOrder?: Maybe<Order>;
   updateReceive?: Maybe<Receive>;
   updateStorageAsset: StorageAsset;
+};
+
+
+export type MutationCreateAssetAuditArgs = {
+  assetIds: Array<Scalars['ID']['input']>;
+  assetStatus?: InputMaybe<Scalars['String']['input']>;
+  conditionStatus?: InputMaybe<Scalars['String']['input']>;
+  confirmedLocation?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -202,10 +224,13 @@ export type MutationMarkNotificationAsReadArgs = {
 
 
 export type MutationReceiveOrderItemArgs = {
+  assetImageDataUrl?: InputMaybe<Scalars['String']['input']>;
+  assetImageFileName?: InputMaybe<Scalars['String']['input']>;
   catalogId?: InputMaybe<Scalars['ID']['input']>;
   itemCode: Scalars['String']['input'];
   officeId?: InputMaybe<Scalars['ID']['input']>;
   orderId: Scalars['ID']['input'];
+  orderItemId?: InputMaybe<Scalars['ID']['input']>;
   quantityReceived: Scalars['Int']['input'];
   receivedAt?: InputMaybe<Scalars['String']['input']>;
   receivedByUserId?: InputMaybe<Scalars['ID']['input']>;
@@ -377,6 +402,7 @@ export type OrderItemInput = {
 export type Query = {
   __typename?: 'Query';
   asset?: Maybe<StorageAsset>;
+  assetAuditHistory: Array<AssetAuditEntry>;
   assetLabelPdf: AssetLabelPdf;
   catalogCategories: Array<CatalogCategory>;
   catalogItemTypes: Array<CatalogItemType>;
@@ -394,6 +420,11 @@ export type Query = {
 export type QueryAssetArgs = {
   id?: InputMaybe<Scalars['ID']['input']>;
   qrCode?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryAssetAuditHistoryArgs = {
+  assetId: Scalars['ID']['input'];
 };
 
 
@@ -472,6 +503,7 @@ export type ReceivedAsset = {
 export type StorageAsset = {
   __typename?: 'StorageAsset';
   assetCode: Scalars['String']['output'];
+  assetImageDataUrl?: Maybe<Scalars['String']['output']>;
   assetName: Scalars['String']['output'];
   assetStatus: Scalars['String']['output'];
   category: Scalars['String']['output'];
@@ -567,6 +599,7 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = {
+  AssetAuditEntry: ResolverTypeWrapper<AssetAuditEntry>;
   AssetLabelPdf: ResolverTypeWrapper<AssetLabelPdf>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   CatalogAttributeInput: CatalogAttributeInput;
@@ -594,6 +627,7 @@ export type ResolversTypes = {
 
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = {
+  AssetAuditEntry: AssetAuditEntry;
   AssetLabelPdf: AssetLabelPdf;
   Boolean: Scalars['Boolean']['output'];
   CatalogAttributeInput: CatalogAttributeInput;
@@ -617,6 +651,18 @@ export type ResolversParentTypes = {
   ReceivedAsset: ReceivedAsset;
   StorageAsset: StorageAsset;
   String: Scalars['String']['output'];
+};
+
+export type AssetAuditEntryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AssetAuditEntry'] = ResolversParentTypes['AssetAuditEntry']> = {
+  assetId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  date?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  location?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  note?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  owner?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
 export type AssetLabelPdfResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AssetLabelPdf'] = ResolversParentTypes['AssetLabelPdf']> = {
@@ -692,6 +738,7 @@ export type CatalogProductImageResolvers<ContextType = GraphQLContext, ParentTyp
 };
 
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
+  createAssetAudit?: Resolver<Array<ResolversTypes['AssetAuditEntry']>, ParentType, ContextType, RequireFields<MutationCreateAssetAuditArgs, 'assetIds'>>;
   createCatalogCategory?: Resolver<ResolversTypes['CatalogCategory'], ParentType, ContextType, RequireFields<MutationCreateCatalogCategoryArgs, 'displayName'>>;
   createCatalogProduct?: Resolver<ResolversTypes['CatalogProduct'], ParentType, ContextType, RequireFields<MutationCreateCatalogProductArgs, 'displayName' | 'productCode'>>;
   createOrder?: Resolver<ResolversTypes['Order'], ParentType, ContextType, RequireFields<MutationCreateOrderArgs, 'orderName'>>;
@@ -780,6 +827,7 @@ export type OrderItemResolvers<ContextType = GraphQLContext, ParentType extends 
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
   asset?: Resolver<Maybe<ResolversTypes['StorageAsset']>, ParentType, ContextType, Partial<QueryAssetArgs>>;
+  assetAuditHistory?: Resolver<Array<ResolversTypes['AssetAuditEntry']>, ParentType, ContextType, RequireFields<QueryAssetAuditHistoryArgs, 'assetId'>>;
   assetLabelPdf?: Resolver<ResolversTypes['AssetLabelPdf'], ParentType, ContextType, RequireFields<QueryAssetLabelPdfArgs, 'assetCodes'>>;
   catalogCategories?: Resolver<Array<ResolversTypes['CatalogCategory']>, ParentType, ContextType>;
   catalogItemTypes?: Resolver<Array<ResolversTypes['CatalogItemType']>, ParentType, ContextType, Partial<QueryCatalogItemTypesArgs>>;
@@ -831,6 +879,7 @@ export type ReceivedAssetResolvers<ContextType = GraphQLContext, ParentType exte
 
 export type StorageAssetResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['StorageAsset'] = ResolversParentTypes['StorageAsset']> = {
   assetCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  assetImageDataUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   assetName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   assetStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -857,6 +906,7 @@ export type StorageAssetResolvers<ContextType = GraphQLContext, ParentType exten
 };
 
 export type Resolvers<ContextType = GraphQLContext> = {
+  AssetAuditEntry?: AssetAuditEntryResolvers<ContextType>;
   AssetLabelPdf?: AssetLabelPdfResolvers<ContextType>;
   CatalogCategory?: CatalogCategoryResolvers<ContextType>;
   CatalogItemType?: CatalogItemTypeResolvers<ContextType>;
@@ -873,4 +923,3 @@ export type Resolvers<ContextType = GraphQLContext> = {
   ReceivedAsset?: ReceivedAssetResolvers<ContextType>;
   StorageAsset?: StorageAssetResolvers<ContextType>;
 };
-

@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 type JwtPayload = Record<string, unknown> & {
   exp?: number;
   iat?: number;
@@ -75,7 +77,7 @@ export async function verifySignedJwt<TPayload extends JwtPayload>(
 
   if (
     expectedSignature.length !== providedSignature.length ||
-    !crypto.timingSafeEqual(Buffer.from(expectedSignature), providedSignature)
+    !timingSafeEqual(Buffer.from(expectedSignature), providedSignature)
   ) {
     throw new Error("JWT signature is invalid.");
   }

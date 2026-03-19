@@ -564,6 +564,10 @@ async function listOrderItemsByOrderIds(
     .orderBy(asc(orderItems.orderId), asc(orderItems.id));
 
   for (const row of rows) {
+    if (row.quantity <= 0) {
+      continue;
+    }
+
     const mappedItem = mapOrderItem(row);
     const existingItems = itemsByOrderId.get(row.orderId) ?? [];
     existingItems.push(mappedItem);

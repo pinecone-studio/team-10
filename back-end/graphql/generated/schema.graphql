@@ -1,3 +1,14 @@
+type AssetAuditEntry {
+  assetId: ID!
+  date: String!
+  id: ID!
+  location: String!
+  note: String
+  owner: String!
+  status: String!
+  title: String!
+}
+
 type AssetLabelPdf {
   assetCount: Int!
   base64: String!
@@ -76,6 +87,7 @@ type CatalogProductImage {
 }
 
 type Mutation {
+  createAssetAudit(assetIds: [ID!]!, assetStatus: String, conditionStatus: String, confirmedLocation: String, note: String): [AssetAuditEntry!]!
   createCatalogCategory(displayName: String!): CatalogCategory!
   createCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String!, status: String, unit: String): CatalogProduct!
   createOrder(approvalMessage: String, approvalTarget: String, deliveryDate: String, department: String, departmentId: ID, items: [OrderItemInput!], officeId: ID, orderName: String!, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, status: String, totalAmount: Float, userId: ID, whyOrdered: String): Order!
@@ -85,7 +97,7 @@ type Mutation {
   deleteReceive(id: ID!): Boolean!
   markAllNotificationsAsRead(userId: ID): Boolean!
   markNotificationAsRead(id: ID!, userId: ID): Notification
-  receiveOrderItem(catalogId: ID, itemCode: String!, officeId: ID, orderId: ID!, quantityReceived: Int!, receivedAt: String, receivedByUserId: ID, receivedCondition: String!, receivedNote: String, serialNumbers: [String!], storageLocation: String): ReceiveOrderItemPayload!
+  receiveOrderItem(assetImageDataUrl: String, assetImageFileName: String, catalogId: ID, itemCode: String!, officeId: ID, orderId: ID!, orderItemId: ID, quantityReceived: Int!, receivedAt: String, receivedByUserId: ID, receivedCondition: String!, receivedNote: String, serialNumbers: [String!], storageLocation: String): ReceiveOrderItemPayload!
   updateCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String, id: ID!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String, status: String, unit: String): CatalogProduct
   updateOrder(approvalMessage: String, approvalTarget: String, assignedAt: String, assignedRole: String, assignedTo: String, deliveryDate: String, department: String, departmentId: ID, financeNote: String, financeReviewedAt: String, financeReviewer: String, higherUpNote: String, higherUpReviewedAt: String, higherUpReviewer: String, id: ID!, items: [OrderItemInput!], officeId: ID, orderName: String, receivedAt: String, receivedCondition: String, receivedNote: String, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, serialNumbers: [String!], status: String, storageLocation: String, totalAmount: Float, userId: ID, whyOrdered: String): Order
   updateReceive(conditionStatus: String, id: ID!, note: String, orderId: ID, orderItemId: ID, quantityReceived: Int, receivedAt: String, receivedCondition: String, serialNumbers: [String!], storageLocation: String): Receive
@@ -175,6 +187,7 @@ input OrderItemInput {
 
 type Query {
   asset(id: ID, qrCode: String): StorageAsset
+  assetAuditHistory(assetId: ID!): [AssetAuditEntry!]!
   assetLabelPdf(assetCodes: [String!]!): AssetLabelPdf!
   catalogCategories: [CatalogCategory!]!
   catalogItemTypes(categoryId: ID): [CatalogItemType!]!
@@ -223,6 +236,7 @@ type ReceivedAsset {
 
 type StorageAsset {
   assetCode: String!
+  assetImageDataUrl: String
   assetName: String!
   assetStatus: String!
   category: String!

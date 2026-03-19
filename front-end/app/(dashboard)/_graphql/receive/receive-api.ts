@@ -4,6 +4,10 @@ import { gql } from "@apollo/client/core";
 import { apolloClient } from "@/app/providers/apolloClient";
 import type { ReceiveOrderInput } from "@/app/_lib/order-types";
 
+function isIntegerIdentifier(value: string | null | undefined) {
+  return /^\d+$/.test(value?.trim() ?? "");
+}
+
 type ReceivedAssetDto = {
   id: string;
   assetCode: string;
@@ -28,6 +32,7 @@ type ReceiveOrderItemPayloadDto = {
 const receiveOrderItemMutation = gql`
   mutation ReceiveOrderItem(
     $orderId: ID!
+    $orderItemId: ID
     $catalogId: ID
     $itemCode: String!
     $quantityReceived: Int!
@@ -36,9 +41,12 @@ const receiveOrderItemMutation = gql`
     $receivedNote: String
     $storageLocation: String
     $serialNumbers: [String!]
+    $assetImageDataUrl: String
+    $assetImageFileName: String
   ) {
     receiveOrderItem(
       orderId: $orderId
+      orderItemId: $orderItemId
       catalogId: $catalogId
       itemCode: $itemCode
       quantityReceived: $quantityReceived
@@ -47,6 +55,8 @@ const receiveOrderItemMutation = gql`
       receivedNote: $receivedNote
       storageLocation: $storageLocation
       serialNumbers: $serialNumbers
+      assetImageDataUrl: $assetImageDataUrl
+      assetImageFileName: $assetImageFileName
     ) {
       receive {
         id
@@ -75,6 +85,7 @@ export async function receiveOrderItemRequest(input: ReceiveOrderInput) {
     mutation: receiveOrderItemMutation,
     variables: {
       orderId: input.orderId,
+      orderItemId: isIntegerIdentifier(input.orderItemId) ? input.orderItemId : null,
       catalogId: input.catalogId || null,
       itemCode: input.itemCode,
       quantityReceived: input.quantityReceived,
@@ -83,6 +94,8 @@ export async function receiveOrderItemRequest(input: ReceiveOrderInput) {
       receivedNote: input.receivedNote,
       storageLocation: input.storageLocation,
       serialNumbers: input.serialNumbers,
+      assetImageDataUrl: input.assetImageDataUrl ?? null,
+      assetImageFileName: input.assetImageFileName ?? null,
     },
     fetchPolicy: "no-cache",
   });

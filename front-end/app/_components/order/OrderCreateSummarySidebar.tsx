@@ -12,6 +12,7 @@ export function OrderCreateSummarySidebar(
     | "draftOrder"
     | "draftItems"
     | "permissionMessage"
+    | "submitError"
     | "canSubmitDraft"
     | "missingSubmitFields"
     | "onFillDemo"
@@ -81,6 +82,11 @@ export function OrderCreateSummarySidebar(
         {!props.canSubmitDraft ? (
           <div className="rounded-[10px] border border-dashed border-[#d9e0e8] px-4 py-3 text-[13px] text-[#94a3b8]">
             Missing: {props.missingSubmitFields.join(", ")}
+          </div>
+        ) : null}
+        {props.submitError ? (
+          <div className="rounded-[10px] border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#b42318]">
+            {props.submitError}
           </div>
         ) : null}
         <button
