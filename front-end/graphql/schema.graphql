@@ -192,6 +192,7 @@ type Receive {
   receivedCondition: String
   serialNumbers: [String!]!
   status: String!
+  storageLocation: String
 }
 
 type ReceiveOrderItemPayload {

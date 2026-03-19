@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { buildIntakeMetadataNote } from "../../_lib/intake-metadata";
 import {
   createDemoReceivableOrder,
   createAssetIds,
@@ -25,6 +24,7 @@ import {
 import type { ReceiveCondition } from "./receiveTypes";
 
 export function ReceiveSection() {
+  const today = new Date().toISOString().slice(0, 10);
   const orders = useOrdersStore();
   const catalog = useCatalogStore();
   const receiveOrders = useMemo(
@@ -44,9 +44,7 @@ export function ReceiveSection() {
   const [rowsPerPage, setRowsPerPage] =
     useState<(typeof ROWS_PER_PAGE_OPTIONS)[number]>(10);
   const [page, setPage] = useState(1);
-  const [receivedDate, setReceivedDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
+  const [receivedDate, setReceivedDate] = useState(today);
   const [receivedCondition, setReceivedCondition] =
     useState<ReceiveCondition>("good");
   const [quantityReceived, setQuantityReceived] = useState("1");
@@ -169,7 +167,7 @@ export function ReceiveSection() {
 
   function fillReceiveDemo(row: (typeof rows)[number]) {
     setSelectedRowId(row.id);
-    setReceivedDate(new Date().toISOString().slice(0, 10));
+    setReceivedDate(today);
     setReceivedCondition("good");
     setQuantityReceived(`${Math.max(1, row.quantity)}`);
     setReceivedNote(`Demo intake for ${row.assetName}.`);
@@ -568,6 +566,7 @@ export function ReceiveSection() {
           onOpenRow={(rowId) => {
             const row = rows.find((entry) => entry.id === rowId);
             setSelectedRowId(rowId);
+            setReceivedDate(today);
             setQuantityReceived(`${row?.quantity ?? 1}`);
             setReceivedCondition("good");
             setReceivedNote("");
