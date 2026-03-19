@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Remove conflicting lockfiles for Vercel
+        run: rm -f bun.lock yarn.lock
+
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
