@@ -250,7 +250,11 @@ export async function fetchStorageAssetsRequest() {
       fetchPolicy: "no-cache",
     });
 
-    return data?.storageAssets ?? [];
+    if ((data?.storageAssets?.length ?? 0) > 0) {
+      return data!.storageAssets;
+    }
+
+    return buildLocalStorageAssets();
   } catch (error) {
     console.warn("Falling back to local storage assets.", error);
     return buildLocalStorageAssets();
