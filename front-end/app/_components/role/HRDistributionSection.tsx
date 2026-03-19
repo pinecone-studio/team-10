@@ -27,6 +27,7 @@ import {
 import { WorkspaceShell } from "../shared/WorkspacePrimitives";
 
 const RECIPIENT_ROLE_OPTIONS = ["Employee", "Department Lead", "IT Admin"] as const;
+const ASSIGNABLE_ASSET_STATUSES = new Set(["inStorage", "available", "received"]);
 
 export function HRDistributionSection() {
   const [storageAssets, setStorageAssets] = useState<StorageAssetDto[]>([]);
@@ -83,10 +84,7 @@ export function HRDistributionSection() {
   const availableBase = useMemo(
     () =>
       buildAvailableItems(storageAssets, historyMap).filter(
-        (asset) =>
-          asset.storageName !== "Assigned to employee" &&
-          asset.holder === null &&
-          asset.assetStatus !== "pendingAssignment",
+        (asset) => ASSIGNABLE_ASSET_STATUSES.has(asset.assetStatus),
       ),
     [historyMap, storageAssets],
   );

@@ -16,6 +16,7 @@ export type StorageAssetDto = {
   assetImageDataUrl: string | null;
   conditionStatus: string;
   assetStatus: string;
+  assignedEmployeeName: string | null;
   storageId: string | null;
   storageName: string;
   storageType: string | null;
@@ -97,6 +98,7 @@ function buildLocalStorageAssets(): Promise<StorageAssetDto[]> {
               assetImageDataUrl: order.receivedImageDataUrl ?? null,
               conditionStatus: order.receivedCondition === "issue" ? "damaged" : "good",
               assetStatus: "inStorage",
+              assignedEmployeeName: null,
               storageId: "local-storage",
               storageName: order.storageLocation || "Main warehouse / Intake",
               storageType: "warehouse",
@@ -166,6 +168,7 @@ const storageAssetListFields = gql`
     assetImageDataUrl
     conditionStatus
     assetStatus
+    assignedEmployeeName
     storageId
     storageName
     storageType
@@ -195,6 +198,7 @@ const storageAssetDetailFields = gql`
     assetImageDataUrl
     conditionStatus
     assetStatus
+    assignedEmployeeName
     storageId
     storageName
     storageType

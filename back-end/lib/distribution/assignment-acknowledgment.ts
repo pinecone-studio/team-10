@@ -13,6 +13,7 @@ import type { AppDb } from "../db.ts";
 import { sendOperationalEmail, type EmailDeliveryStatus } from "../email.ts";
 import { createSignedJwt, verifySignedJwt } from "../jwt.ts";
 import { getDistributionById, type DistributionRecord } from "./shared.ts";
+import { resolveEmployeeStorageLocationId } from "./users.ts";
 
 type AssignmentAckJwtPayload = {
   sub: string;
@@ -196,19 +197,40 @@ function ensurePendingAcknowledgment(
   acknowledgment: PendingAcknowledgmentRow,
   payload: AssignmentAckJwtPayload,
 ) {
+  const normalizeNumericClaim = (value: unknown) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+
+    return null;
+  };
+
   if (payload.sub !== "asset-assignment-ack") {
     throw new Error("Assignment acknowledgment token subject is invalid.");
   }
 
-  if (acknowledgment.acknowledgmentId !== payload.ackId) {
+  const payloadAckId = normalizeNumericClaim(payload.ackId);
+  if (payloadAckId !== null && acknowledgment.acknowledgmentId !== payloadAckId) {
     throw new Error("Assignment acknowledgment token does not match record.");
   }
 
-  if (acknowledgment.assignmentRequestId !== payload.assignmentRequestId) {
+  const payloadAssignmentRequestId = normalizeNumericClaim(payload.assignmentRequestId);
+  if (
+    payloadAssignmentRequestId !== null &&
+    acknowledgment.assignmentRequestId !== payloadAssignmentRequestId
+  ) {
     throw new Error("Assignment acknowledgment request id mismatch.");
   }
 
-  if (acknowledgment.employeeId !== payload.employeeId) {
+  const payloadEmployeeId = normalizeNumericClaim(payload.employeeId);
+  if (payloadEmployeeId !== null && acknowledgment.employeeId !== payloadEmployeeId) {
     throw new Error("Assignment acknowledgment employee mismatch.");
   }
 
@@ -581,6 +603,10 @@ export async function signAssignmentAcknowledgment(
       acknowledgmentId: acknowledgment.acknowledgmentId,
       pdfBuffer,
     });
+    const employeeStorageLocationId = await resolveEmployeeStorageLocationId(
+      db,
+      acknowledgment.employeeName,
+    );
 
     await db
       .update(assetAssignmentAcknowledgments)
@@ -612,7 +638,7 @@ export async function signAssignmentAcknowledgment(
       .update(assets)
       .set({
         assetStatus: "assigned",
-        currentStorageId: null,
+        currentStorageId: employeeStorageLocationId,
         updatedAt: signedAt,
       })
       .where(eq(assets.id, acknowledgment.assetId))

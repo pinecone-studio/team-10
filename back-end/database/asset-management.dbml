@@ -553,7 +553,7 @@ Table receiveItems {
   }
 }
 
-Table storage {
+Table storage [note: 'Canonical locations table. Includes physical storage locations (warehouse/shelf/cabinet/etc.) and employee custody locations (locker records).'] {
   id integer [pk, increment]
   storageName text [not null, unique]
   storageType storageTypeEnum [not null]
@@ -575,7 +575,8 @@ Table assets {
   serialNumber text
   conditionStatus conditionStatusEnum [not null]
   assetStatus assetStatusEnum [not null]
-  currentStorageId integer
+  currentStorageId integer [note: 'Canonical current location FK. Location values must come from storage table rows.']
+  // Current assignee is derived from active/pending assetDistributions.employeeId, not stored as a direct assets column.
   createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
   updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
 

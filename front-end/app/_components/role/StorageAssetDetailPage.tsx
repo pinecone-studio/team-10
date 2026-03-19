@@ -1253,6 +1253,7 @@ function humanizeConditionLabel(value: string) {
 function humanizeStatusLabel(value: string) {
   if (value === "available") return "Available";
   if (value === "assigned") return "Assigned";
+  if (value === "pendingAssignment") return "Pending Assignment";
   if (value === "inRepair") return "In Repair";
   if (value === "pendingDisposal") return "Pending Disposal";
   if (value === "pendingRetrieval") return "Pending Retrieval";
@@ -1268,7 +1269,7 @@ function parseCurrency(value: string) {
 }
 
 function normalizeStorageStatus(value: string) {
-  if (value === "inStorage" || value === "received" || value === "pendingAssignment") {
+  if (value === "inStorage" || value === "received") {
     return "available";
   }
 

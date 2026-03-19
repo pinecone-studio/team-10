@@ -633,6 +633,7 @@ export type StorageAsset = {
   assetImageDataUrl?: Maybe<Scalars['String']['output']>;
   assetName: Scalars['String']['output'];
   assetStatus: Scalars['String']['output'];
+  assignedEmployeeName?: Maybe<Scalars['String']['output']>;
   category: Scalars['String']['output'];
   conditionStatus: Scalars['String']['output'];
   createdAt: Scalars['String']['output'];
@@ -1107,6 +1108,7 @@ export type StorageAssetResolvers<ContextType = GraphQLContext, ParentType exten
   assetImageDataUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   assetName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   assetStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  assignedEmployeeName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   conditionStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;

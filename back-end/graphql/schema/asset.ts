@@ -17,6 +17,7 @@ export const AssetTypeDefs = `
     assetImageDataUrl: String
     conditionStatus: String!
     assetStatus: String!
+    assignedEmployeeName: String
     storageId: ID
     storageName: String!
     storageType: String

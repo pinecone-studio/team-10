@@ -310,6 +310,7 @@ type StorageAsset {
   assetImageDataUrl: String
   assetName: String!
   assetStatus: String!
+  assignedEmployeeName: String
   category: String!
   conditionStatus: String!
   createdAt: String!

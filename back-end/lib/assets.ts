@@ -1,5 +1,6 @@
 import { asc, eq, or, sql } from "drizzle-orm";
 import {
+  assetDistributions,
   assets,
   assetStatusValues,
   conditionStatusValues,
@@ -9,6 +10,7 @@ import {
   receiveItems,
   receives,
   storage,
+  users,
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
 import { parseIntegerId } from "./reference-resolvers.ts";
@@ -27,6 +29,7 @@ type StorageAssetRow = {
   assetImageContentType: string | null;
   conditionStatus: string;
   assetStatus: string;
+  assignedEmployeeName: string | null;
   storageId: number | null;
   storageName: string | null;
   storageType: string | null;
@@ -54,6 +57,7 @@ export type StorageAssetRecord = {
   assetImageDataUrl: string | null;
   conditionStatus: string;
   assetStatus: string;
+  assignedEmployeeName: string | null;
   storageId: string | null;
   storageName: string;
   storageType: string | null;
@@ -82,6 +86,15 @@ const storageAssetSelection = {
   assetImageContentType: assets.assetImageContentType,
   conditionStatus: assets.conditionStatus,
   assetStatus: assets.assetStatus,
+  assignedEmployeeName: sql<string | null>`(
+    SELECT u.full_name
+    FROM asset_distributions d
+    INNER JOIN users u ON u.id = d.employee_id
+    WHERE d.asset_id = ${assets.id}
+      AND d.status IN ('active', 'pendingHandover')
+    ORDER BY d.id DESC
+    LIMIT 1
+  )`.as("assignedEmployeeName"),
   storageId: sql<number | null>`${storage.id}`.as("storageId"),
   storageName: sql<string | null>`${storage.storageName}`.as("storageName"),
   storageType: sql<string | null>`${storage.storageType}`.as("storageType"),
@@ -103,19 +116,7 @@ function getStorageNameFallback(row: StorageAssetRow) {
     return row.storageName;
   }
 
-  if (row.assetStatus === "assigned") {
-    return "Assigned to employee";
-  }
-
-  if (row.assetStatus === "pendingAssignment") {
-    return "Pending assignment acknowledgment";
-  }
-
-  if (row.assetStatus === "pendingRetrieval") {
-    return "Pending retrieval";
-  }
-
-  return "Main warehouse / Intake";
+  return "Unknown location";
 }
 
 async function mapStorageAsset(
@@ -151,6 +152,7 @@ async function mapStorageAsset(
     assetImageDataUrl,
     conditionStatus: row.conditionStatus,
     assetStatus: row.assetStatus,
+    assignedEmployeeName: row.assignedEmployeeName,
     storageId: row.storageId === null ? null : String(row.storageId),
     storageName: getStorageNameFallback(row),
     storageType: row.storageType,

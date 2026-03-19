@@ -33,6 +33,7 @@ const STATUS_FILTERS = [
   "All Statuses",
   "Available",
   "Assigned",
+  "Pending Assignment",
   "In Repair",
   "Pending Disposal",
   "Pending Retrieval",
@@ -144,6 +145,7 @@ export function InventoryStorageSection() {
         mapCategory(asset.category),
         asset.itemType,
         asset.storageName,
+        asset.assignedEmployeeName ?? "",
         asset.serialNumber ?? "",
         asset.qrCode,
         humanizeConditionValue(asset.conditionStatus),
@@ -734,7 +736,7 @@ export function InventoryStorageSection() {
                           ))}
                         </TableHeaderTrigger>
                       </th>
-                      <th className="w-[16%] px-2 py-3 text-left align-middle">
+                      <th className="w-[14%] px-2 py-3 text-left align-middle">
                         <TableHeaderTrigger
                           label="Location"
                           open={openHeaderMenu === "location"}
@@ -756,6 +758,7 @@ export function InventoryStorageSection() {
                           ))}
                         </TableHeaderTrigger>
                       </th>
+                      <th className="w-[12%] px-2 py-3 text-left align-middle">Employee</th>
                       <th className="w-[12%] px-2 py-3 text-left align-middle">
                         <TableHeaderTrigger
                           label="Condition"
@@ -870,6 +873,13 @@ export function InventoryStorageSection() {
                         <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
                           <div className="leading-5">
                             <span className="block break-words">{asset.storageName}</span>
+                          </div>
+                        </td>
+                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
+                          <div className="leading-5">
+                            <span className="block break-words">
+                              {asset.assignedEmployeeName ?? "-"}
+                            </span>
                           </div>
                         </td>
                         <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
@@ -1159,7 +1169,7 @@ function parseCurrency(value: string) {
 }
 
 function normalizeStorageStatus(value: string) {
-  if (value === "inStorage" || value === "received" || value === "pendingAssignment") {
+  if (value === "inStorage" || value === "received") {
     return "available";
   }
 
@@ -1178,6 +1188,7 @@ function humanizeConditionValue(value: string) {
 function humanizeStatusValue(value: string) {
   if (value === "available") return "Available";
   if (value === "assigned") return "Assigned";
+  if (value === "pendingAssignment") return "Pending Assignment";
   if (value === "inRepair") return "In Repair";
   if (value === "pendingDisposal") return "Pending Disposal";
   if (value === "pendingRetrieval") return "Pending Retrieval";
@@ -1197,6 +1208,7 @@ function conditionFilterToValue(value: (typeof CONDITION_FILTERS)[number]) {
 function statusFilterToValue(value: (typeof STATUS_FILTERS)[number]) {
   if (value === "Available") return "available";
   if (value === "Assigned") return "assigned";
+  if (value === "Pending Assignment") return "pendingAssignment";
   if (value === "In Repair") return "inRepair";
   if (value === "Pending Disposal") return "pendingDisposal";
   if (value === "Pending Retrieval") return "pendingRetrieval";
