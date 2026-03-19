@@ -24,9 +24,7 @@ export function ReceiveSection() {
             activeProductImageUrl={state.activeProduct?.imageUrl}
             uploadedImage={state.uploadedImage}
             completedItemsLabel={completedItemsLabel}
-            qrValue={state.pendingQrLink || state.primaryQrEntry?.token || state.activeRow.itemCode}
-            qrTitle={state.primaryQrEntry?.serialNumber ?? state.activeRow.itemCode}
-            qrLink={state.pendingQrLink}
+            maxQuantity={state.activeRow.quantity}
             receivedDate={state.receivedDate}
             receivedCondition={state.receivedCondition}
             quantityReceived={state.quantityReceived}
@@ -35,17 +33,20 @@ export function ReceiveSection() {
             typeOptions={state.typeOptions}
             selectedCategory={state.selectedCategory}
             selectedType={state.selectedType}
+            specificationFields={state.specificationFields}
+            suggestedSpecificationFields={state.suggestedSpecificationFields ?? []}
             onUploadImage={state.handleUploadImage}
-            onOpenQrLink={state.handleOpenQrLink}
-            onCopyQrLink={state.handleCopyQrLink}
             onReceivedDateChange={state.setReceivedDate}
             onReceivedConditionChange={state.setReceivedCondition}
             onQuantityReceivedChange={state.setQuantityReceived}
             onReceivedNoteChange={state.setReceivedNote}
-            onCategoryChange={(value) => { state.setSelectedCategory(value); state.setSelectedType(""); }}
-            onTypeChange={state.setSelectedType}
+            onCategoryChange={state.handleCategoryChange}
+            onTypeChange={state.handleTypeChange}
             onAddCategory={state.handleAddCategory}
             onAddType={state.handleAddType}
+            onSpecificationChange={state.handleSpecificationChange}
+            onAddSpecificationField={state.handleAddCustomField}
+            onRemoveSpecificationField={state.handleRemoveSpecification}
             onSubmit={state.handleSubmitReceive}
           />
         </div>

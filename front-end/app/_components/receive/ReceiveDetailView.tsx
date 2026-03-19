@@ -3,15 +3,14 @@
 import type { ReceiveCondition, ReceiveRow } from "./receiveTypes";
 import { ReceiveDetailFormCard } from "./ReceiveDetailFormCard";
 import { ReceiveDetailPreviewCard } from "./ReceiveDetailPreviewCard";
+import type { ReceiveSpecificationField } from "./receiveSpecifications";
 
 export function ReceiveDetailView(props: {
   activeRow: ReceiveRow;
   activeProductImageUrl?: string | null;
   uploadedImage: string | null;
   completedItemsLabel: string;
-  qrValue: string;
-  qrTitle: string;
-  qrLink: string;
+  maxQuantity: number;
   receivedDate: string;
   receivedCondition: ReceiveCondition;
   quantityReceived: string;
@@ -20,9 +19,9 @@ export function ReceiveDetailView(props: {
   typeOptions: string[];
   selectedCategory: string;
   selectedType: string;
+  specificationFields: ReceiveSpecificationField[];
+  suggestedSpecificationFields: string[];
   onUploadImage: (file: File) => void;
-  onOpenQrLink: () => void;
-  onCopyQrLink: () => Promise<void>;
   onReceivedDateChange: (value: string) => void;
   onReceivedConditionChange: (value: ReceiveCondition) => void;
   onQuantityReceivedChange: (value: string) => void;
@@ -31,6 +30,9 @@ export function ReceiveDetailView(props: {
   onTypeChange: (value: string) => void;
   onAddCategory: (value: string) => void;
   onAddType: (value: string) => void;
+  onSpecificationChange: (id: string, value: string) => void;
+  onAddSpecificationField: (name: string) => void;
+  onRemoveSpecificationField: (id: string) => void;
   onSubmit: () => Promise<void>;
 }) {
   return (
@@ -40,24 +42,26 @@ export function ReceiveDetailView(props: {
         activeProductImageUrl={props.activeProductImageUrl}
         uploadedImage={props.uploadedImage}
         completedItemsLabel={props.completedItemsLabel}
-        qrValue={props.qrValue}
-        qrTitle={props.qrTitle}
-        qrLink={props.qrLink}
-        onOpenQrLink={props.onOpenQrLink}
-        onCopyQrLink={props.onCopyQrLink}
         onUploadImage={props.onUploadImage}
       />
       <ReceiveDetailFormCard
         receivedDate={props.receivedDate}
         receivedCondition={props.receivedCondition}
         quantityReceived={props.quantityReceived}
+        maxQuantity={props.maxQuantity}
         receivedNote={props.receivedNote}
         department={props.activeRow.department}
         categoryOptions={props.categoryOptions}
         typeOptions={props.typeOptions}
         selectedCategory={props.selectedCategory}
         selectedType={props.selectedType}
-        canSubmit={props.activeRow.selectable && Number(props.quantityReceived) > 0}
+        specificationFields={props.specificationFields}
+        suggestedSpecificationFields={props.suggestedSpecificationFields}
+        canSubmit={
+          props.activeRow.selectable &&
+          Number(props.quantityReceived) > 0 &&
+          Number(props.quantityReceived) <= props.maxQuantity
+        }
         submitLabel={props.activeRow.selectable ? "Receive item" : "Already received"}
         onReceivedDateChange={props.onReceivedDateChange}
         onReceivedConditionChange={props.onReceivedConditionChange}
@@ -67,6 +71,9 @@ export function ReceiveDetailView(props: {
         onTypeChange={props.onTypeChange}
         onAddCategory={props.onAddCategory}
         onAddType={props.onAddType}
+        onSpecificationChange={props.onSpecificationChange}
+        onAddSpecificationField={props.onAddSpecificationField}
+        onRemoveSpecificationField={props.onRemoveSpecificationField}
         onSubmit={props.onSubmit}
       />
     </div>

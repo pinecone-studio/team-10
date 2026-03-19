@@ -13,6 +13,7 @@ import {
   type DistributionRecordDto,
 } from "@/app/(dashboard)/_graphql/distribution/distribution-api";
 import { downloadBase64File } from "@/app/_lib/download-base64";
+import { parseIntakeMetadata } from "@/app/_lib/intake-metadata";
 import { formatCurrency, formatDisplayDate, useOrdersStore } from "@/app/_lib/order-store";
 import { buildRegisteredAssetScanUrl } from "@/app/_lib/qr-links";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
@@ -177,6 +178,10 @@ export function StorageAssetDetailPage({
         : null,
     [asset, orders, qrContext?.orderId],
   );
+  const intakeMetadata = useMemo(
+    () => parseIntakeMetadata(asset?.receiveNote),
+    [asset?.receiveNote],
+  );
   const matchedHandoff = useMemo(
     () => getMatchingDistributionRecords(asset, distributionRecords),
     [asset, distributionRecords],
@@ -238,8 +243,14 @@ export function StorageAssetDetailPage({
         qrContext?.storageLocation ??
         asset?.storageName ??
         "Main warehouse / Intake",
+      specifications:
+        intakeMetadata.specifications.length > 0
+          ? intakeMetadata.specifications
+              .map((specification, index) => `${index + 1}. ${specification.name}: ${specification.value}`)
+              .join("\n")
+          : "No specifications",
     };},
-    [asset, linkedOrder, matchedHandoff, qrContext],
+    [asset, intakeMetadata.specifications, linkedOrder, matchedHandoff, qrContext],
   );
 
   const detailItems = useMemo(() => {
@@ -390,6 +401,7 @@ export function StorageAssetDetailPage({
                 <DisplayField label="Department" value={ownershipSummary.department} />
                 <DisplayField label="Storage" value={ownershipSummary.storage} />
                 <DisplayField label="Usage Notes" value={ownershipSummary.usageNotes} />
+                <DisplayField label="Specifications" value={ownershipSummary.specifications} />
                 <ControlField label="Confirmed Location">
                   <select
                     value={confirmedLocation}
@@ -566,6 +578,7 @@ function MobileAssetDetailView({
     previousHolder: string;
     holderRole: string;
     usageNotes: string;
+    specifications: string;
     department: string;
     requestNumber: string;
     storage: string;
@@ -642,6 +655,7 @@ function MobileAssetDetailView({
               <MobileInfoRow label="Holder" value={ownershipSummary.holder} />
               <MobileInfoRow label="Previous holder" value={ownershipSummary.previousHolder} />
               <MobileInfoRow label="Usage notes" value={ownershipSummary.usageNotes} />
+              <MobileInfoRow label="Specifications" value={ownershipSummary.specifications} />
               <MobileInfoRow label="Department" value={ownershipSummary.department} />
               <MobileInfoRow label="Request" value={ownershipSummary.requestNumber} />
               <MobileInfoRow label="Storage" value={ownershipSummary.storage} />
@@ -767,6 +781,7 @@ function MobileInfoRow({ label, value }: { label: string; value: string }) {
   const segments = value.split("\n\n").filter(Boolean);
   const isPreviousHolderList = normalizedLabel === "previous holder" && lines.length > 1;
   const isUsageNotesList = normalizedLabel === "usage notes" && segments.length > 1;
+  const isSpecificationList = normalizedLabel === "specifications" && lines.length > 1;
   return (
     <div className="flex items-start justify-between gap-4 border-b border-[#eef2f6] py-3 last:border-b-0">
       <span className="text-[13px] text-[#667085]">{label}</span>
@@ -776,6 +791,17 @@ function MobileInfoRow({ label, value }: { label: string; value: string }) {
             <div
               key={line}
               className="rounded-[10px] border border-[#dbe7f3] bg-[#f8fbff] px-3 py-2 text-[13px] font-medium leading-5 text-[#101828]"
+            >
+              {line}
+            </div>
+          ))}
+        </div>
+      ) : isSpecificationList ? (
+        <div className="max-w-[62%] space-y-2 text-left">
+          {lines.map((line) => (
+            <div
+              key={line}
+              className="rounded-[10px] border border-[#dbe7f3] bg-[#f8fbff] px-3 py-2 text-[13px] leading-5 text-[#101828]"
             >
               {line}
             </div>
@@ -808,6 +834,7 @@ function DisplayField({ label, value }: { label: string; value: string }) {
   const segments = value.split("\n\n").filter(Boolean);
   const isPreviousHolderList = normalizedLabel === "previous holder" && lines.length > 1;
   const isUsageNotesList = normalizedLabel === "usage notes" && segments.length > 1;
+  const isSpecificationList = normalizedLabel === "specifications" && lines.length > 1;
   return (
     <div>
       <p className="mb-2 text-[13px] font-semibold text-[#111827]">{label}</p>
@@ -817,6 +844,17 @@ function DisplayField({ label, value }: { label: string; value: string }) {
             <div
               key={line}
               className="rounded-[10px] border border-[#dbe7f3] bg-white px-3 py-2 text-[14px] font-medium leading-5 text-[#344054]"
+            >
+              {line}
+            </div>
+          ))}
+        </div>
+      ) : isSpecificationList ? (
+        <div className="space-y-2 rounded-[12px] border border-[#d0d5dd] bg-[#f8fbff] p-3">
+          {lines.map((line) => (
+            <div
+              key={line}
+              className="rounded-[10px] border border-[#dbe7f3] bg-white px-3 py-2 text-[14px] leading-5 text-[#344054]"
             >
               {line}
             </div>
@@ -897,6 +935,7 @@ function ReceiveStyleQrCard({
     previousHolder: string;
     holderRole: string;
     usageNotes: string;
+    specifications: string;
     department: string;
     requestNumber: string;
     storage: string;

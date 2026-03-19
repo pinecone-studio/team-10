@@ -1,7 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ReceiveSpecificationFields } from "./ReceiveSpecificationFields";
 import { ReceiveAssetClassificationFields } from "./ReceiveAssetClassificationFields";
+import type { ReceiveSpecificationField } from "./receiveSpecifications";
 import type { ReceiveCondition } from "./receiveTypes";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -19,12 +21,15 @@ export function ReceiveDetailFormCard(props: {
   receivedDate: string;
   receivedCondition: ReceiveCondition;
   quantityReceived: string;
+  maxQuantity: number;
   receivedNote: string;
   department: string;
   categoryOptions: string[];
   typeOptions: string[];
   selectedCategory: string;
   selectedType: string;
+  specificationFields: ReceiveSpecificationField[];
+  suggestedSpecificationFields: string[];
   canSubmit: boolean;
   submitLabel: string;
   onReceivedDateChange: (value: string) => void;
@@ -35,6 +40,9 @@ export function ReceiveDetailFormCard(props: {
   onTypeChange: (value: string) => void;
   onAddCategory: (value: string) => void;
   onAddType: (value: string) => void;
+  onSpecificationChange: (id: string, value: string) => void;
+  onAddSpecificationField: (name: string) => void;
+  onRemoveSpecificationField: (id: string) => void;
   onSubmit: () => Promise<void>;
 }) {
   return (
@@ -79,6 +87,7 @@ export function ReceiveDetailFormCard(props: {
             }
             type="number"
             min="1"
+            max={props.maxQuantity}
             className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[12px] outline-none"
           />
         </Field>
@@ -92,6 +101,13 @@ export function ReceiveDetailFormCard(props: {
           onTypeChange={props.onTypeChange}
           onAddCategory={props.onAddCategory}
           onAddType={props.onAddType}
+        />
+        <ReceiveSpecificationFields
+          fields={props.specificationFields}
+          suggestedFields={props.suggestedSpecificationFields}
+          onFieldChange={props.onSpecificationChange}
+          onAddField={props.onAddSpecificationField}
+          onRemoveField={props.onRemoveSpecificationField}
         />
         <Field label="Notes">
           <textarea
