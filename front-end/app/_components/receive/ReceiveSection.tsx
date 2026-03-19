@@ -11,12 +11,14 @@ export function ReceiveSection() {
   if (state.activeRow) {
     const completedItemsLabel = `${state.completedRowIds.filter((rowId) => state.rows.some((row) => row.id === rowId && row.orderId === state.activeRow?.orderId)).length}/${state.rows.filter((row) => row.orderId === state.activeRow?.orderId).length} items`;
     return (
-      <ReceivePageFrame title="Receive" subtitle="Complete intake details for the selected item.">
-        <div className="mx-auto flex max-w-[1238px] min-h-[calc(100vh-180px)] flex-col gap-[18px] px-[40px] pb-12 pt-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <button type="button" onClick={state.resetDetailState} className="inline-flex w-fit items-center gap-2 text-[14px] font-medium text-[#344054]"><span aria-hidden="true">{"<-"}</span><span>Back to Receive</span></button>
-            <button type="button" onClick={() => void state.handleQuickCreate()} className="fx-submit-button h-10 px-4 text-[13px] font-medium"><span className="fx-submit-icon-wrapper"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fx-submit-icon"><path d="M12 3v18" /><path d="M3 12h18" /></svg></span><span className="fx-submit-label">Demo Button</span></button>
-          </div>
+      <ReceivePageFrame
+        title="Receive"
+        subtitle="Complete intake details for the selected item."
+        backLabel="Back to Receive"
+        onBack={state.resetDetailState}
+        action={<button type="button" onClick={() => void state.handleQuickCreate()} className="inline-flex h-[40px] w-[140px] cursor-pointer items-center justify-center rounded-[6px] bg-[#0f172a] px-4 text-[14px] font-medium text-white transition duration-150 hover:bg-[#1f2937] active:scale-[0.98] active:bg-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"><span className="inline-flex items-center gap-[6px]"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v18" /><path d="M3 12h18" /></svg><span>Demo Button</span></span></button>}
+      >
+        <div className="mx-auto flex max-w-[1238px] min-h-[calc(100vh-180px)] flex-col px-[40px] pb-12 pt-5">
           <ReceiveDetailView
             activeRow={state.activeRow}
             activeProductImageUrl={state.activeProduct?.imageUrl}

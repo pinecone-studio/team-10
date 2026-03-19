@@ -60,7 +60,7 @@ export function ReceiveStatusFilter(props: {
                   props.onChange(option.value);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center gap-[10px] rounded-[10px] px-3 py-2 text-left text-[13px] ${isActive ? "bg-[#eef6ff] text-[#2563eb]" : "text-[#475569]"}`}
+                className={`flex w-full cursor-pointer items-center gap-[10px] rounded-[10px] px-3 py-2 text-left text-[13px] ${isActive ? "bg-[#eef6ff] text-[#2563eb]" : "text-[#475569]"}`}
               >
                 <span className="inline-flex w-[10px] items-center justify-center text-[#84cc16]">
                   {option.value === "all" ? <span className="h-[6px] w-[6px] rounded-full bg-[#94a3b8]" /> : <ReceiveConditionIcon condition={option.value} />}

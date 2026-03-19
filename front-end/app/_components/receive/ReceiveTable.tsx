@@ -140,7 +140,7 @@ export function ReceiveTable({
                     <button
                       type="button"
                       onClick={() => row.selectable && onOpenRow(row.id)}
-                      className={`inline-flex h-[30px] min-w-[70px] items-center justify-center rounded-[9px] px-2 text-[10px] font-medium ${
+                      className={`inline-flex h-[30px] min-w-[70px] cursor-pointer items-center justify-center rounded-[9px] px-2 text-[10px] font-medium ${
                         row.selectable
                           ? "bg-[#101828] text-white"
                           : "border border-[#d0d5dd] bg-white text-[#98a2b3]"

@@ -6,6 +6,9 @@ export function ReceivePageFrame(props: {
   title: string;
   subtitle: string;
   fixedViewport?: boolean;
+  backLabel?: string;
+  onBack?: () => void;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -14,9 +17,20 @@ export function ReceivePageFrame(props: {
     >
       <div className="flex items-start justify-between gap-4 px-[40px] pb-6">
         <div>
+          {props.backLabel && props.onBack ? (
+            <button
+              type="button"
+              onClick={props.onBack}
+              className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-[8px] py-2 text-[14px] font-medium text-[#1e293b] transition duration-150 hover:bg-[#f8fbff] hover:px-2 active:scale-[0.98] active:bg-[#eef5fd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
+            >
+              <span aria-hidden="true">{"<-"}</span>
+              <span>{props.backLabel}</span>
+            </button>
+          ) : null}
           <h1 className="text-[24px] font-bold leading-none text-black">{props.title}</h1>
           <p className="mt-2 text-[14px] leading-5 text-[#64748b]">{props.subtitle}</p>
         </div>
+        {props.action}
       </div>
       <div className="border-t border-[#d9e9fb]" />
       {props.children}

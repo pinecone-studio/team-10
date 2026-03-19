@@ -2,7 +2,11 @@
 
 import { departmentOptions } from "../../_lib/order-catalog";
 import type { OrderCreateViewProps } from "./OrderCreateView.types";
-import { CalendarIcon, CheckCircleIcon, ChevronDownIcon } from "./OrderCreateIcons";
+import {
+  CalendarIcon,
+  CheckCircleIcon,
+  ChevronDownIcon,
+} from "./OrderCreateIcons";
 import { Field, Input, Select } from "./OrderFormFields";
 import { formatLongRequestDate } from "./orderCreateUtils";
 
@@ -17,48 +21,62 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function OrderCreateDetailsCard(props: Pick<OrderCreateViewProps, "draftOrder" | "onOrderChange">) {
+export function OrderCreateDetailsCard(
+  props: Pick<OrderCreateViewProps, "draftOrder" | "onOrderChange">,
+) {
   return (
     <section>
-      <div className="px-8 py-8">
-        <h3 className="text-[18px] font-semibold leading-7 text-[#111827]">Order Details</h3>
+      <div className="px-8 py-6">
+        <h3 className="text-[16px] font-semibold leading-7 text-[#111827]">
+          Order Details
+        </h3>
       </div>
-      <div className="border-t border-[#dbeafb] px-8 pb-8 pt-14">
-        <div className="grid gap-x-16 gap-y-6 md:grid-cols-2">
-        <ReadonlyField label="Request ID" value={props.draftOrder.requestNumber} />
-        <ReadonlyField label="Request Date" value={formatLongRequestDate(props.draftOrder.requestDate)} />
-        <Field label="Department">
-          <div className="relative">
-            <Select
-              value={props.draftOrder.department}
-              onChange={(event) => props.onOrderChange("department", event.target.value)}
-              className="h-11 appearance-none rounded-[10px] border-[#d7e7fb] bg-white pr-10 text-[#64748b]"
-            >
-              {departmentOptions.map((department) => (
-                <option key={department} value={department}>
-                  {department}
-                </option>
-              ))}
-            </Select>
-            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
-              <ChevronDownIcon />
-            </span>
-          </div>
-        </Field>
-        <Field label="Required Delivery Date">
-          <div className="relative">
-            <Input
-              value={props.draftOrder.deliveryDate}
-              onChange={(event) => props.onOrderChange("deliveryDate", event.target.value)}
-              type="date"
-              className="h-11 rounded-[10px] border-[#d7e7fb] pl-11 text-[#62748e]"
-            />
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
-              <CalendarIcon />
-            </span>
-          </div>
-        </Field>
-      </div>
+      <div className="border-t border-[#dbeafb] px-8 pb-8 pt-8">
+        <div className="grid gap-x-16 gap-y-5 md:grid-cols-2">
+          <ReadonlyField
+            label="Request ID"
+            value={props.draftOrder.requestNumber}
+          />
+          <ReadonlyField
+            label="Request Date"
+            value={formatLongRequestDate(props.draftOrder.requestDate)}
+          />
+          <Field label="Department">
+            <div className="relative">
+              <Select
+                value={props.draftOrder.department}
+                onChange={(event) =>
+                  props.onOrderChange("department", event.target.value)
+                }
+                className="h-11 appearance-none rounded-[10px] border-[#d7e7fb] bg-white pr-10 text-[#64748b]"
+              >
+                {departmentOptions.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </Select>
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
+                <ChevronDownIcon />
+              </span>
+            </div>
+          </Field>
+          <Field label="Required Delivery Date">
+            <div className="relative">
+              <Input
+                value={props.draftOrder.deliveryDate}
+                onChange={(event) =>
+                  props.onOrderChange("deliveryDate", event.target.value)
+                }
+                type="date"
+                className="h-11 rounded-[10px] border-[#d7e7fb] pl-11 text-[#62748e]"
+              />
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
+                <CalendarIcon />
+              </span>
+            </div>
+          </Field>
+        </div>
       </div>
     </section>
   );

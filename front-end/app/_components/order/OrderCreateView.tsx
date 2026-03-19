@@ -14,12 +14,39 @@ export function OrderCreateView(props: OrderCreateViewProps) {
         title="Inventory Order Request System"
         backLabel="Back to Order History"
         onBack={props.onOpenHistory}
-        action={<OrderNotificationButton onOpenDetail={props.onOpenDetail} />}
+        action={
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void props.onFillDemo()}
+              className="inline-flex h-[40px] w-[140px] cursor-pointer items-center justify-center rounded-[6px] bg-[#0f172a] px-4 text-[14px] font-medium text-white transition duration-150 hover:bg-[#1f2937] active:scale-[0.98] active:bg-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
+            >
+              <span className="inline-flex items-center gap-[6px]">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 3v18" />
+                  <path d="M3 12h18" />
+                </svg>
+                <span>Demo Button</span>
+              </span>
+            </button>
+            <OrderNotificationButton onOpenDetail={props.onOpenDetail} />
+          </div>
+        }
       />
       <div className="border-t border-[#d9e9fb]" />
       <div className="px-[40px] pb-12 pt-10">
         <div className="mx-auto grid max-w-[1440px] gap-6 xl:grid-cols-[minmax(0,1fr)_350px] xl:items-start">
-          <div className="flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-[#dbeafb] bg-white shadow-[0_14px_40px_rgba(125,170,232,0.18),0_8px_18px_rgba(15,23,42,0.08)] xl:h-[800px]">
+          <div className="flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-[#dbeafb] bg-white shadow-[0_14px_40px_rgba(125,170,232,0.18),0_8px_18px_rgba(15,23,42,0.08)] xl:h-[650px]">
             <OrderCreateDetailsCard
               draftOrder={props.draftOrder}
               onOrderChange={props.onOrderChange}
