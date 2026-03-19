@@ -19,7 +19,14 @@ export function OrderHistoryView(props: {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const visibleOrders = useMemo(
-    () => filterOrdersByDateRange(filterOrdersByQuery(props.orders, searchQuery), startDate, endDate),
+    () =>
+      sortOrdersNewestFirst(
+        filterOrdersByDateRange(
+          filterOrdersByQuery(props.orders, searchQuery),
+          startDate,
+          endDate,
+        ),
+      ),
     [endDate, props.orders, searchQuery, startDate],
   );
   const counts = useMemo(() => buildCounts(props.allOrders), [props.allOrders]);
@@ -85,4 +92,51 @@ function buildCounts(orders: StoredOrder[]) {
     completed: orders.filter((order) => ["approved_finance", "received_inventory", "assigned_hr"].includes(order.status)).length,
     cancelled: orders.filter((order) => ["rejected_finance"].includes(order.status)).length,
   };
+}
+
+function sortOrdersNewestFirst(orders: StoredOrder[]) {
+  function parseRequestNumber(order: StoredOrder) {
+    const match = /^REQ-(\d{8})-(\d+)$/.exec(order.requestNumber.trim());
+    if (!match) {
+      return null;
+    }
+
+    return {
+      dateNumber: Number(match[1]),
+      sequenceNumber: Number(match[2]),
+    };
+  }
+
+  function parseSortableId(id: string) {
+    return /^\d+$/.test(id.trim()) ? Number(id) : null;
+  }
+
+  return [...orders].sort((left, right) => {
+    const leftRequestNumber = parseRequestNumber(left);
+    const rightRequestNumber = parseRequestNumber(right);
+
+    if (leftRequestNumber && rightRequestNumber) {
+      const requestDateCompare =
+        rightRequestNumber.dateNumber - leftRequestNumber.dateNumber;
+      if (requestDateCompare !== 0) return requestDateCompare;
+
+      const requestSequenceCompare =
+        rightRequestNumber.sequenceNumber - leftRequestNumber.sequenceNumber;
+      if (requestSequenceCompare !== 0) return requestSequenceCompare;
+    }
+
+    const updatedAtCompare = right.updatedAt.localeCompare(left.updatedAt);
+    if (updatedAtCompare !== 0) return updatedAtCompare;
+
+    const createdAtCompare = right.createdAt.localeCompare(left.createdAt);
+    if (createdAtCompare !== 0) return createdAtCompare;
+
+    const leftNumericId = parseSortableId(left.id);
+    const rightNumericId = parseSortableId(right.id);
+    if (leftNumericId !== null && rightNumericId !== null) {
+      return rightNumericId - leftNumericId;
+    }
+
+    return right.id.localeCompare(left.id);
+  });
 }

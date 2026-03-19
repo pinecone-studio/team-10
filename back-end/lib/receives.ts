@@ -262,6 +262,21 @@ function parseJsonStringArray(value: string | null) {
   }
 }
 
+// Keep batches comfortably below SQLite/D1 bind parameter limits.
+const ASSET_INSERT_BATCH_SIZE = 50;
+
+function chunkValues<T>(values: T[], size: number) {
+  if (size <= 0) {
+    throw new Error("Batch size must be greater than zero.");
+  }
+
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+  return chunks;
+}
+
 async function resolveStorageId(
   db: AppDb,
   storageLocation?: string | null,
@@ -770,15 +785,27 @@ export async function receiveOrderItem(
       };
     });
 
-    let createdAssetIds: number[] = [];
     if (assetValues.length > 0) {
-      const createdAssets = await db
-        .insert(assets)
-        .values(assetValues)
-        .returning({ id: assets.id });
-
-      createdAssetIds = createdAssets.map((asset) => asset.id);
+      for (const assetValueBatch of chunkValues(
+        assetValues,
+        ASSET_INSERT_BATCH_SIZE,
+      )) {
+        for (const assetValue of assetValueBatch) {
+          await db.insert(assets).values(assetValue).run();
+        }
+      }
     }
+
+    const createdAssetIds =
+      assetValues.length > 0
+        ? (
+            await db
+              .select({ id: assets.id })
+              .from(assets)
+              .where(eq(assets.receiveItemId, receiveItem.id))
+              .orderBy(asc(assets.id))
+          ).map((asset) => asset.id)
+        : [];
 
     const { remainingQuantity, remainingTotalCost } = await computeRemainingOrderState(
       db,
@@ -961,11 +988,11 @@ export async function updateReceive(
 
 export async function deleteReceive(db: AppDb, id: string): Promise<boolean> {
   const numericId = parseIntegerId("Receive id", id);
+  const existingReceive = await getReceiveRowById(db, id);
+  if (!existingReceive) {
+    return false;
+  }
 
-  const rows = await db
-    .delete(receives)
-    .where(eq(receives.id, numericId))
-    .returning({ id: receives.id });
-
-  return rows.length > 0;
+  await db.delete(receives).where(eq(receives.id, numericId)).run();
+  return true;
 }
