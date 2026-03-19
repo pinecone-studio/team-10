@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: ${{ steps.deploy.outputs.deployment_url }}
+      url: ${{ vars.FRONTEND_PRODUCTION_URL || steps.deploy.outputs.deployment_url }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -60,7 +60,8 @@ jobs:
 
       - name: Publish deployment summary
         run: |
+          DISPLAY_URL="${{ vars.FRONTEND_PRODUCTION_URL || steps.deploy.outputs.deployment_url }}"
           echo "### Front-End Production Deploy" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- Commit: \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- URL: ${{ steps.deploy.outputs.deployment_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: ${DISPLAY_URL}" >> "$GITHUB_STEP_SUMMARY"
