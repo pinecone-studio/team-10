@@ -86,6 +86,63 @@ type CatalogProductImage {
   updatedAt: String!
 }
 
+type CensusReport {
+  actionItems: [String!]!
+  conditionChangeCount: Int!
+  discrepancyCount: Int!
+  sessionId: ID!
+  totalAssets: Int!
+  verifiedCount: Int!
+  verifiedPercentage: Int!
+}
+
+type CensusSession {
+  completedAt: String
+  createdAt: String!
+  createdByName: String!
+  createdByUserId: ID!
+  dueAt: String!
+  id: ID!
+  note: String
+  scopeType: String!
+  scopeValue: String
+  status: String!
+  title: String!
+  updatedAt: String!
+}
+
+type CensusTask {
+  assetCode: String!
+  assetId: ID!
+  assetName: String!
+  baselineAssetStatus: String!
+  baselineConditionStatus: String!
+  baselineLocation: String
+  category: String!
+  censusSessionId: ID!
+  createdAt: String!
+  departmentName: String
+  discrepancyReason: String
+  employeeEmail: String!
+  employeeId: ID!
+  employeeName: String!
+  id: ID!
+  itemType: String!
+  note: String
+  portalEmailSentAt: String
+  portalEmailStatus: String!
+  portalExpiresAt: String
+  qrCode: String!
+  reportedConditionStatus: String
+  serialNumber: String
+  status: String!
+  updatedAt: String!
+  verificationChannel: String
+  verifiedAt: String
+  verifiedByName: String
+  verifiedByUserId: ID
+}
+
 type DistributionRecord {
   assetCode: String!
   assetId: ID!
@@ -116,9 +173,11 @@ type DistributionRecord {
 
 type Mutation {
   assignAssetDistribution(assetId: ID!, employeeName: String!, note: String, recipientRole: String): DistributionRecord!
+  completeCensusSession(id: ID!): CensusSession!
   createAssetAudit(assetIds: [ID!]!, assetStatus: String, conditionStatus: String, confirmedLocation: String, note: String): [AssetAuditEntry!]!
   createCatalogCategory(displayName: String!): CatalogCategory!
   createCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String!, status: String, unit: String): CatalogProduct!
+  createCensusSession(dueAt: String!, note: String, scopeType: String!, scopeValue: String, title: String!): CensusSession!
   createOrder(approvalMessage: String, approvalTarget: String, deliveryDate: String, department: String, departmentId: ID, items: [OrderItemInput!], officeId: ID, orderName: String!, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, status: String, totalAmount: Float, userId: ID, whyOrdered: String): Order!
   createReceive(conditionStatus: String!, note: String, orderId: ID!, orderItemId: ID!, quantityReceived: Int!, receivedAt: String, receivedCondition: String, serialNumbers: [String!], storageLocation: String): Receive!
   deleteCatalogCategory(id: ID!): Boolean!
@@ -133,6 +192,8 @@ type Mutation {
   updateOrder(approvalMessage: String, approvalTarget: String, assignedAt: String, assignedRole: String, assignedTo: String, deliveryDate: String, department: String, departmentId: ID, financeNote: String, financeReviewedAt: String, financeReviewer: String, higherUpNote: String, higherUpReviewedAt: String, higherUpReviewer: String, id: ID!, items: [OrderItemInput!], officeId: ID, orderName: String, receivedAt: String, receivedCondition: String, receivedNote: String, requestDate: String, requestNumber: String, requestedApproverId: String, requestedApproverName: String, requestedApproverRole: String, requester: String, serialNumbers: [String!], status: String, storageLocation: String, totalAmount: Float, userId: ID, whyOrdered: String): Order
   updateReceive(conditionStatus: String, id: ID!, note: String, orderId: ID, orderItemId: ID, quantityReceived: Int, receivedAt: String, receivedCondition: String, serialNumbers: [String!], storageLocation: String): Receive
   updateStorageAsset(assetStatus: String, conditionStatus: String, id: ID!): StorageAsset!
+  verifyCensusTaskByPortal(conditionStatus: String, note: String, token: String!): CensusTask!
+  verifyCensusTaskByQr(conditionStatus: String, note: String, qrCode: String!): CensusTask!
 }
 
 type Notification {
@@ -225,6 +286,11 @@ type Query {
   catalogItemTypes(categoryId: ID): [CatalogItemType!]!
   catalogProduct(id: ID!): CatalogProduct
   catalogProducts(categoryId: ID, itemTypeId: ID, status: String): [CatalogProduct!]!
+  censusPortalVerification(token: String!): CensusTask!
+  censusReport(sessionId: ID!): CensusReport!
+  censusSession(id: ID!): CensusSession
+  censusSessions(includeCompleted: Boolean): [CensusSession!]!
+  censusTasks(sessionId: ID!): [CensusTask!]!
   notifications(userId: ID): [Notification!]!
   order(id: ID!): Order
   orders: [Order!]!

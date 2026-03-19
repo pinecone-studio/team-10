@@ -149,6 +149,30 @@ export const emailDeliveryStatusValues = [
   "skipped",
 ] as const;
 
+export const censusScopeTypeValues = [
+  "company",
+  "department",
+  "category",
+] as const;
+
+export const censusStatusValues = [
+  "active",
+  "completed",
+  "overdue",
+] as const;
+
+export const censusTaskStatusValues = [
+  "pending",
+  "verified",
+  "discrepancy",
+] as const;
+
+export const censusVerificationChannelValues = [
+  "auditorQr",
+  "employeePortal",
+  "manual",
+] as const;
+
 export const disposalStatusValues = [
   "pending",
   "financeApproved",
@@ -934,6 +958,85 @@ export const assetAssignmentAcknowledgments = sqliteTable(
     index("idx_asset_assignment_acknowledgments_email_status").on(
       table.emailStatus,
     ),
+  ],
+);
+
+export const censusSessions = sqliteTable(
+  "census_sessions",
+  {
+    id: idColumn(),
+    title: text("title").notNull(),
+    scopeType: text("scope_type", { enum: censusScopeTypeValues }).notNull(),
+    scopeValue: text("scope_value"),
+    createdByUserId: integer("created_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    status: text("status", { enum: censusStatusValues }).notNull().default("active"),
+    dueAt: text("due_at").notNull(),
+    completedAt: text("completed_at"),
+    note: text("note"),
+    ...timestamps(),
+  },
+  (table) => [
+    index("idx_census_sessions_status").on(table.status),
+    index("idx_census_sessions_scope").on(table.scopeType, table.scopeValue),
+    index("idx_census_sessions_due_at").on(table.dueAt),
+  ],
+);
+
+export const censusTasks = sqliteTable(
+  "census_tasks",
+  {
+    id: idColumn(),
+    censusSessionId: integer("census_session_id")
+      .notNull()
+      .references(() => censusSessions.id, { onDelete: "cascade" }),
+    assetId: integer("asset_id")
+      .notNull()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    distributionId: integer("distribution_id").references(() => assetDistributions.id, {
+      onDelete: "set null",
+    }),
+    employeeId: integer("employee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    baselineConditionStatus: text("baseline_condition_status", {
+      enum: conditionStatusValues,
+    }).notNull(),
+    baselineAssetStatus: text("baseline_asset_status", {
+      enum: assetStatusValues,
+    }).notNull(),
+    baselineLocation: text("baseline_location"),
+    reportedConditionStatus: text("reported_condition_status", {
+      enum: conditionStatusValues,
+    }),
+    status: text("status", { enum: censusTaskStatusValues }).notNull().default("pending"),
+    verificationChannel: text("verification_channel", {
+      enum: censusVerificationChannelValues,
+    }),
+    verifiedAt: text("verified_at"),
+    verifiedByUserId: integer("verified_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    verifiedByName: text("verified_by_name"),
+    note: text("note"),
+    discrepancyReason: text("discrepancy_reason"),
+    portalJwtId: text("portal_jwt_id").unique(),
+    portalExpiresAt: text("portal_expires_at"),
+    portalConsumedAt: text("portal_consumed_at"),
+    portalEmailStatus: text("portal_email_status", { enum: emailDeliveryStatusValues })
+      .notNull()
+      .default("pending"),
+    portalEmailSentAt: text("portal_email_sent_at"),
+    ...timestamps(),
+  },
+  (table) => [
+    index("idx_census_tasks_session_id").on(table.censusSessionId),
+    index("idx_census_tasks_asset_id").on(table.assetId),
+    index("idx_census_tasks_distribution_id").on(table.distributionId),
+    index("idx_census_tasks_employee_id").on(table.employeeId),
+    index("idx_census_tasks_status").on(table.status),
+    index("idx_census_tasks_portal_jwt_id").on(table.portalJwtId),
   ],
 );
 

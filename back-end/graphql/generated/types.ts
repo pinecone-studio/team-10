@@ -112,6 +112,66 @@ export type CatalogProductImage = {
   updatedAt: Scalars['String']['output'];
 };
 
+export type CensusReport = {
+  __typename?: 'CensusReport';
+  actionItems: Array<Scalars['String']['output']>;
+  conditionChangeCount: Scalars['Int']['output'];
+  discrepancyCount: Scalars['Int']['output'];
+  sessionId: Scalars['ID']['output'];
+  totalAssets: Scalars['Int']['output'];
+  verifiedCount: Scalars['Int']['output'];
+  verifiedPercentage: Scalars['Int']['output'];
+};
+
+export type CensusSession = {
+  __typename?: 'CensusSession';
+  completedAt?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['String']['output'];
+  createdByName: Scalars['String']['output'];
+  createdByUserId: Scalars['ID']['output'];
+  dueAt: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  scopeType: Scalars['String']['output'];
+  scopeValue?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
+};
+
+export type CensusTask = {
+  __typename?: 'CensusTask';
+  assetCode: Scalars['String']['output'];
+  assetId: Scalars['ID']['output'];
+  assetName: Scalars['String']['output'];
+  baselineAssetStatus: Scalars['String']['output'];
+  baselineConditionStatus: Scalars['String']['output'];
+  baselineLocation?: Maybe<Scalars['String']['output']>;
+  category: Scalars['String']['output'];
+  censusSessionId: Scalars['ID']['output'];
+  createdAt: Scalars['String']['output'];
+  departmentName?: Maybe<Scalars['String']['output']>;
+  discrepancyReason?: Maybe<Scalars['String']['output']>;
+  employeeEmail: Scalars['String']['output'];
+  employeeId: Scalars['ID']['output'];
+  employeeName: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  itemType: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  portalEmailSentAt?: Maybe<Scalars['String']['output']>;
+  portalEmailStatus: Scalars['String']['output'];
+  portalExpiresAt?: Maybe<Scalars['String']['output']>;
+  qrCode: Scalars['String']['output'];
+  reportedConditionStatus?: Maybe<Scalars['String']['output']>;
+  serialNumber?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
+  verificationChannel?: Maybe<Scalars['String']['output']>;
+  verifiedAt?: Maybe<Scalars['String']['output']>;
+  verifiedByName?: Maybe<Scalars['String']['output']>;
+  verifiedByUserId?: Maybe<Scalars['ID']['output']>;
+};
+
 export type DistributionRecord = {
   __typename?: 'DistributionRecord';
   assetCode: Scalars['String']['output'];
@@ -144,9 +204,11 @@ export type DistributionRecord = {
 export type Mutation = {
   __typename?: 'Mutation';
   assignAssetDistribution: DistributionRecord;
+  completeCensusSession: CensusSession;
   createAssetAudit: Array<AssetAuditEntry>;
   createCatalogCategory: CatalogCategory;
   createCatalogProduct: CatalogProduct;
+  createCensusSession: CensusSession;
   createOrder: Order;
   createReceive: Receive;
   deleteCatalogCategory: Scalars['Boolean']['output'];
@@ -161,6 +223,8 @@ export type Mutation = {
   updateOrder?: Maybe<Order>;
   updateReceive?: Maybe<Receive>;
   updateStorageAsset: StorageAsset;
+  verifyCensusTaskByPortal: CensusTask;
+  verifyCensusTaskByQr: CensusTask;
 };
 
 
@@ -169,6 +233,11 @@ export type MutationAssignAssetDistributionArgs = {
   employeeName: Scalars['String']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
   recipientRole?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationCompleteCensusSessionArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -199,6 +268,15 @@ export type MutationCreateCatalogProductArgs = {
   productCode: Scalars['String']['input'];
   status?: InputMaybe<Scalars['String']['input']>;
   unit?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationCreateCensusSessionArgs = {
+  dueAt: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  scopeType: Scalars['String']['input'];
+  scopeValue?: InputMaybe<Scalars['String']['input']>;
+  title: Scalars['String']['input'];
 };
 
 
@@ -371,6 +449,20 @@ export type MutationUpdateStorageAssetArgs = {
   id: Scalars['ID']['input'];
 };
 
+
+export type MutationVerifyCensusTaskByPortalArgs = {
+  conditionStatus?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  token: Scalars['String']['input'];
+};
+
+
+export type MutationVerifyCensusTaskByQrArgs = {
+  conditionStatus?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  qrCode: Scalars['String']['input'];
+};
+
 export type Notification = {
   __typename?: 'Notification';
   createdAt: Scalars['String']['output'];
@@ -465,6 +557,11 @@ export type Query = {
   catalogItemTypes: Array<CatalogItemType>;
   catalogProduct?: Maybe<CatalogProduct>;
   catalogProducts: Array<CatalogProduct>;
+  censusPortalVerification: CensusTask;
+  censusReport: CensusReport;
+  censusSession?: Maybe<CensusSession>;
+  censusSessions: Array<CensusSession>;
+  censusTasks: Array<CensusTask>;
   notifications: Array<Notification>;
   order?: Maybe<Order>;
   orders: Array<Order>;
@@ -509,6 +606,31 @@ export type QueryCatalogProductsArgs = {
   categoryId?: InputMaybe<Scalars['ID']['input']>;
   itemTypeId?: InputMaybe<Scalars['ID']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryCensusPortalVerificationArgs = {
+  token: Scalars['String']['input'];
+};
+
+
+export type QueryCensusReportArgs = {
+  sessionId: Scalars['ID']['input'];
+};
+
+
+export type QueryCensusSessionArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryCensusSessionsArgs = {
+  includeCompleted?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type QueryCensusTasksArgs = {
+  sessionId: Scalars['ID']['input'];
 };
 
 
@@ -671,6 +793,9 @@ export type ResolversTypes = {
   CatalogProduct: ResolverTypeWrapper<CatalogProduct>;
   CatalogProductAttribute: ResolverTypeWrapper<CatalogProductAttribute>;
   CatalogProductImage: ResolverTypeWrapper<CatalogProductImage>;
+  CensusReport: ResolverTypeWrapper<CensusReport>;
+  CensusSession: ResolverTypeWrapper<CensusSession>;
+  CensusTask: ResolverTypeWrapper<CensusTask>;
   DistributionRecord: ResolverTypeWrapper<DistributionRecord>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
@@ -700,6 +825,9 @@ export type ResolversParentTypes = {
   CatalogProduct: CatalogProduct;
   CatalogProductAttribute: CatalogProductAttribute;
   CatalogProductImage: CatalogProductImage;
+  CensusReport: CensusReport;
+  CensusSession: CensusSession;
+  CensusTask: CensusTask;
   DistributionRecord: DistributionRecord;
   Float: Scalars['Float']['output'];
   ID: Scalars['ID']['output'];
@@ -801,6 +929,66 @@ export type CatalogProductImageResolvers<ContextType = GraphQLContext, ParentTyp
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type CensusReportResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CensusReport'] = ResolversParentTypes['CensusReport']> = {
+  actionItems?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  conditionChangeCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  discrepancyCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  sessionId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  totalAssets?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  verifiedCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  verifiedPercentage?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type CensusSessionResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CensusSession'] = ResolversParentTypes['CensusSession']> = {
+  completedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  createdByName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  createdByUserId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  dueAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  note?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  scopeType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  scopeValue?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type CensusTaskResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CensusTask'] = ResolversParentTypes['CensusTask']> = {
+  assetCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  assetId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  assetName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  baselineAssetStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  baselineConditionStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  baselineLocation?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  censusSessionId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  departmentName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  discrepancyReason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  employeeEmail?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  employeeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  employeeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  itemType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  note?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  portalEmailSentAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  portalEmailStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  portalExpiresAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  qrCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  reportedConditionStatus?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  serialNumber?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  verificationChannel?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  verifiedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  verifiedByName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  verifiedByUserId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type DistributionRecordResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DistributionRecord'] = ResolversParentTypes['DistributionRecord']> = {
   assetCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   assetId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
@@ -832,9 +1020,11 @@ export type DistributionRecordResolvers<ContextType = GraphQLContext, ParentType
 
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
   assignAssetDistribution?: Resolver<ResolversTypes['DistributionRecord'], ParentType, ContextType, RequireFields<MutationAssignAssetDistributionArgs, 'assetId' | 'employeeName'>>;
+  completeCensusSession?: Resolver<ResolversTypes['CensusSession'], ParentType, ContextType, RequireFields<MutationCompleteCensusSessionArgs, 'id'>>;
   createAssetAudit?: Resolver<Array<ResolversTypes['AssetAuditEntry']>, ParentType, ContextType, RequireFields<MutationCreateAssetAuditArgs, 'assetIds'>>;
   createCatalogCategory?: Resolver<ResolversTypes['CatalogCategory'], ParentType, ContextType, RequireFields<MutationCreateCatalogCategoryArgs, 'displayName'>>;
   createCatalogProduct?: Resolver<ResolversTypes['CatalogProduct'], ParentType, ContextType, RequireFields<MutationCreateCatalogProductArgs, 'displayName' | 'productCode'>>;
+  createCensusSession?: Resolver<ResolversTypes['CensusSession'], ParentType, ContextType, RequireFields<MutationCreateCensusSessionArgs, 'dueAt' | 'scopeType' | 'title'>>;
   createOrder?: Resolver<ResolversTypes['Order'], ParentType, ContextType, RequireFields<MutationCreateOrderArgs, 'orderName'>>;
   createReceive?: Resolver<ResolversTypes['Receive'], ParentType, ContextType, RequireFields<MutationCreateReceiveArgs, 'conditionStatus' | 'orderId' | 'orderItemId' | 'quantityReceived'>>;
   deleteCatalogCategory?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteCatalogCategoryArgs, 'id'>>;
@@ -849,6 +1039,8 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   updateOrder?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<MutationUpdateOrderArgs, 'id'>>;
   updateReceive?: Resolver<Maybe<ResolversTypes['Receive']>, ParentType, ContextType, RequireFields<MutationUpdateReceiveArgs, 'id'>>;
   updateStorageAsset?: Resolver<ResolversTypes['StorageAsset'], ParentType, ContextType, RequireFields<MutationUpdateStorageAssetArgs, 'id'>>;
+  verifyCensusTaskByPortal?: Resolver<ResolversTypes['CensusTask'], ParentType, ContextType, RequireFields<MutationVerifyCensusTaskByPortalArgs, 'token'>>;
+  verifyCensusTaskByQr?: Resolver<ResolversTypes['CensusTask'], ParentType, ContextType, RequireFields<MutationVerifyCensusTaskByQrArgs, 'qrCode'>>;
 };
 
 export type NotificationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Notification'] = ResolversParentTypes['Notification']> = {
@@ -930,6 +1122,11 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   catalogItemTypes?: Resolver<Array<ResolversTypes['CatalogItemType']>, ParentType, ContextType, Partial<QueryCatalogItemTypesArgs>>;
   catalogProduct?: Resolver<Maybe<ResolversTypes['CatalogProduct']>, ParentType, ContextType, RequireFields<QueryCatalogProductArgs, 'id'>>;
   catalogProducts?: Resolver<Array<ResolversTypes['CatalogProduct']>, ParentType, ContextType, Partial<QueryCatalogProductsArgs>>;
+  censusPortalVerification?: Resolver<ResolversTypes['CensusTask'], ParentType, ContextType, RequireFields<QueryCensusPortalVerificationArgs, 'token'>>;
+  censusReport?: Resolver<ResolversTypes['CensusReport'], ParentType, ContextType, RequireFields<QueryCensusReportArgs, 'sessionId'>>;
+  censusSession?: Resolver<Maybe<ResolversTypes['CensusSession']>, ParentType, ContextType, RequireFields<QueryCensusSessionArgs, 'id'>>;
+  censusSessions?: Resolver<Array<ResolversTypes['CensusSession']>, ParentType, ContextType, Partial<QueryCensusSessionsArgs>>;
+  censusTasks?: Resolver<Array<ResolversTypes['CensusTask']>, ParentType, ContextType, RequireFields<QueryCensusTasksArgs, 'sessionId'>>;
   notifications?: Resolver<Array<ResolversTypes['Notification']>, ParentType, ContextType, Partial<QueryNotificationsArgs>>;
   order?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<QueryOrderArgs, 'id'>>;
   orders?: Resolver<Array<ResolversTypes['Order']>, ParentType, ContextType>;
@@ -1010,6 +1207,9 @@ export type Resolvers<ContextType = GraphQLContext> = {
   CatalogProduct?: CatalogProductResolvers<ContextType>;
   CatalogProductAttribute?: CatalogProductAttributeResolvers<ContextType>;
   CatalogProductImage?: CatalogProductImageResolvers<ContextType>;
+  CensusReport?: CensusReportResolvers<ContextType>;
+  CensusSession?: CensusSessionResolvers<ContextType>;
+  CensusTask?: CensusTaskResolvers<ContextType>;
   DistributionRecord?: DistributionRecordResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   Notification?: NotificationResolvers<ContextType>;

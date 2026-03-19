@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   downloadAssetLabelsPdfRequest,
-  fetchStorageAssetsRequest,
   fetchStorageAssetDetailRequest,
   type StorageAssetDto,
   updateStorageAssetRequest,
@@ -1093,32 +1092,6 @@ function buildLocationOptions(currentLocation: string) {
   ];
 
   return Array.from(new Set(defaults.filter(Boolean)));
-}
-
-function buildFallbackAssignedAssets(asset: StorageAssetDto) {
-  return [
-    {
-      ...asset,
-      id: `${asset.id}-assigned-1`,
-      assetCode: "MSE-2026-012",
-      assetName: "Magic Mouse",
-      itemType: "Mouse",
-    },
-    {
-      ...asset,
-      id: `${asset.id}-assigned-2`,
-      assetCode: "MON-2026-008",
-      assetName: "Dell Monitor 27\"",
-      itemType: "Monitor",
-    },
-    {
-      ...asset,
-      id: `${asset.id}-assigned-3`,
-      assetCode: "KYB-2026-045",
-      assetName: "Magic Keyboard",
-      itemType: "Keyboard",
-    },
-  ];
 }
 
 function historyIcon(title: string) {

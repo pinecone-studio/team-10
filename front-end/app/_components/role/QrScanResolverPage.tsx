@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { verifyCensusTaskByQrRequest } from "@/app/(dashboard)/_graphql/census/census-api";
 import { fetchStorageAssetDetailRequest } from "@/app/(dashboard)/_graphql/storage/storage-api";
 
 export function QrScanResolverPage({
@@ -26,6 +27,7 @@ export function QrScanResolverPage({
   ownerRole?: string;
 }) {
   const [status, setStatus] = useState<"missing" | "error" | null>(null);
+  const [previewMode, setPreviewMode] = useState<"mobile" | "desktop">("mobile");
 
   useEffect(() => {
     let isMounted = true;
@@ -43,7 +45,7 @@ export function QrScanResolverPage({
         }
 
         if (mode === "audit") {
-          window.alert("Successfully audited and verified");
+          await verifyCensusTaskByQrRequest({ qrCode, conditionStatus: asset.conditionStatus });
         }
 
         const searchParams = new URLSearchParams({
@@ -112,10 +114,21 @@ export function QrScanResolverPage({
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#dcebfb_0%,#eff7ff_58%,#ffffff_100%)] px-6 py-10 text-slate-900">
-      <section className="w-full max-w-[420px] rounded-[24px] border border-[#d7e4f2] bg-white p-6 shadow-[0_20px_48px_rgba(148,163,184,0.16)]">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#7c93b2]">
-          QR Scan
-        </p>
+      <section className={`${previewMode === "mobile" ? "max-w-[420px]" : "max-w-[780px]"} w-full rounded-[24px] border border-[#d7e4f2] bg-white p-6 shadow-[0_20px_48px_rgba(148,163,184,0.16)]`}>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#7c93b2]">
+            QR Scan
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              setPreviewMode((current) => (current === "mobile" ? "desktop" : "mobile"))
+            }
+            className="rounded-full border border-[#d5e5f5] bg-[#f8fbff] px-3 py-1.5 text-[12px] font-medium text-[#47627f]"
+          >
+            Switch to {previewMode === "mobile" ? "desktop" : "mobile"} view
+          </button>
+        </div>
         <h1 className="mt-3 text-[28px] font-semibold text-[#0f172a]">QR Link Result</h1>
         <p className="mt-3 text-[15px] leading-7 text-[#52637a]">{message}</p>
         <Link

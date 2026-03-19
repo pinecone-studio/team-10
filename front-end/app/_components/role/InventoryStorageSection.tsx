@@ -4,6 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
+  completeCensusSessionRequest,
+  createCensusSessionRequest,
+  fetchCensusReportRequest,
+  fetchCensusSessionsRequest,
+  fetchCensusTasksRequest,
+  type CensusReportDto,
+  type CensusSessionDto,
+  type CensusTaskDto,
+} from "@/app/(dashboard)/_graphql/census/census-api";
+import {
   downloadAssetLabelsPdfRequest,
   fetchStorageAssetsRequest,
   type StorageAssetDto,
@@ -49,12 +59,12 @@ type StorageHeaderMenu =
   | "actions"
   | null;
 
-type CensusSession = {
+type CensusSessionView = {
   id: string;
   title: string;
   location: string;
-  scope: "selected" | "location" | "full";
-  status: "draft" | "active" | "completed";
+  scope: "company" | "department" | "category";
+  status: "active" | "completed" | "overdue";
   assetCount: number;
   createdAt: string;
   startedAt: string;
@@ -64,6 +74,43 @@ type CensusSession = {
   owner: string;
   note: string;
 };
+
+function mapScopeForApi(scope: "selected" | "location" | "full", location: string, assets: StorageAssetDto[]) {
+  if (scope === "location") {
+    const locationAsset = assets.find((asset) => asset.storageName === location);
+    return {
+      scopeType: "department",
+      scopeValue: locationAsset?.department || null,
+    };
+  }
+
+  return {
+    scopeType: scope === "full" ? "company" : "category",
+    scopeValue: scope === "selected" ? "IT Equipment" : null,
+  };
+}
+
+function mapSessionView(
+  session: CensusSessionDto,
+  tasks: CensusTaskDto[],
+): CensusSessionView {
+  const verifiedCount = tasks.filter((task) => task.status === "verified").length;
+  return {
+    id: session.id,
+    title: session.title,
+    location: session.scopeValue ?? "Company-wide",
+    scope: session.scopeType as CensusSessionView["scope"],
+    status: session.status as CensusSessionView["status"],
+    assetCount: tasks.length,
+    createdAt: session.createdAt,
+    startedAt: session.createdAt,
+    dueAt: session.dueAt,
+    completedAt: session.completedAt,
+    progressCount: verifiedCount,
+    owner: session.createdByName,
+    note: session.note ?? "",
+  };
+}
 
 export function InventoryStorageSection() {
   const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
@@ -90,8 +137,10 @@ export function InventoryStorageSection() {
   const [censusLocation, setCensusLocation] = useState("Main warehouse / Intake");
   const [censusScope, setCensusScope] = useState<"selected" | "location" | "full">("selected");
   const [censusNote, setCensusNote] = useState("");
-  const [currentSession, setCurrentSession] = useState<CensusSession | null>(null);
-  const [sessionHistory, setSessionHistory] = useState<CensusSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<CensusSessionView | null>(null);
+  const [sessionHistory, setSessionHistory] = useState<CensusSessionView[]>([]);
+  const [currentSessionTasks, setCurrentSessionTasks] = useState<CensusTaskDto[]>([]);
+  const [currentReport, setCurrentReport] = useState<CensusReportDto | null>(null);
   const [openHeaderMenu, setOpenHeaderMenu] = useState<StorageHeaderMenu>(null);
   const [openRowActionId, setOpenRowActionId] = useState<string | null>(null);
   const [rowsPerPage, setRowsPerPage] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10);
@@ -105,10 +154,37 @@ export function InventoryStorageSection() {
       setErrorMessage(null);
 
       try {
-        const nextAssets = await fetchStorageAssetsRequest();
+        const [nextAssets, sessions] = await Promise.all([
+          fetchStorageAssetsRequest(),
+          fetchCensusSessionsRequest(true),
+        ]);
         if (!isMounted) return;
         setAssets(nextAssets);
-        setSessionHistory(createInitialCensusHistory(nextAssets));
+        const activeSession = sessions.find((session) => session.status === "active" || session.status === "overdue") ?? null;
+        const completedSessions = sessions.filter((session) => session.status === "completed");
+
+        if (activeSession) {
+          const [tasks, report] = await Promise.all([
+            fetchCensusTasksRequest(activeSession.id),
+            fetchCensusReportRequest(activeSession.id),
+          ]);
+          if (!isMounted) return;
+          setCurrentSessionTasks(tasks);
+          setCurrentReport(report);
+          setCurrentSession(mapSessionView(activeSession, tasks));
+        } else {
+          setCurrentSession(null);
+          setCurrentSessionTasks([]);
+          setCurrentReport(null);
+        }
+
+        const completedViews = await Promise.all(
+          completedSessions.map(async (session) =>
+            mapSessionView(session, await fetchCensusTasksRequest(session.id)),
+          ),
+        );
+        if (!isMounted) return;
+        setSessionHistory(completedViews);
       } catch (error) {
         if (!isMounted) return;
         setErrorMessage(
@@ -338,44 +414,53 @@ export function InventoryStorageSection() {
     }
   }
 
-  function handleCreateCensus() {
-    const now = new Date();
-    const assetCount = Math.max(scopedAssetCount, 0);
-    const nextSession: CensusSession = {
-      id: `CNS-${now.getFullYear()}-${String(sessionHistory.length + 1).padStart(3, "0")}`,
-      title:
-        censusTitle.trim() ||
-        `${censusLocation} ${censusScope === "selected" ? "selected assets" : "census"}`,
-      location: censusLocation,
-      scope: censusScope,
-      status: "active",
-      assetCount,
-      createdAt: now.toISOString(),
-      startedAt: now.toISOString(),
-      dueAt: new Date(now.getTime() + 1000 * 60 * 60 * 24).toISOString(),
-      completedAt: null,
-      progressCount: censusScope === "selected" ? selectedAssets.length : 0,
-      owner: "Batbayar Dorj",
-      note: censusNote.trim(),
-    };
+  async function handleCreateCensus() {
+    try {
+      const dueAt = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString();
+      const scopeInput = mapScopeForApi(censusScope, censusLocation, assets);
+      const created = await createCensusSessionRequest({
+        title:
+          censusTitle.trim() ||
+          `${censusLocation} ${censusScope === "selected" ? "selected assets" : "census"}`,
+        scopeType: scopeInput.scopeType,
+        scopeValue: scopeInput.scopeValue,
+        dueAt,
+        note: censusNote.trim() || null,
+      });
 
-    setCurrentSession(nextSession);
-    setCensusTitle("");
-    setCensusNote("");
+      if (!created) return;
+      const [tasks, report] = await Promise.all([
+        fetchCensusTasksRequest(created.id),
+        fetchCensusReportRequest(created.id),
+      ]);
+      setCurrentSession(mapSessionView(created, tasks));
+      setCurrentSessionTasks(tasks);
+      setCurrentReport(report);
+      setCensusTitle("");
+      setCensusNote("");
+    } catch (error) {
+      setActionErrorMessage(
+        error instanceof Error ? error.message : "Failed to create census session.",
+      );
+    }
   }
 
-  function handleCompleteCurrentSession() {
+  async function handleCompleteCurrentSession() {
     if (!currentSession) return;
-
-    const completedSession: CensusSession = {
-      ...currentSession,
-      status: "completed",
-      progressCount: currentSession.assetCount,
-      completedAt: new Date().toISOString(),
-    };
-
-    setSessionHistory((current) => [completedSession, ...current]);
-    setCurrentSession(null);
+    try {
+      const completed = await completeCensusSessionRequest(currentSession.id);
+      if (!completed) return;
+      const tasks = await fetchCensusTasksRequest(completed.id);
+      const completedView = mapSessionView(completed, tasks);
+      setSessionHistory((current) => [completedView, ...current]);
+      setCurrentSession(null);
+      setCurrentSessionTasks([]);
+      setCurrentReport(null);
+    } catch (error) {
+      setActionErrorMessage(
+        error instanceof Error ? error.message : "Failed to complete census session.",
+      );
+    }
   }
 
   return (
@@ -397,6 +482,8 @@ export function InventoryStorageSection() {
         <StorageCensusWorkspace
           selectedCount={selectedIds.length}
           currentSession={currentSession}
+          currentTasks={currentSessionTasks}
+          currentReport={currentReport}
           history={sessionHistory}
           censusTitle={censusTitle}
           censusLocation={censusLocation}
@@ -1207,6 +1294,8 @@ function statusFilterToValue(value: (typeof STATUS_FILTERS)[number]) {
 function StorageCensusWorkspace({
   selectedCount,
   currentSession,
+  currentTasks,
+  currentReport,
   history,
   censusTitle,
   censusLocation,
@@ -1223,8 +1312,10 @@ function StorageCensusWorkspace({
   onComplete,
 }: {
   selectedCount: number;
-  currentSession: CensusSession | null;
-  history: CensusSession[];
+  currentSession: CensusSessionView | null;
+  currentTasks: CensusTaskDto[];
+  currentReport: CensusReportDto | null;
+  history: CensusSessionView[];
   censusTitle: string;
   censusLocation: string;
   censusScope: "selected" | "location" | "full";
@@ -1394,6 +1485,34 @@ function StorageCensusWorkspace({
                   <CensusMetric label="Counted" value={String(currentSession.progressCount)} />
                   <CensusMetric label="Due" value={formatDisplayDate(currentSession.dueAt)} />
                 </div>
+                {currentReport ? (
+                  <div className="mt-4 grid gap-3 md:grid-cols-4">
+                    <CensusMetric label="Verified %" value={`${currentReport.verifiedPercentage}%`} />
+                    <CensusMetric label="Discrepancies" value={String(currentReport.discrepancyCount)} />
+                    <CensusMetric label="Condition changes" value={String(currentReport.conditionChangeCount)} />
+                    <CensusMetric label="Action items" value={String(currentReport.actionItems.length)} />
+                  </div>
+                ) : null}
+                {currentTasks.length > 0 ? (
+                  <div className="mt-4 rounded-[16px] border border-[#dbe7f3] bg-white p-4">
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#8fa0ba]">
+                      Verification Tasks
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {currentTasks.slice(0, 6).map((task) => (
+                        <div key={task.id} className="flex items-center justify-between gap-3 rounded-[12px] bg-[#f8fbff] px-3 py-3 text-[12px]">
+                          <div>
+                            <p className="font-semibold text-[#0f172a]">{task.assetName}</p>
+                            <p className="mt-1 text-[#64748b]">{task.employeeName} • {task.assetCode}</p>
+                          </div>
+                          <span className={`rounded-full px-3 py-1 text-[11px] font-medium ${task.status === "verified" ? "border border-[#bbf7d0] bg-[#effdf3] text-[#15803d]" : task.status === "discrepancy" ? "border border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]" : "border border-[#dbe4ee] bg-white text-[#475569]"}`}>
+                            {task.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="mt-5">
                   <div className="flex items-center justify-between text-[12px] text-[#64748b]">
@@ -1507,11 +1626,11 @@ function StorageCensusWorkspace({
                   </td>
                   <td className="px-4 py-3 align-top">{session.location}</td>
                   <td className="px-4 py-3 align-top">
-                    {session.scope === "selected"
-                      ? "Selected"
-                      : session.scope === "location"
-                        ? "Location"
-                        : "Full"}
+                    {session.scope === "department"
+                      ? "Department"
+                      : session.scope === "category"
+                        ? "Category"
+                        : "Company"}
                   </td>
                   <td className="px-4 py-3 align-top">{session.assetCount}</td>
                   <td className="px-4 py-3 align-top">
@@ -1557,31 +1676,3 @@ function CensusMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function createInitialCensusHistory(assets: StorageAssetDto[]): CensusSession[] {
-  if (assets.length === 0) {
-    return [];
-  }
-
-  const uniqueLocations = Array.from(new Set(assets.map((asset) => asset.storageName)));
-
-  return uniqueLocations.slice(0, 3).map((location, index) => {
-    const assetCount = assets.filter((asset) => asset.storageName === location).length;
-    const completedAt = new Date(Date.now() - (index + 1) * 1000 * 60 * 60 * 24 * 7);
-
-    return {
-      id: `CNS-2026-${String(index + 1).padStart(3, "0")}`,
-      title: `${location} weekly check`,
-      location,
-      scope: "location",
-      status: "completed",
-      assetCount,
-      createdAt: completedAt.toISOString(),
-      startedAt: completedAt.toISOString(),
-      dueAt: completedAt.toISOString(),
-      completedAt: completedAt.toISOString(),
-      progressCount: assetCount,
-      owner: "Batbayar Dorj",
-      note: "Completed stock verification for the area.",
-    };
-  });
-}

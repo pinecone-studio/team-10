@@ -672,6 +672,68 @@ CREATE TABLE IF NOT EXISTS asset_assignment_acknowledgments (
   FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS census_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  scope_type TEXT NOT NULL CHECK (
+    scope_type IN ('company', 'department', 'category')
+  ),
+  scope_value TEXT,
+  created_by_user_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (
+    status IN ('active', 'completed', 'overdue')
+  ),
+  due_at TEXT NOT NULL,
+  completed_at TEXT,
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS census_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  census_session_id INTEGER NOT NULL,
+  asset_id INTEGER NOT NULL,
+  distribution_id INTEGER,
+  employee_id INTEGER NOT NULL,
+  baseline_condition_status TEXT NOT NULL CHECK (
+    baseline_condition_status IN ('good', 'fair', 'damaged', 'defective', 'missing', 'incomplete', 'used')
+  ),
+  baseline_asset_status TEXT NOT NULL CHECK (
+    baseline_asset_status IN ('received', 'inStorage', 'available', 'pendingAssignment', 'assigned', 'pendingRetrieval', 'inRepair', 'pendingDisposal', 'sold', 'disposed', 'lost')
+  ),
+  baseline_location TEXT,
+  reported_condition_status TEXT CHECK (
+    reported_condition_status IS NULL OR reported_condition_status IN ('good', 'fair', 'damaged', 'defective', 'missing', 'incomplete', 'used')
+  ),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (
+    status IN ('pending', 'verified', 'discrepancy')
+  ),
+  verification_channel TEXT CHECK (
+    verification_channel IS NULL OR verification_channel IN ('auditorQr', 'employeePortal', 'manual')
+  ),
+  verified_at TEXT,
+  verified_by_user_id INTEGER,
+  verified_by_name TEXT,
+  note TEXT,
+  discrepancy_reason TEXT,
+  portal_jwt_id TEXT UNIQUE,
+  portal_expires_at TEXT,
+  portal_consumed_at TEXT,
+  portal_email_status TEXT NOT NULL DEFAULT 'pending' CHECK (
+    portal_email_status IN ('pending', 'sent', 'failed', 'skipped')
+  ),
+  portal_email_sent_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (census_session_id) REFERENCES census_sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+  FOREIGN KEY (distribution_id) REFERENCES asset_distributions(id) ON DELETE SET NULL,
+  FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (verified_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS asset_disposals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   asset_id INTEGER NOT NULL,
@@ -855,6 +917,15 @@ CREATE INDEX IF NOT EXISTS idx_asset_assignment_acknowledgments_employee_id ON a
 CREATE INDEX IF NOT EXISTS idx_asset_assignment_acknowledgments_jwt_id ON asset_assignment_acknowledgments(jwt_id);
 CREATE INDEX IF NOT EXISTS idx_asset_assignment_acknowledgments_status ON asset_assignment_acknowledgments(status);
 CREATE INDEX IF NOT EXISTS idx_asset_assignment_acknowledgments_email_status ON asset_assignment_acknowledgments(email_status);
+CREATE INDEX IF NOT EXISTS idx_census_sessions_status ON census_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_census_sessions_scope ON census_sessions(scope_type, scope_value);
+CREATE INDEX IF NOT EXISTS idx_census_sessions_due_at ON census_sessions(due_at);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_session_id ON census_tasks(census_session_id);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_asset_id ON census_tasks(asset_id);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_distribution_id ON census_tasks(distribution_id);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_employee_id ON census_tasks(employee_id);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_status ON census_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_portal_jwt_id ON census_tasks(portal_jwt_id);
 
 CREATE INDEX IF NOT EXISTS idx_asset_disposals_asset_id ON asset_disposals(asset_id);
 CREATE INDEX IF NOT EXISTS idx_asset_disposals_status ON asset_disposals(status);
