@@ -114,7 +114,7 @@ function AssetRow(props: {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[13px] font-semibold text-[#0f172a]">Assignment history</p>
-                  <p className="text-[12px] text-[#64748b]">This asset's previous handoff and retrieval sessions.</p>
+                  <p className="text-[12px] text-[#64748b]">This asset&apos;s previous handoff and retrieval sessions.</p>
                 </div>
                 <span className="rounded-full bg-[#eef4ff] px-2.5 py-1 text-[11px] font-semibold text-[#35589c]">
                   {props.asset.sessions.length} record{props.asset.sessions.length > 1 ? "s" : ""}
