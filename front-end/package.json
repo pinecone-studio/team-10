@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run codegen && next build",
+    "build": "npm run codegen && next build --webpack",
     "vercel:pull": "npx -y vercel@latest pull --yes --environment=production",
     "vercel:build": "npx -y vercel@latest build --prod",
     "vercel:deploy": "npx -y vercel@latest --prod --yes",
