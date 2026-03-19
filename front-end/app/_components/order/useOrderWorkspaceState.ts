@@ -218,6 +218,7 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
         })),
         createGoodsDraft(getNextGoodsCode(demoDraftItems.map((item) => item.code))),
       ]);
+      setPermissionMessage("Please review this demo inventory order for sample office procurement items.");
     },
     submit: async () => {
       setSubmitError(null);

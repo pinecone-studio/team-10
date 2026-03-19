@@ -7,7 +7,9 @@ import type { ReceiveCondition } from "./receiveTypes";
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-[6px] block text-[12px] font-medium text-[#344054]">{label}</span>
+      <span className="mb-[6px] block text-[12px] font-medium text-[#344054]">
+        {label}
+      </span>
       {children}
     </label>
   );
@@ -36,15 +38,32 @@ export function ReceiveDetailFormCard(props: {
   onSubmit: () => Promise<void>;
 }) {
   return (
-    <div className="self-start rounded-[12px] border border-[#dcdfe4] bg-white p-[18px] xl:sticky xl:top-6">
-      <h3 className="text-[18px] font-semibold text-[#101828]">Receive Details</h3>
-      <div className="mt-[14px] space-y-[14px]">
+    <div className="self-start flex h-[650px] flex-col overflow-hidden rounded-[12px] border border-[#dcdfe4] bg-white p-[18px] xl:sticky xl:top-6">
+      <h3 className="text-[16px] font-semibold text-[#101828]">
+        Receive Details
+      </h3>
+      <div className="mt-[14px] min-h-0 flex-1 space-y-[14px] overflow-y-auto pr-1">
         <div className="grid gap-[12px] sm:grid-cols-2">
           <Field label="Received date">
-            <input value={props.receivedDate} onChange={(event) => props.onReceivedDateChange(event.target.value)} type="date" className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none" />
+            <input
+              value={props.receivedDate}
+              onChange={(event) =>
+                props.onReceivedDateChange(event.target.value)
+              }
+              type="date"
+              className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none"
+            />
           </Field>
           <Field label="Condition on arrival">
-            <select value={props.receivedCondition} onChange={(event) => props.onReceivedConditionChange(event.target.value as ReceiveCondition)} className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none">
+            <select
+              value={props.receivedCondition}
+              onChange={(event) =>
+                props.onReceivedConditionChange(
+                  event.target.value as ReceiveCondition,
+                )
+              }
+              className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[12px] outline-none"
+            >
               <option value="good">Good</option>
               <option value="damaged">Damaged</option>
               <option value="defective">Defective</option>
@@ -53,7 +72,15 @@ export function ReceiveDetailFormCard(props: {
           </Field>
         </div>
         <Field label="Quantity received">
-          <input value={props.quantityReceived} onChange={(event) => props.onQuantityReceivedChange(event.target.value)} type="number" min="1" className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none" />
+          <input
+            value={props.quantityReceived}
+            onChange={(event) =>
+              props.onQuantityReceivedChange(event.target.value)
+            }
+            type="number"
+            min="1"
+            className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[12px] outline-none"
+          />
         </Field>
         <ReceiveAssetClassificationFields
           department={props.department}
@@ -67,10 +94,37 @@ export function ReceiveDetailFormCard(props: {
           onAddType={props.onAddType}
         />
         <Field label="Notes">
-          <textarea value={props.receivedNote} onChange={(event) => props.onReceivedNoteChange(event.target.value)} rows={3} className="w-full rounded-[10px] border border-[#d0d5dd] px-[12px] py-[10px] text-[14px] outline-none" placeholder="Add receive note..." />
+          <textarea
+            value={props.receivedNote}
+            onChange={(event) => props.onReceivedNoteChange(event.target.value)}
+            rows={3}
+            className="w-full rounded-[10px] border border-[#d0d5dd] px-[12px] py-[10px] text-[12px] outline-none"
+            placeholder="Add receive note..."
+          />
         </Field>
-        <button type="button" disabled={!props.canSubmit} onClick={() => void props.onSubmit()} className="fx-submit-button h-[48px] w-full px-4 text-[15px] font-medium">
-          <span className="fx-submit-icon-wrapper"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fx-submit-icon"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg></span>
+        <button
+          type="button"
+          disabled={!props.canSubmit}
+          onClick={() => void props.onSubmit()}
+          className="inline-flex h-[48px] w-full cursor-pointer items-center justify-center gap-3 rounded-[10px] bg-[#5d88ce] px-4 text-[15px] font-medium text-white transition duration-150 hover:bg-[#4c78c1] active:scale-[0.98] active:bg-[#436cae] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#bfdbfe] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#cbd5e1] disabled:text-white disabled:opacity-100"
+        >
+          <span className="fx-submit-icon-wrapper">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="fx-submit-icon"
+            >
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          </span>
           <span className="fx-submit-label">{props.submitLabel}</span>
         </button>
       </div>

@@ -22,7 +22,9 @@ export function ReceiveAssetClassificationFields(props: Props) {
 
   return (
     <div className="rounded-[12px] border border-[#dbe3ee] bg-[#f8fbff] p-4">
-      <p className="text-[13px] font-semibold text-[#0f172a]">Asset classification</p>
+      <p className="text-[12px] font-semibold text-[#0f172a]">
+        Asset classification
+      </p>
       <div className="mt-3 grid gap-3">
         <ReadOnlyField label="Department" value={props.department} />
         <SelectWithAdder
@@ -63,7 +65,9 @@ export function ReceiveAssetClassificationFields(props: Props) {
             setTypeAdderOpen(false);
           }}
           disabled={!props.selectedCategory}
-          helperText={!props.selectedCategory ? "Select category first." : undefined}
+          helperText={
+            !props.selectedCategory ? "Select category first." : undefined
+          }
         />
       </div>
     </div>
@@ -109,7 +113,7 @@ function SelectWithAdder(props: {
             value={props.value}
             onChange={(event) => props.onChange(event.target.value)}
             disabled={props.disabled}
-            className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[14px] outline-none disabled:bg-[#f8fafc] disabled:text-[#98a2b3]"
+            className="h-[42px] w-full rounded-[10px] border border-[#d0d5dd] px-[12px] text-[12px] outline-none disabled:bg-[#f8fafc] disabled:text-[#98a2b3]"
           >
             <option value="">Select {props.label.toLowerCase()}</option>
             {props.options.map((option) => (
@@ -122,7 +126,7 @@ function SelectWithAdder(props: {
             type="button"
             onClick={props.onToggleAdder}
             disabled={props.disabled}
-            className="inline-flex h-[42px] w-[42px] items-center justify-center rounded-[10px] border border-[#d0d5dd] bg-white text-[18px] font-semibold text-[#2563eb] disabled:bg-[#f8fafc] disabled:text-[#98a2b3]"
+            className="inline-flex h-[42px] w-[42px] cursor-pointer items-center justify-center rounded-[10px] border border-[#d0d5dd] bg-white text-[16px] font-semibold text-[#2563eb] disabled:bg-[#f8fafc] disabled:text-[#98a2b3]"
           >
             +
           </button>
@@ -143,7 +147,7 @@ function SelectWithAdder(props: {
             <button
               type="button"
               onClick={props.onAdd}
-              className="inline-flex h-[38px] items-center justify-center rounded-[8px] bg-[#2563eb] px-3 text-[13px] font-medium text-white"
+              className="inline-flex h-[38px] cursor-pointer items-center justify-center rounded-[8px] bg-[#2563eb] px-3 text-[13px] font-medium text-white"
             >
               Add
             </button>
@@ -157,8 +161,10 @@ function SelectWithAdder(props: {
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="mb-[6px] block text-[12px] font-medium text-[#344054]">{label}</p>
-      <div className="flex h-[42px] items-center rounded-[10px] border border-[#d0d5dd] bg-white px-[12px] text-[14px] text-[#101828]">
+      <p className="mb-[6px] block text-[12px] font-medium text-[#344054]">
+        {label}
+      </p>
+      <div className="flex h-[42px] items-center rounded-[10px] border border-[#d0d5dd] bg-white px-[12px] text-[12px] text-[#101828]">
         {value}
       </div>
     </div>

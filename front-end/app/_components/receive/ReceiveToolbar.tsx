@@ -26,7 +26,7 @@ export function ReceiveToolbar({
       <button
         type="button"
         onClick={() => void onQuickCreate()}
-        className="inline-flex h-[32px] items-center gap-[6px] rounded-[10px] bg-[#101828] px-[12px] text-[14px] font-medium text-white"
+        className="inline-flex h-[32px] cursor-pointer items-center gap-[6px] rounded-[10px] bg-[#101828] px-[12px] text-[14px] font-medium text-white"
       >
         <span className="inline-flex size-[16px] items-center justify-center rounded-full border border-white/20 text-[12px] leading-none">
           +

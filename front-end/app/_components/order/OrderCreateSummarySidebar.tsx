@@ -26,11 +26,13 @@ export function OrderCreateSummarySidebar(
   const currencyCode = props.draftItems[0]?.currencyCode ?? "USD";
 
   return (
-    <aside className="flex h-full flex-col overflow-hidden rounded-[22px] border border-[#dbeafb] bg-white shadow-[0_14px_40px_rgba(125,170,232,0.18),0_8px_18px_rgba(15,23,42,0.08)] xl:h-[800px]">
-      <div className="px-8 py-8">
-        <h3 className="text-[18px] font-semibold leading-7 text-[#111827]">Order Summary</h3>
+    <aside className="flex h-full flex-col overflow-hidden rounded-[22px] border border-[#dbeafb] bg-white shadow-[0_14px_40px_rgba(125,170,232,0.18),0_8px_18px_rgba(15,23,42,0.08)] xl:h-[650px]">
+      <div className="px-8 py-6">
+        <h3 className="text-[16px] font-semibold leading-7 text-[#111827]">
+          Order Summary
+        </h3>
       </div>
-      <div className="flex flex-1 flex-col gap-7 border-t border-[#dbeafb] px-6 pb-8 pt-14">
+      <div className="flex flex-1 flex-col gap-5 border-t border-[#dbeafb] px-6 pb-8 pt-8">
         <div className="flex items-center gap-4">
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#dbeafe] text-[13px] font-semibold text-[#0a0a0a]">
             {(props.draftOrder.requester || "BA").slice(0, 2).toUpperCase()}
@@ -95,8 +97,19 @@ export function OrderCreateSummarySidebar(
           disabled={!props.canSubmitDraft}
           className="mt-auto inline-flex h-11 w-full items-center justify-center gap-3 rounded-[10px] bg-[#5d88ce] text-[14px] font-medium text-white transition duration-150 hover:bg-[#4c78c1] active:scale-[0.98] active:bg-[#436cae] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#bfdbfe] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#cbd5e1] disabled:text-white disabled:opacity-100"
         >
-          <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
-            <path d="m17 3-8.6 8.6M17 3l-5.5 14-3.1-5.4L3 8.5 17 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            className="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path
+              d="m17 3-8.6 8.6M17 3l-5.5 14-3.1-5.4L3 8.5 17 3Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
           Send for Approval
         </button>
@@ -107,7 +120,8 @@ export function OrderCreateSummarySidebar(
                 Are you sure?
               </h4>
               <p className="mt-2 text-[13px] leading-5 text-[#62748e]">
-                This order will be sent for approval and you will return to Order History.
+                This order will be sent for approval and you will return to
+                Order History.
               </p>
               <div className="mt-5 flex justify-end gap-2">
                 <button

@@ -1,7 +1,7 @@
 "use client";
 
 const BUTTON_CLASS_NAME =
-  "inline-flex size-[32px] items-center justify-center rounded-[8px] border border-[#eaecf0] bg-white text-[14px] text-[#667085] shadow-[0_1px_2px_rgba(16,24,40,0.05)] disabled:opacity-40";
+  "inline-flex size-[32px] cursor-pointer items-center justify-center rounded-[8px] border border-[#eaecf0] bg-white text-[14px] text-[#667085] shadow-[0_1px_2px_rgba(16,24,40,0.05)] disabled:cursor-not-allowed disabled:opacity-40";
 
 export function ReceivePagination({
   selectedCount,
