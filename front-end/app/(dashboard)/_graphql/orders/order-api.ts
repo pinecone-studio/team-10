@@ -287,7 +287,7 @@ function parseCurrencyCode() {
   return "USD" as const;
 }
 
-function parseApprovalTarget(_value?: string): StoredOrder["approvalTarget"] {
+function parseApprovalTarget(): StoredOrder["approvalTarget"] {
   return "finance";
 }
 
