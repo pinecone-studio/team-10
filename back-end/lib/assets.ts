@@ -1,4 +1,4 @@
-import { asc, eq, isNotNull, or } from "drizzle-orm";
+import { asc, eq, isNotNull, or, sql } from "drizzle-orm";
 import {
   assets,
   assetStatusValues,
@@ -82,20 +82,20 @@ const storageAssetSelection = {
   assetImageContentType: assets.assetImageContentType,
   conditionStatus: assets.conditionStatus,
   assetStatus: assets.assetStatus,
-  storageId: storage.id,
-  storageName: storage.storageName,
-  storageType: storage.storageType,
-  receivedAt: receives.receivedAt,
-  receiveNote: receiveItems.note,
-  orderId: orders.id,
-  requestNumber: orders.requestNumber,
-  requestDate: orders.requestDate,
-  requesterName: orders.requesterName,
-  departmentName: departments.departmentName,
-  unitCost: orderItems.unitCost,
-  currencyCode: orderItems.currencyCode,
-  createdAt: assets.createdAt,
-  updatedAt: assets.updatedAt,
+  storageId: sql<number | null>`${storage.id}`.as("storageId"),
+  storageName: sql<string | null>`${storage.storageName}`.as("storageName"),
+  storageType: sql<string | null>`${storage.storageType}`.as("storageType"),
+  receivedAt: sql<string>`${receives.receivedAt}`.as("receivedAt"),
+  receiveNote: sql<string | null>`${receiveItems.note}`.as("receiveNote"),
+  orderId: sql<number>`${orders.id}`.as("orderId"),
+  requestNumber: sql<string | null>`${orders.requestNumber}`.as("requestNumber"),
+  requestDate: sql<string | null>`${orders.requestDate}`.as("requestDate"),
+  requesterName: sql<string | null>`${orders.requesterName}`.as("requesterName"),
+  departmentName: sql<string | null>`${departments.departmentName}`.as("departmentName"),
+  unitCost: sql<number | null>`${orderItems.unitCost}`.as("unitCost"),
+  currencyCode: sql<string | null>`${orderItems.currencyCode}`.as("currencyCode"),
+  createdAt: sql<string>`${assets.createdAt}`.as("createdAt"),
+  updatedAt: sql<string>`${assets.updatedAt}`.as("updatedAt"),
 };
 
 async function mapStorageAsset(
