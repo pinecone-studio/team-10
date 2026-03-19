@@ -395,6 +395,10 @@ function createLocalOrderFallback(input: CreateOrderInput): StoredOrder {
   });
 }
 
+function sumOrderItems(items: OrderItem[]) {
+  return items.reduce((sum, item) => sum + item.totalPrice, 0);
+}
+
 export function generateRequestNumber() {
   ensureOrdersStoreLoaded();
   return createNextRequestNumber(readOrdersSnapshot());
@@ -644,6 +648,96 @@ export async function reviewFinanceOrder(input: {
     } catch (error) {
       console.error("Failed to refresh notifications after finance review.", error);
     }
+  }
+}
+
+export async function reviewFinanceOrderItems(input: {
+  orderId: string;
+  reviewer: string;
+  note?: string;
+  decisions: Array<{
+    catalogId: string;
+    code: string;
+    approved: boolean;
+  }>;
+}) {
+  const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
+  if (!existingOrder) {
+    console.warn(`No cached order found for finance item review ${input.orderId}.`);
+    return;
+  }
+
+  const decisionMap = new Map(
+    input.decisions.map((decision) => [`${decision.catalogId}::${decision.code}`, decision.approved]),
+  );
+  const approvedItems = existingOrder.items.filter((item) =>
+    decisionMap.get(`${item.catalogId}::${item.code}`) === true,
+  );
+  const rejectedItems = existingOrder.items.filter((item) =>
+    decisionMap.get(`${item.catalogId}::${item.code}`) === false,
+  );
+
+  if (approvedItems.length === existingOrder.items.length) {
+    await reviewFinanceOrder({
+      orderId: input.orderId,
+      reviewer: input.reviewer,
+      note: input.note,
+      approved: true,
+    });
+    return;
+  }
+
+  if (rejectedItems.length === existingOrder.items.length) {
+    await reviewFinanceOrder({
+      orderId: input.orderId,
+      reviewer: input.reviewer,
+      note: input.note,
+      approved: false,
+    });
+    return;
+  }
+
+  const reviewedAt = new Date().toISOString();
+  const updatedAt = reviewedAt;
+  const baseNote = input.note?.trim();
+  const approvalNote = baseNote
+    ? `${baseNote} Approved ${approvedItems.length} item(s) for receiving.`
+    : `Approved ${approvedItems.length} item(s) for receiving.`;
+  const rejectionNote = baseNote
+    ? `${baseNote} Rejected ${rejectedItems.length} item(s) during finance review.`
+    : `Rejected ${rejectedItems.length} item(s) during finance review.`;
+  const approvedOrder = normalizeOrder({
+    ...existingOrder,
+    items: approvedItems,
+    totalAmount: sumOrderItems(approvedItems),
+    status: "approved_finance",
+    financeReviewer: input.reviewer,
+    financeReviewedAt: reviewedAt,
+    financeNote: approvalNote,
+    updatedAt,
+  });
+  const rejectedOrder = normalizeOrder({
+    ...existingOrder,
+    id: `${existingOrder.id}-finance-rejected-${Date.now()}`,
+    items: rejectedItems,
+    totalAmount: sumOrderItems(rejectedItems),
+    status: "rejected_finance",
+    financeReviewer: input.reviewer,
+    financeReviewedAt: reviewedAt,
+    financeNote: rejectionNote,
+    updatedAt,
+  });
+
+  writeOrdersSnapshot([
+    approvedOrder,
+    rejectedOrder,
+    ...cachedOrdersSnapshot.filter((order) => order.id !== existingOrder.id),
+  ]);
+
+  try {
+    await refreshNotificationsStore();
+  } catch (error) {
+    console.error("Failed to refresh notifications after finance item review.", error);
   }
 }
 
