@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const DEFAULT_BACKEND_GRAPHQL_URL = "http://localhost:3001/api/graphql";
+const LOCAL_BACKEND_GRAPHQL_URL = "http://localhost:3001/api/graphql";
+const DEFAULT_PRODUCTION_BACKEND_GRAPHQL_URL =
+  "https://team10-backend.team10-backend-2026-tsatska.workers.dev/api/graphql";
 
 function normalizeGraphqlUrl(value: string) {
   if (value.endsWith("/api/graphql")) {
@@ -24,7 +26,7 @@ function buildCandidateUrls(request: NextRequest) {
 
   const inferredUrls = (() => {
     if (!isLocalRequest) {
-      return [DEFAULT_BACKEND_GRAPHQL_URL];
+      return [DEFAULT_PRODUCTION_BACKEND_GRAPHQL_URL];
     }
 
     const requestUrl = new URL(request.url);
@@ -44,7 +46,14 @@ function buildCandidateUrls(request: NextRequest) {
     );
   })();
 
-  return [...new Set([...explicitUrls, ...inferredUrls, DEFAULT_BACKEND_GRAPHQL_URL])];
+  return [
+    ...new Set([
+      ...explicitUrls,
+      ...inferredUrls,
+      DEFAULT_PRODUCTION_BACKEND_GRAPHQL_URL,
+      LOCAL_BACKEND_GRAPHQL_URL,
+    ]),
+  ];
 }
 
 function defaultPort(protocol: string) {
