@@ -1,3 +1,10 @@
+type AssetLabelPdf {
+  assetCount: Int!
+  base64: String!
+  contentType: String!
+  fileName: String!
+}
+
 input CatalogAttributeInput {
   attributeName: String!
   attributeValue: String!
@@ -168,6 +175,7 @@ input OrderItemInput {
 
 type Query {
   asset(id: ID, qrCode: String): StorageAsset
+  assetLabelPdf(assetCodes: [String!]!): AssetLabelPdf!
   catalogCategories: [CatalogCategory!]!
   catalogItemTypes(categoryId: ID): [CatalogItemType!]!
   catalogProduct(id: ID!): CatalogProduct

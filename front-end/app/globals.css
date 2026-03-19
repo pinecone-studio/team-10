@@ -841,14 +841,21 @@ html[data-backend-busy="true"] button:not(:disabled) svg {
   --checkbox-bg: #dbeafe;
   --checkbox-border: #a9c9ef;
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  vertical-align: middle;
   cursor: pointer;
   user-select: none;
+  overflow: hidden;
   -webkit-tap-highlight-color: transparent;
 }
 
 .ios-checkbox input {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .checkbox-wrapper {

@@ -14,35 +14,35 @@ export const STORAGE_STATUS_OPTIONS: StorageOption[] = [
   {
     value: "available",
     label: "Available",
-    toneClassName: "border-[#a7f3d0] bg-[#ecfdf3] text-[#0f9f5f]",
+    toneClassName: "border-[#a7efc9] bg-[#ecfff4] text-[#12a150]",
     menuIconClassName: "text-[#84cc16]",
     icon: <CubeIcon />,
   },
   {
     value: "assigned",
     label: "Assigned",
-    toneClassName: "border-[#bfdbfe] bg-[#eaf2ff] text-[#2563eb]",
-    menuIconClassName: "text-[#2563eb]",
+    toneClassName: "border-[#bfd7ff] bg-[#ebf3ff] text-[#255df0]",
+    menuIconClassName: "text-[#255df0]",
     icon: <BriefcaseIcon />,
   },
   {
     value: "inRepair",
     label: "In Repair",
-    toneClassName: "border-[#fde68a] bg-[#fff6d9] text-[#c96a00]",
+    toneClassName: "border-[#ffd979] bg-[#fff4d2] text-[#c96a00]",
     menuIconClassName: "text-[#f97316]",
     icon: <WrenchIcon />,
   },
   {
     value: "pendingDisposal",
     label: "Pending Disposal",
-    toneClassName: "border-[#fecdd3] bg-[#fff1f3] text-[#dc2626]",
+    toneClassName: "border-[#ffc9ce] bg-[#fff0f1] text-[#d61f26]",
     menuIconClassName: "text-[#dc2626]",
     icon: <TrashIcon />,
   },
   {
     value: "pendingRetrieval",
     label: "Pending Retrieval",
-    toneClassName: "border-[#d7e3f4] bg-[#f6f9fd] text-[#475569]",
+    toneClassName: "border-[#d7e3f4] bg-[#f6f9fd] text-[#52637a]",
     menuIconClassName: "text-[#64748b]",
     icon: <ReturnIcon />,
   },
@@ -81,12 +81,12 @@ export const STORAGE_CONDITION_OPTIONS: StorageOption[] = [
 
 export function StorageStatusBadge({ value }: { value: string }) {
   const option = getStorageOption(STORAGE_STATUS_OPTIONS, value);
-  return <StorageBadge option={option} />;
+  return <StorageBadge option={option} kind="status" />;
 }
 
 export function StorageConditionBadge({ value }: { value: string }) {
   const option = getStorageOption(STORAGE_CONDITION_OPTIONS, value);
-  return <StorageBadge option={option} />;
+  return <StorageBadge option={option} kind="condition" />;
 }
 
 export function StorageSelectMenu({
@@ -129,7 +129,10 @@ export function StorageSelectMenu({
         onClick={() => setIsOpen((current) => !current)}
         className="flex w-full items-center justify-between rounded-[16px] border border-[#d8e6f4] bg-white px-3 py-3 text-left shadow-[0_12px_30px_rgba(148,163,184,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <StorageBadge option={selected} />
+        <StorageBadge
+          option={selected}
+          kind={options === STORAGE_CONDITION_OPTIONS ? "condition" : "status"}
+        />
         <svg
           width="16"
           height="16"
@@ -160,11 +163,11 @@ export function StorageSelectMenu({
                     onChange(option.value);
                     setIsOpen(false);
                   }}
-                  className={`flex w-full items-center justify-between rounded-[12px] px-3 py-2 text-left transition ${
+                  className={`flex w-full items-center justify-between rounded-[12px] px-4 py-[11px] text-left transition ${
                     isSelected ? "bg-[#f8fbff]" : "hover:bg-[#f8fbff]"
                   }`}
                 >
-                  <span className="text-[15px] font-medium text-[#344054]">
+                  <span className="text-[16px] font-medium text-[#344054]">
                     {option.label}
                   </span>
                   <span className={option.menuIconClassName} aria-hidden="true">
@@ -218,6 +221,14 @@ export function StorageCheckbox({
   );
 }
 
+export function StorageCategoryBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex h-8 min-w-[124px] items-center justify-center rounded-full border border-[#d7e2ef] bg-[#fbfcfe] px-3 text-[12px] font-medium leading-none text-[#6b7280]">
+      <span className="whitespace-nowrap">{label}</span>
+    </span>
+  );
+}
+
 function getStorageOption(options: StorageOption[], value: string) {
   return (
     options.find((option) => option.value === value) ?? {
@@ -236,13 +247,28 @@ function humanizeStorageValue(value: string) {
     .replace(/^./, (character) => character.toUpperCase());
 }
 
-function StorageBadge({ option }: { option: StorageOption }) {
+function StorageBadge({
+  option,
+  kind = "status",
+}: {
+  option: StorageOption;
+  kind?: "status" | "condition";
+}) {
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-[7px] text-[13px] font-medium leading-none ${option.toneClassName}`}
+      className={`inline-flex h-8 items-center gap-[6px] rounded-full border px-3 text-[12px] font-medium leading-none ${
+        kind === "condition"
+          ? `justify-start text-[#6b7280] ${option.toneClassName}`
+          : option.toneClassName
+      }`}
     >
-      <span aria-hidden="true">{option.icon}</span>
-      <span>{option.label}</span>
+      <span
+        className={`${kind === "condition" ? option.menuIconClassName : ""} shrink-0`}
+        aria-hidden="true"
+      >
+        {option.icon}
+      </span>
+      <span className="whitespace-nowrap">{option.label}</span>
     </span>
   );
 }
