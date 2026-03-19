@@ -1,17 +1,20 @@
-export default function DistributionHeader() {
+import DistributionDashboard from "./DistributionDashboard";
+
+export default function DistributionHeader(props: {
+  pendingCount: number;
+  inTransitCount: number;
+  deliveredCount: number;
+  signedCount: number;
+}) {
   return (
-    <div className="flex w-full flex-col gap-6 bg-white px-6 pt-6 pb-2">
+    <section className="flex w-full flex-col gap-5">
       <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-col gap-1">
-          <p className="font-inter text-[24px] font-bold leading-8 text-[#0A0A0A]">
-            Distribution
-          </p>
-          <p className="font-inter text-sm font-normal leading-5 text-slate-500">
-            Distribute items from storage to employees
-          </p>
+          <h1 className="font-[var(--font-inter)] text-[24px] font-bold leading-none text-[#050810]">Distribution</h1>
+          <p className="font-[var(--font-inter)] text-[14px] font-normal leading-5 text-[#64748B]">Distribute items from storage to employees</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 min-w-[166px] cursor-pointer items-center justify-center gap-1.5 rounded-md bg-slate-900 px-4 py-2 transition hover:bg-slate-800 active:scale-[0.99]">
+          <button type="button" className="flex items-center justify-center gap-[6px] rounded-[6px] bg-[#0F172A] px-4 py-2 text-[15px] font-medium text-white">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="15"
@@ -32,11 +35,9 @@ export default function DistributionHeader() {
                 strokeLinejoin="round"
               />
             </svg>
-            <p className="text-sm font-medium leading-6 tracking-normal text-white">
-              New distribution
-            </p>
-          </div>
-          <div className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-slate-200 bg-white p-2 transition hover:bg-slate-50 active:scale-[0.99]">
+            <span>New distribution</span>
+          </button>
+          <button type="button" className="flex h-[40px] w-[40px] items-center justify-center rounded-[8px] border border-[#d7e4f2] bg-white">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -49,9 +50,10 @@ export default function DistributionHeader() {
                 fill="black"
               />
             </svg>
-          </div>
+          </button>
         </div>
       </div>
-    </div>
+      <DistributionDashboard pendingCount={props.pendingCount} inTransitCount={props.inTransitCount} deliveredCount={props.deliveredCount} signedCount={props.signedCount} />
+    </section>
   );
 }
