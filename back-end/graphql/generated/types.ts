@@ -112,8 +112,38 @@ export type CatalogProductImage = {
   updatedAt: Scalars['String']['output'];
 };
 
+export type DistributionRecord = {
+  __typename?: 'DistributionRecord';
+  assetCode: Scalars['String']['output'];
+  assetId: Scalars['ID']['output'];
+  assetName: Scalars['String']['output'];
+  assetStatus: Scalars['String']['output'];
+  assignmentRequestId?: Maybe<Scalars['ID']['output']>;
+  category: Scalars['String']['output'];
+  conditionStatus: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  currentStorageId?: Maybe<Scalars['ID']['output']>;
+  currentStorageName?: Maybe<Scalars['String']['output']>;
+  distributedAt: Scalars['String']['output'];
+  distributedByUserId: Scalars['ID']['output'];
+  employeeId: Scalars['ID']['output'];
+  employeeName: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  itemType: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  recipientRole: Scalars['String']['output'];
+  returnCondition?: Maybe<Scalars['String']['output']>;
+  returnPower?: Maybe<Scalars['String']['output']>;
+  returnedAt?: Maybe<Scalars['String']['output']>;
+  serialNumber?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
+  usageYears?: Maybe<Scalars['String']['output']>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
+  assignAssetDistribution: DistributionRecord;
   createAssetAudit: Array<AssetAuditEntry>;
   createCatalogCategory: CatalogCategory;
   createCatalogProduct: CatalogProduct;
@@ -125,10 +155,20 @@ export type Mutation = {
   markAllNotificationsAsRead: Scalars['Boolean']['output'];
   markNotificationAsRead?: Maybe<Notification>;
   receiveOrderItem: ReceiveOrderItemPayload;
+  returnAssetDistribution: DistributionRecord;
+  sendDistributionNotification: Scalars['Boolean']['output'];
   updateCatalogProduct?: Maybe<CatalogProduct>;
   updateOrder?: Maybe<Order>;
   updateReceive?: Maybe<Receive>;
   updateStorageAsset: StorageAsset;
+};
+
+
+export type MutationAssignAssetDistributionArgs = {
+  assetId: Scalars['ID']['input'];
+  employeeName: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  recipientRole?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -238,6 +278,22 @@ export type MutationReceiveOrderItemArgs = {
   receivedNote?: InputMaybe<Scalars['String']['input']>;
   serialNumbers?: InputMaybe<Array<Scalars['String']['input']>>;
   storageLocation?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationReturnAssetDistributionArgs = {
+  distributionId: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  returnCondition?: InputMaybe<Scalars['String']['input']>;
+  returnPower?: InputMaybe<Scalars['String']['input']>;
+  storageLocation?: InputMaybe<Scalars['String']['input']>;
+  usageYears?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationSendDistributionNotificationArgs = {
+  distributionId: Scalars['ID']['input'];
+  message?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -403,6 +459,7 @@ export type Query = {
   __typename?: 'Query';
   asset?: Maybe<StorageAsset>;
   assetAuditHistory: Array<AssetAuditEntry>;
+  assetDistributions: Array<DistributionRecord>;
   assetLabelPdf: AssetLabelPdf;
   catalogCategories: Array<CatalogCategory>;
   catalogItemTypes: Array<CatalogItemType>;
@@ -425,6 +482,11 @@ export type QueryAssetArgs = {
 
 export type QueryAssetAuditHistoryArgs = {
   assetId: Scalars['ID']['input'];
+};
+
+
+export type QueryAssetDistributionsArgs = {
+  includeReturned?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 
@@ -609,6 +671,7 @@ export type ResolversTypes = {
   CatalogProduct: ResolverTypeWrapper<CatalogProduct>;
   CatalogProductAttribute: ResolverTypeWrapper<CatalogProductAttribute>;
   CatalogProductImage: ResolverTypeWrapper<CatalogProductImage>;
+  DistributionRecord: ResolverTypeWrapper<DistributionRecord>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
@@ -637,6 +700,7 @@ export type ResolversParentTypes = {
   CatalogProduct: CatalogProduct;
   CatalogProductAttribute: CatalogProductAttribute;
   CatalogProductImage: CatalogProductImage;
+  DistributionRecord: DistributionRecord;
   Float: Scalars['Float']['output'];
   ID: Scalars['ID']['output'];
   Int: Scalars['Int']['output'];
@@ -737,7 +801,37 @@ export type CatalogProductImageResolvers<ContextType = GraphQLContext, ParentTyp
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type DistributionRecordResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DistributionRecord'] = ResolversParentTypes['DistributionRecord']> = {
+  assetCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  assetId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  assetName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  assetStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  assignmentRequestId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  conditionStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  currentStorageId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  currentStorageName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  distributedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  distributedByUserId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  employeeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  employeeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  itemType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  note?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  recipientRole?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  returnCondition?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  returnPower?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  returnedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  serialNumber?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  usageYears?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
+  assignAssetDistribution?: Resolver<ResolversTypes['DistributionRecord'], ParentType, ContextType, RequireFields<MutationAssignAssetDistributionArgs, 'assetId' | 'employeeName'>>;
   createAssetAudit?: Resolver<Array<ResolversTypes['AssetAuditEntry']>, ParentType, ContextType, RequireFields<MutationCreateAssetAuditArgs, 'assetIds'>>;
   createCatalogCategory?: Resolver<ResolversTypes['CatalogCategory'], ParentType, ContextType, RequireFields<MutationCreateCatalogCategoryArgs, 'displayName'>>;
   createCatalogProduct?: Resolver<ResolversTypes['CatalogProduct'], ParentType, ContextType, RequireFields<MutationCreateCatalogProductArgs, 'displayName' | 'productCode'>>;
@@ -749,6 +843,8 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   markAllNotificationsAsRead?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, Partial<MutationMarkAllNotificationsAsReadArgs>>;
   markNotificationAsRead?: Resolver<Maybe<ResolversTypes['Notification']>, ParentType, ContextType, RequireFields<MutationMarkNotificationAsReadArgs, 'id'>>;
   receiveOrderItem?: Resolver<ResolversTypes['ReceiveOrderItemPayload'], ParentType, ContextType, RequireFields<MutationReceiveOrderItemArgs, 'itemCode' | 'orderId' | 'quantityReceived' | 'receivedCondition'>>;
+  returnAssetDistribution?: Resolver<ResolversTypes['DistributionRecord'], ParentType, ContextType, RequireFields<MutationReturnAssetDistributionArgs, 'distributionId'>>;
+  sendDistributionNotification?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationSendDistributionNotificationArgs, 'distributionId'>>;
   updateCatalogProduct?: Resolver<Maybe<ResolversTypes['CatalogProduct']>, ParentType, ContextType, RequireFields<MutationUpdateCatalogProductArgs, 'id'>>;
   updateOrder?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<MutationUpdateOrderArgs, 'id'>>;
   updateReceive?: Resolver<Maybe<ResolversTypes['Receive']>, ParentType, ContextType, RequireFields<MutationUpdateReceiveArgs, 'id'>>;
@@ -828,6 +924,7 @@ export type OrderItemResolvers<ContextType = GraphQLContext, ParentType extends 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
   asset?: Resolver<Maybe<ResolversTypes['StorageAsset']>, ParentType, ContextType, Partial<QueryAssetArgs>>;
   assetAuditHistory?: Resolver<Array<ResolversTypes['AssetAuditEntry']>, ParentType, ContextType, RequireFields<QueryAssetAuditHistoryArgs, 'assetId'>>;
+  assetDistributions?: Resolver<Array<ResolversTypes['DistributionRecord']>, ParentType, ContextType, Partial<QueryAssetDistributionsArgs>>;
   assetLabelPdf?: Resolver<ResolversTypes['AssetLabelPdf'], ParentType, ContextType, RequireFields<QueryAssetLabelPdfArgs, 'assetCodes'>>;
   catalogCategories?: Resolver<Array<ResolversTypes['CatalogCategory']>, ParentType, ContextType>;
   catalogItemTypes?: Resolver<Array<ResolversTypes['CatalogItemType']>, ParentType, ContextType, Partial<QueryCatalogItemTypesArgs>>;
@@ -913,6 +1010,7 @@ export type Resolvers<ContextType = GraphQLContext> = {
   CatalogProduct?: CatalogProductResolvers<ContextType>;
   CatalogProductAttribute?: CatalogProductAttributeResolvers<ContextType>;
   CatalogProductImage?: CatalogProductImageResolvers<ContextType>;
+  DistributionRecord?: DistributionRecordResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   Notification?: NotificationResolvers<ContextType>;
   Order?: OrderResolvers<ContextType>;
@@ -923,3 +1021,4 @@ export type Resolvers<ContextType = GraphQLContext> = {
   ReceivedAsset?: ReceivedAssetResolvers<ContextType>;
   StorageAsset?: StorageAssetResolvers<ContextType>;
 };
+

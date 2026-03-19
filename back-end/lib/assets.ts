@@ -1,4 +1,4 @@
-import { asc, eq, isNotNull, or, sql } from "drizzle-orm";
+import { asc, eq, or, sql } from "drizzle-orm";
 import {
   assets,
   assetStatusValues,
@@ -98,6 +98,22 @@ const storageAssetSelection = {
   updatedAt: sql<string>`${assets.updatedAt}`.as("updatedAt"),
 };
 
+function getStorageNameFallback(row: StorageAssetRow) {
+  if (row.storageName) {
+    return row.storageName;
+  }
+
+  if (row.assetStatus === "assigned") {
+    return "Assigned to employee";
+  }
+
+  if (row.assetStatus === "pendingRetrieval") {
+    return "Pending retrieval";
+  }
+
+  return "Main warehouse / Intake";
+}
+
 async function mapStorageAsset(
   row: StorageAssetRow,
   runtimeConfig?: RuntimeConfig,
@@ -132,7 +148,7 @@ async function mapStorageAsset(
     conditionStatus: row.conditionStatus,
     assetStatus: row.assetStatus,
     storageId: row.storageId === null ? null : String(row.storageId),
-    storageName: row.storageName ?? "Main warehouse / Intake",
+    storageName: getStorageNameFallback(row),
     storageType: row.storageType,
     receivedAt: row.receivedAt,
     receiveNote: row.receiveNote,
@@ -166,7 +182,6 @@ export async function listStorageAssets(
 ): Promise<StorageAssetRecord[]> {
   try {
     const rows = await buildStorageAssetsBaseQuery(db)
-      .where(isNotNull(assets.currentStorageId))
       .orderBy(asc(storage.storageName), asc(assets.assetName), asc(assets.id));
 
     return Promise.all(rows.map((row) => mapStorageAsset(row, runtimeConfig)));

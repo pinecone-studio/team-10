@@ -871,8 +871,12 @@ export const assetDistributions = sqliteTable(
     distributedAt: text("distributed_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
+    recipientRole: text("recipient_role"),
     status: text("status", { enum: distributionStatusValues }).notNull(),
     returnedAt: text("returned_at"),
+    usageYears: text("usage_years"),
+    returnCondition: text("return_condition"),
+    returnPower: text("return_power"),
     note: text("note"),
     ...timestamps(),
   },
