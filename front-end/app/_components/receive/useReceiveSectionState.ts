@@ -34,6 +34,7 @@ export function useReceiveSectionState() {
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [customTypesByCategory, setCustomTypesByCategory] = useState<Record<string, string[]>>({});
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedImageFileName, setUploadedImageFileName] = useState<string | null>(null);
   const [specificationFields, setSpecificationFields] = useState<ReceiveSpecificationField[]>([]);
 
   const filteredRows = useMemo(() => {
@@ -105,11 +106,11 @@ export function useReceiveSectionState() {
   }
 
   function resetDetailState() {
-    setSelectedRowId(null); setSelectedCategory(""); setSelectedType(""); setUploadedImage(null); setSpecificationFields([]);
+    setSelectedRowId(null); setSelectedCategory(""); setSelectedType(""); setUploadedImage(null); setUploadedImageFileName(null); setSpecificationFields([]);
   }
   function openRow(rowId: string) {
     const row = rows.find((entry) => entry.id === rowId);
-    setSelectedRowId(rowId); setReceivedDate(today); setQuantityReceived(`${row?.quantity ?? 1}`); setReceivedCondition("good"); setReceivedNote(""); if (row) applyClassificationDefaults(row); setUploadedImage(null);
+    setSelectedRowId(rowId); setReceivedDate(today); setQuantityReceived(`${row?.quantity ?? 1}`); setReceivedCondition("good"); setReceivedNote(""); if (row) applyClassificationDefaults(row); setUploadedImage(null); setUploadedImageFileName(null);
   }
   async function handleQuickCreate() {
     if (activeRow) {
@@ -120,7 +121,7 @@ export function useReceiveSectionState() {
     const createdOrder = await createDemoReceivableOrder();
     const createdRow = buildReceiveRows([createdOrder])[0];
     if (createdRow) {
-      setSelectedRowId(createdRow.id); setReceivedDate(today); setReceivedCondition("good"); setQuantityReceived(`${Math.max(1, createdRow.quantity)}`); setReceivedNote(`Demo intake for ${createdRow.assetName}.`); applyClassificationDefaults(createdRow); setUploadedImage(null);
+      setSelectedRowId(createdRow.id); setReceivedDate(today); setReceivedCondition("good"); setQuantityReceived(`${Math.max(1, createdRow.quantity)}`); setReceivedNote(`Demo intake for ${createdRow.assetName}.`); applyClassificationDefaults(createdRow); setUploadedImage(null); setUploadedImageFileName(null);
     }
   }
   function handleAddCategory(value: string) {
@@ -176,17 +177,16 @@ export function useReceiveSectionState() {
   function handleRemoveSpecification(id: string) {
     setSpecificationFields((current) => current.filter((field) => field.id !== id));
   }
-  function handleUploadImage(file: File) { const reader = new FileReader(); reader.onload = () => setUploadedImage(String(reader.result)); reader.readAsDataURL(file); }
+  function handleUploadImage(file: File) { const reader = new FileReader(); setUploadedImageFileName(file.name); reader.onload = () => setUploadedImage(String(reader.result)); reader.readAsDataURL(file); }
   async function handleSubmitReceive() {
     if (!activeRow) return;
     setCompletedRowIds((current) => Array.from(new Set([...current, activeRow.id])));
     const order = orders.find((entry) => entry.id === activeRow.orderId);
     if (!order) return;
     const resolvedQuantity = Math.max(1, Math.min(activeRow.quantity, Number(quantityReceived) || 1));
-    await receiveInventoryOrder({ orderId: order.id, catalogId: activeProduct?.id ?? order.items.find((item) => item.code === activeRow.itemCode)?.catalogId ?? activeRow.itemCode, itemCode: activeRow.itemCode, quantityReceived: resolvedQuantity, receivedAt: receivedDate, receivedCondition: receivedCondition === "good" ? "complete" : "issue", receivedNote: buildIntakeMetadataNote({ note: receivedNote.trim() || `Received ${activeRow.assetName} and completed intake.`, department: activeRow.department, category: selectedCategory, itemType: selectedType, specifications: specificationFields.map((field) => ({ name: field.name, value: field.value })) }), storageLocation: "Main warehouse / Intake", serialNumbers: generatedQrCodes.length > 0 ? generatedQrCodes.map((entry) => entry.serialNumber) : buildSerialNumbers(order), assetIds: createAssetIds(activeRow.assetName, receivedDate, resolvedQuantity) });
+    await receiveInventoryOrder({ orderId: order.id, catalogId: activeProduct?.id ?? order.items.find((item) => item.code === activeRow.itemCode)?.catalogId ?? activeRow.itemCode, itemCode: activeRow.itemCode, quantityReceived: resolvedQuantity, receivedAt: receivedDate, receivedCondition: receivedCondition === "good" ? "complete" : "issue", receivedNote: buildIntakeMetadataNote({ note: receivedNote.trim() || `Received ${activeRow.assetName} and completed intake.`, department: activeRow.department, category: selectedCategory, itemType: selectedType, specifications: specificationFields.map((field) => ({ name: field.name, value: field.value })) }), storageLocation: "Main warehouse / Intake", assetImageDataUrl: uploadedImage, assetImageFileName: uploadedImageFileName, serialNumbers: generatedQrCodes.length > 0 ? generatedQrCodes.map((entry) => entry.serialNumber) : buildSerialNumbers(order), assetIds: createAssetIds(activeRow.assetName, receivedDate, resolvedQuantity) });
     resetDetailState();
   }
 
-  return { rows, search, setSearch, completedRowIds, rowsPerPage, setRowsPerPage, page, setPage, currentPage, totalPages, expectedDateSortDirection, setExpectedDateSortDirection, statusFilter, setStatusFilter, receivedDate, setReceivedDate, receivedCondition, setReceivedCondition, quantityReceived, setQuantityReceived, receivedNote, setReceivedNote, selectedCategory, setSelectedCategory, selectedType, setSelectedType, specificationFields, uploadedImage, activeRow, activeProduct, categoryOptions, typeOptions, pagedRows, approvedRows, totalCost, totalReceivedQuantity, totalQuantity, summaryRequestLabel, handleQuickCreate, handleAddCategory, handleAddType, handleCategoryChange, handleTypeChange, handleAddCustomField, handleSpecificationChange, handleRemoveSpecification, handleUploadImage, handleSubmitReceive, openRow, resetDetailState, ROWS_PER_PAGE_OPTIONS };
   return { rows, search, setSearch, completedRowIds, rowsPerPage, setRowsPerPage, page, setPage, currentPage, totalPages, expectedDateSortDirection, setExpectedDateSortDirection, statusFilter, setStatusFilter, receivedDate, setReceivedDate, receivedCondition, setReceivedCondition, quantityReceived, setQuantityReceived: handleQuantityReceivedChange, receivedNote, setReceivedNote, selectedCategory, setSelectedCategory, selectedType, setSelectedType, specificationFields, suggestedSpecificationFields, uploadedImage, activeRow, activeProduct, categoryOptions, typeOptions, pagedRows, approvedRows, totalCost, totalReceivedQuantity, totalQuantity, summaryRequestLabel, handleQuickCreate, handleAddCategory, handleAddType, handleCategoryChange, handleTypeChange, handleAddCustomField, handleSpecificationChange, handleRemoveSpecification, handleUploadImage, handleSubmitReceive, openRow, resetDetailState, ROWS_PER_PAGE_OPTIONS };
 }
