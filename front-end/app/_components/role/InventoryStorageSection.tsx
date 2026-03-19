@@ -67,6 +67,7 @@ type CensusSession = {
 };
 
 export function InventoryStorageSection() {
+  const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
   const [assets, setAssets] = useState<StorageAssetDto[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [selectedCategory, setSelectedCategory] =
@@ -94,6 +95,8 @@ export function InventoryStorageSection() {
   const [sessionHistory, setSessionHistory] = useState<CensusSession[]>([]);
   const [openHeaderMenu, setOpenHeaderMenu] = useState<StorageHeaderMenu>(null);
   const [openRowActionId, setOpenRowActionId] = useState<string | null>(null);
+  const [rowsPerPage, setRowsPerPage] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -262,8 +265,14 @@ export function InventoryStorageSection() {
 
   const currentRole =
     pathname.split("/").filter(Boolean)[0] === "systemAdmin" ? "systemAdmin" : "inventoryHead";
+  const totalPages = Math.max(1, Math.ceil(visibleAssets.length / rowsPerPage));
+  const currentPageSafe = Math.min(currentPage, totalPages);
+  const paginatedAssets = visibleAssets.slice(
+    (currentPageSafe - 1) * rowsPerPage,
+    currentPageSafe * rowsPerPage,
+  );
   const allVisibleSelected =
-    visibleAssets.length > 0 && visibleAssets.every((asset) => selectedIds.includes(asset.id));
+    paginatedAssets.length > 0 && paginatedAssets.every((asset) => selectedIds.includes(asset.id));
   const selectedAssets = assets.filter((asset) => selectedIds.includes(asset.id));
   const scopedAssetCount =
     censusScope === "selected"
@@ -281,6 +290,25 @@ export function InventoryStorageSection() {
     window.addEventListener("pointerdown", handlePointerDown);
     return () => window.removeEventListener("pointerdown", handlePointerDown);
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    searchValue,
+    selectedCategory,
+    selectedType,
+    selectedConditionFilter,
+    selectedStatusFilter,
+    selectedLocationFilter,
+    sortMode,
+    rowsPerPage,
+  ]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   function handleActionClick(action: (typeof ACTIONS)[number]) {
     if (action === "Census") {
@@ -650,7 +678,18 @@ export function InventoryStorageSection() {
                         <StorageCheckbox
                           checked={allVisibleSelected}
                           onChange={(checked) =>
-                            setSelectedIds(checked ? visibleAssets.map((asset) => asset.id) : [])
+                            setSelectedIds((current) =>
+                              checked
+                                ? Array.from(
+                                    new Set([
+                                      ...current,
+                                      ...paginatedAssets.map((asset) => asset.id),
+                                    ]),
+                                  )
+                                : current.filter(
+                                    (id) => !paginatedAssets.some((asset) => asset.id === id),
+                                  ),
+                            )
                           }
                           ariaLabel="Select all storage assets"
                         />
@@ -793,7 +832,7 @@ export function InventoryStorageSection() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleAssets.map((asset, index) => (
+                    {paginatedAssets.map((asset, index) => (
                       <tr key={asset.id} className="transition hover:bg-[#f8fbff]">
                         <td className="border-t border-[#edf2f7] px-3 py-4 text-center align-middle">
                           <div onClick={(event) => event.stopPropagation()}>
@@ -811,7 +850,7 @@ export function InventoryStorageSection() {
                           </div>
                         </td>
                         <td className="border-t border-[#edf2f7] px-3 py-4 align-middle">
-                          {index + 1}
+                          {(currentPageSafe - 1) * rowsPerPage + index + 1}
                         </td>
                         <td className="border-t border-[#edf2f7] px-3 py-4 align-middle font-semibold text-[#0f172a]">
                           <div className="whitespace-nowrap leading-6">{asset.assetCode}</div>
@@ -906,9 +945,61 @@ export function InventoryStorageSection() {
             <div className="flex items-center justify-between px-1 pt-3 text-[10px] text-[#64748b]">
               <span>{selectedIds.length} of {visibleAssets.length} row(s) selected.</span>
               <div className="flex items-center gap-4">
-                <span>Rows per page 10</span>
-                <span>Page 1 of 1</span>
-                <span>{"< < > >"}</span>
+                <label className="flex items-center gap-2">
+                  <span>Rows per page</span>
+                  <select
+                    value={rowsPerPage}
+                    onChange={(event) =>
+                      setRowsPerPage(Number(event.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])
+                    }
+                    className="rounded-[8px] border border-[#d7e2ef] bg-white px-2 py-1 text-[10px] text-[#334155] outline-none"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span>Page {currentPageSafe} of {totalPages}</span>
+                <div className="flex items-center gap-1 text-[12px]">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPageSafe === 1}
+                    className="rounded px-1.5 py-0.5 transition hover:bg-[#eef6ff] disabled:opacity-40"
+                    aria-label="First page"
+                  >
+                    {"<<"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={currentPageSafe === 1}
+                    className="rounded px-1.5 py-0.5 transition hover:bg-[#eef6ff] disabled:opacity-40"
+                    aria-label="Previous page"
+                  >
+                    {"<"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    disabled={currentPageSafe === totalPages}
+                    className="rounded px-1.5 py-0.5 transition hover:bg-[#eef6ff] disabled:opacity-40"
+                    aria-label="Next page"
+                  >
+                    {">"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPageSafe === totalPages}
+                    className="rounded px-1.5 py-0.5 transition hover:bg-[#eef6ff] disabled:opacity-40"
+                    aria-label="Last page"
+                  >
+                    {">>"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
