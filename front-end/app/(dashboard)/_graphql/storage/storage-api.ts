@@ -3,7 +3,7 @@
 import { gql } from "@apollo/client/core";
 import { parseIntakeMetadata } from "@/app/_lib/intake-metadata";
 import { apolloClient } from "@/app/providers/apolloClient";
-import { loadOrdersSnapshot } from "@/app/_lib/order-store";
+import { fetchOrdersRequest } from "@/app/(dashboard)/_graphql/orders/order-api";
 
 export type StorageAssetDto = {
   id: string;
@@ -59,7 +59,7 @@ function inferStorageCategory(itemName: string) {
 }
 
 function buildLocalStorageAssets(): Promise<StorageAssetDto[]> {
-  return loadOrdersSnapshot().then((orders) =>
+  return fetchOrdersRequest().then((orders) =>
     orders
       .filter((order) => order.status === "received_inventory" || order.status === "assigned_hr")
       .flatMap((order) =>
