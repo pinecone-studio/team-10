@@ -49,7 +49,7 @@ export const roleNavSections: Record<AppRole, readonly SectionKey[]> = {
   inventoryHead: ["order", "receive", "storage"],
   finance: ["order"],
   itAdmin: ["storage", "dispose"],
-  hrManager: ["distribution", "dispose"],
+  hrManager: ["storage", "distribution", "dispose"],
   systemAdmin: ["order", "receive", "storage", "distribution", "dispose", "terminate"],
 };
 

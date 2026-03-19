@@ -21,7 +21,7 @@ export function RoleWorkspace({ role, roleLabel, section }: { role: AppRole; rol
   if ((role === "higherUpApprover" || role === "systemAdmin") && section === "terminate") return <HigherUpTerminateSection />;
   if (role === "finance" && section === "order") return <FinanceApprovalSection />;
   if ((role === "inventoryHead" || role === "systemAdmin") && section === "receive") return <InventoryReceiveSection />;
-  if (role === "inventoryHead" && section === "storage") return <InventoryStorageSection />;
+  if ((role === "inventoryHead" || role === "hrManager") && section === "storage") return <InventoryStorageSection />;
   if ((role === "hrManager" || role === "systemAdmin") && section === "distribution") return <HRDistributionSection />;
   if (role === "employee" && section === "distribution") return <EmployeeAssetsSection />;
   if (role === "employee" && section === "employeeRequests") return <EmployeeRequestsSection />;
