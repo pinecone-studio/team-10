@@ -43,14 +43,14 @@ export function ReceiveConditionBadge({ condition }: { condition: ReceiveConditi
       className={`inline-flex h-[22px] items-center gap-[4px] rounded-[999px] border border-[#d0d5dd] bg-white px-[8px] text-[12px] leading-none ${config.textClassName}`}
     >
       <span className={config.iconClassName} aria-hidden="true">
-        <ConditionIcon condition={condition} />
+        <ReceiveConditionIcon condition={condition} />
       </span>
       <span>{config.label}</span>
     </span>
   );
 }
 
-function ConditionIcon({ condition }: { condition: ReceiveCondition }) {
+export function ReceiveConditionIcon({ condition }: { condition: ReceiveCondition }) {
   if (condition === "good") {
     return (
       <svg width="12" height="12" viewBox="0 0 14 14" fill="none">

@@ -37,16 +37,9 @@ export function OrderHistoryToolbar(props: {
 }) {
   return (
     <>
-      <div className="flex items-end justify-between gap-4 bg-white px-[24px] pb-4 pt-[60px] lg:pl-[44px] lg:pr-[60px]">
+      <div className="flex items-end justify-between gap-4 px-[44px] pb-4 pt-[60px]">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-[24px] font-bold leading-none text-black">
-              Order history
-            </h2>
-            <span className="inline-flex items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#2563eb]">
-              Updated
-            </span>
-          </div>
+          <h2 className="text-[24px] font-bold leading-none text-black">Order history</h2>
           <p className="mt-1 text-[14px] leading-5 text-[#64748b]">
             View and manage all inventory order requests.
           </p>
@@ -62,24 +55,24 @@ export function OrderHistoryToolbar(props: {
           <OrderNotificationButton onOpenDetail={props.onOpenDetail} />
         </div>
       </div>
-      <div className="flex flex-col gap-4 border-y border-[#e2e8f0] bg-white px-6 py-[25px] xl:flex-row xl:items-center xl:justify-between">
-        <div className="inline-flex w-fit flex-wrap items-center rounded-[8px] bg-[#f1f5f9] p-1">
+      <div className="flex flex-col gap-4 border-y border-[#d9e9fb] bg-transparent px-[44px] py-[22px] xl:flex-row xl:items-center xl:justify-between">
+        <div className="inline-flex w-fit flex-wrap items-center rounded-[12px] border border-[#e2efff] bg-[rgba(255,255,255,0.72)] p-1.5 shadow-[0_10px_30px_rgba(125,170,232,0.14),0_2px_8px_rgba(15,23,42,0.04)] backdrop-blur-[10px]">
           {filterOptions.map((filter) => (
             <button
               key={filter}
               type="button"
               onClick={() => props.onFilterChange(filter)}
-              className={`inline-flex cursor-pointer items-center gap-[10px] rounded-[4px] px-3 py-1 text-[14px] transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2 ${props.selectedFilter === filter ? "bg-white font-normal text-black shadow-[0_1px_2px_rgba(15,23,42,0.06)] hover:bg-white active:bg-[#f8fafc]" : "text-[#64748b] hover:bg-white/70 active:bg-white"}`}
+              className={`inline-flex cursor-pointer items-center gap-[8px] rounded-[10px] px-4 py-2 text-[14px] transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2 ${props.selectedFilter === filter ? "bg-white font-medium text-[#111827] shadow-[0_4px_14px_rgba(125,170,232,0.18)] hover:bg-white active:bg-[#f8fafc]" : "text-[#64748b] hover:bg-white/70 active:bg-white"}`}
             >
               <span>{filter[0]!.toUpperCase() + filter.slice(1)}</span>
-              <span className="rounded-[4px] bg-[#f1f5f9] px-1 text-[12px] text-[#757575]">
+              <span className={`rounded-full px-1.5 text-[11px] ${props.selectedFilter === filter ? "bg-[#eff6ff] text-[#4f82db]" : "bg-[#edf2f7] text-[#64748b]"}`}>
                 {props.counts[filter]}
               </span>
             </button>
           ))}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
-          <label className="flex h-9 w-full items-center gap-[6px] rounded-[6px] border border-[#e3e4e8] bg-white px-3 sm:w-[207px]">
+          <label className="flex h-10 w-full items-center gap-[6px] rounded-[10px] border border-[#e2efff] bg-[rgba(255,255,255,0.84)] px-3 shadow-[0_8px_18px_rgba(15,23,42,0.04)] sm:w-[207px]">
             <span>
               <SearchIcon />
             </span>
