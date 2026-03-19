@@ -9,6 +9,19 @@ import {
 } from "./shared.ts";
 import { resolveStorageId } from "./users.ts";
 
+function calculateUsageDuration(distributedAt: string, returnedAt: string) {
+  const start = new Date(distributedAt);
+  const end = new Date(returnedAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    return null;
+  }
+
+  const totalDays = Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86_400_000));
+  if (totalDays < 30) return `${totalDays} day`;
+  if (totalDays < 365) return `${Math.floor(totalDays / 30)} mo`;
+  return `${(totalDays / 365).toFixed(1).replace(/\.0$/, "")} yr`;
+}
+
 export async function returnAssetDistribution(
   db: AppDb,
   input: {
@@ -28,6 +41,7 @@ export async function returnAssetDistribution(
         assetId: assetDistributions.assetId,
         employeeId: assetDistributions.employeeId,
         status: assetDistributions.status,
+        distributedAt: assetDistributions.distributedAt,
       })
       .from(assetDistributions)
       .where(eq(assetDistributions.id, distributionId))
@@ -38,10 +52,11 @@ export async function returnAssetDistribution(
 
     const storageId = await resolveStorageId(db, input.storageLocation);
     const now = new Date().toISOString();
+    const usageYears = input.usageYears?.trim() || calculateUsageDuration(distribution.distributedAt, now);
     await db.update(assetDistributions).set({
       status: "returned",
       returnedAt: now,
-      usageYears: input.usageYears?.trim() || null,
+      usageYears,
       returnCondition: input.returnCondition?.trim() || null,
       returnPower: input.returnPower?.trim() || null,
       note: input.note?.trim() || null,

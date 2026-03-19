@@ -2,7 +2,6 @@ import type { DistributionRecordDto } from "@/app/(dashboard)/_graphql/distribut
 import type { StorageAssetDto } from "@/app/(dashboard)/_graphql/storage/storage-api";
 
 export type RetrievalDraft = {
-  years: string;
   condition: string;
   power: string;
   notes: string;
@@ -36,7 +35,18 @@ export type DistributionItem = {
 };
 
 export function draftFor(value?: RetrievalDraft): RetrievalDraft {
-  return value ?? { years: "", condition: "Okay", power: "Working", notes: "" };
+  return value ?? { condition: "Okay", power: "Working", notes: "" };
+}
+
+function calculateUsageDuration(distributedAt?: string | null, returnedAt?: string | null) {
+  if (!distributedAt || !returnedAt) return "-";
+  const start = new Date(distributedAt);
+  const end = new Date(returnedAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return "-";
+  const totalDays = Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86_400_000));
+  if (totalDays < 30) return `${totalDays} day`;
+  if (totalDays < 365) return `${Math.floor(totalDays / 30)} mo`;
+  return `${(totalDays / 365).toFixed(1).replace(/\.0$/, "")} yr`;
 }
 
 function toSession(record: DistributionRecordDto): DistributionSession {
@@ -44,7 +54,7 @@ function toSession(record: DistributionRecordDto): DistributionSession {
     holder: record.employeeName,
     role: record.recipientRole || "Employee",
     assignedAt: record.distributedAt,
-    years: record.usageYears || "-",
+    years: calculateUsageDuration(record.distributedAt, record.returnedAt) || record.usageYears || "-",
     condition: record.returnCondition || "-",
     power: record.returnPower || "-",
     notes: record.note || "No notes",
@@ -94,6 +104,7 @@ export function buildAvailableItems(storageAssets: StorageAssetDto[], historyMap
 }
 
 export function buildAssignedItems(records: DistributionRecordDto[]) {
+  const historyMap = buildHistoryMap(records);
   return records
     .filter((record) => record.status === "active")
     .map<DistributionItem>((record) => ({
@@ -109,6 +120,6 @@ export function buildAssignedItems(records: DistributionRecordDto[]) {
       itemType: record.itemType,
       holder: record.employeeName,
       role: record.recipientRole,
-      sessions: [],
+      sessions: historyMap[record.assetId] ?? [],
     }));
 }

@@ -4,11 +4,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   downloadAssetLabelsPdfRequest,
-  fetchStorageAssetsRequest,
   fetchStorageAssetDetailRequest,
   type StorageAssetDto,
   updateStorageAssetRequest,
 } from "@/app/(dashboard)/_graphql/storage/storage-api";
+import {
+  fetchAssetDistributionsRequest,
+  type DistributionRecordDto,
+} from "@/app/(dashboard)/_graphql/distribution/distribution-api";
 import { downloadBase64File } from "@/app/_lib/download-base64";
 import { formatCurrency, formatDisplayDate, useOrdersStore } from "@/app/_lib/order-store";
 import { buildRegisteredAssetScanUrl } from "@/app/_lib/qr-links";
@@ -31,68 +34,22 @@ type HistoryEntry = {
 
 type MobileTab = "details" | "history";
 type RegisteredQrMode = "employee" | "audit";
-type HrHandoffState = { holder: string | null; role: string | null; history: string[] };
-const HR_HANDOFFS_KEY = "ams-hr-asset-handoffs";
-function splitHandoffEntry(entry: string) {
-  const [date, ...rest] = entry.split(" | ");
-  return { date: rest.length ? date : "", text: rest.length ? rest.join(" | ") : entry };
-}
-function getLastHrHolder(history: string[] = []) {
-  return [...history]
-    .reverse()
-    .map((entry) => splitHandoffEntry(entry).text)
-    .find((entry) => entry.includes("->") && !entry.includes("Inventory Head"))
-    ?.split("->")
-    .at(-1)
-    ?.trim() ?? null;
-}
-function getMatchingHandoffState(
+function getMatchingDistributionRecords(
   asset: StorageAssetDto | null,
-  handoffs: Record<string, HrHandoffState>,
+  records: DistributionRecordDto[],
 ) {
   if (!asset) return null;
-  return (
-    handoffs[asset.id] ??
-    handoffs[asset.assetCode] ??
-    (asset.serialNumber ? handoffs[asset.serialNumber] : null) ??
-    Object.entries(handoffs).find(
-      ([key]) =>
-        key.includes(asset.assetCode) ||
-        (asset.serialNumber ? key.includes(asset.serialNumber) : false),
-    )?.[1] ??
-    null
-  );
-}
-function getHandoffSessions(history: string[] = []) {
-  const sessions: Array<{
-    holder: string;
-    assignedAt: string;
-    returnedAt: string;
-    notes: string;
-  }> = [];
-  for (const raw of history) {
-    const entry = splitHandoffEntry(raw);
-    if (entry.text.includes("->") && !entry.text.includes("Inventory Head")) {
-      sessions.push({
-        holder: entry.text.split("->").at(-1)?.trim() ?? "Unknown",
-        assignedAt: entry.date || "-",
-        returnedAt: "-",
-        notes: "No notes",
-      });
-      continue;
-    }
-    if (entry.text.startsWith("Inspection:")) {
-      const current = sessions.at(-1);
-      if (!current) continue;
-      const [, , , notes = "No notes"] = entry.text.replace("Inspection: ", "").split(" | ");
-      current.notes = notes || "No notes";
-      continue;
-    }
-    if (entry.text.includes("Inventory Head") && sessions.length) {
-      sessions[sessions.length - 1]!.returnedAt = entry.date || "-";
-    }
-  }
-  return sessions;
+  return records
+    .filter(
+      (record) =>
+        record.assetId === asset.id ||
+        record.assetCode === asset.assetCode ||
+        (!!asset.serialNumber && record.serialNumber === asset.serialNumber),
+    )
+    .sort((left, right) =>
+      new Date(right.distributedAt || right.createdAt).getTime() -
+      new Date(left.distributedAt || left.createdAt).getTime(),
+    );
 }
 
 export function StorageAssetDetailPage({
@@ -122,7 +79,7 @@ export function StorageAssetDetailPage({
   const [mobileTab, setMobileTab] = useState<MobileTab>("details");
   const [registeredQrMode, setRegisteredQrMode] =
     useState<RegisteredQrMode>("employee");
-  const [hrHandoffs, setHrHandoffs] = useState<Record<string, HrHandoffState>>({});
+  const [distributionRecords, setDistributionRecords] = useState<DistributionRecordDto[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -131,7 +88,10 @@ export function StorageAssetDetailPage({
       setErrorMessage(null);
 
       try {
-        const detail = await fetchStorageAssetDetailRequest({ id: assetId });
+        const [detail, distributions] = await Promise.all([
+          fetchStorageAssetDetailRequest({ id: assetId }),
+          fetchAssetDistributionsRequest(true),
+        ]);
         if (!isMounted) return;
 
         if (!detail) {
@@ -140,12 +100,9 @@ export function StorageAssetDetailPage({
         }
 
         setAsset(detail);
+        setDistributionRecords(distributions);
         setAuditResult(detail.receiveNote ?? "");
         setConfirmedLocation(detail.storageName);
-        try {
-          const saved = window.localStorage.getItem(HR_HANDOFFS_KEY);
-          if (saved) setHrHandoffs(JSON.parse(saved));
-        } catch {}
       } catch (error) {
         if (!isMounted) return;
         setErrorMessage(
@@ -221,39 +178,54 @@ export function StorageAssetDetailPage({
     [asset, orders, qrContext?.orderId],
   );
   const matchedHandoff = useMemo(
-    () => getMatchingHandoffState(asset, hrHandoffs),
-    [asset, hrHandoffs],
+    () => getMatchingDistributionRecords(asset, distributionRecords),
+    [asset, distributionRecords],
   );
   const ownershipSummary = useMemo(
     () => {
-      const handoff = matchedHandoff;
-      const lastHrHolder = getLastHrHolder(handoff?.history);
-      const sessions = getHandoffSessions(handoff?.history);
-      const currentSession = sessions.at(-1) ?? null;
-      const previousSessions = (handoff?.holder ? sessions.slice(0, -1) : sessions)
-        .map((session) => session.holder)
-        .filter((holder, index, list) => holder && list.indexOf(holder) === index);
-      const previousSession = sessions.length > 1 ? sessions.at(-2) ?? null : null;
-      return {
-      holder:
-        handoff?.holder ??
-        lastHrHolder ??
+      const records = matchedHandoff ?? [];
+      const currentRecord = records.find((record) => record.status === "active") ?? null;
+      const latestRecord = records[0] ?? null;
+      const currentHolderName =
+        currentRecord?.employeeName ??
+        latestRecord?.employeeName ??
         qrContext?.ownerName ??
         linkedOrder?.assignedTo ??
         linkedOrder?.requester ??
         asset?.requester ??
-        "Unassigned",
-      previousHolder:
-        previousSessions.length > 0
-          ? previousSessions.join(", ")
-          : previousSession?.holder ?? (handoff?.holder ? lastHrHolder : null) ?? "-",
-      holderRole:
-        handoff?.role ??
-        (lastHrHolder ? "Previous holder" : null) ??
+        "Unassigned";
+      const currentHolderRole =
+        currentRecord?.recipientRole ??
+        latestRecord?.recipientRole ??
         qrContext?.ownerRole ??
         linkedOrder?.assignedRole ??
-        "Unassigned",
-      latestNote: currentSession?.notes !== "No notes" ? currentSession?.notes ?? "No notes" : previousSession?.notes ?? "No notes",
+        "Unassigned";
+      const previousSessions = records
+        .filter((record) => !currentRecord || record.id !== currentRecord.id)
+        .map((record) =>
+          `${record.employeeName} (${record.recipientRole || "Employee"}${asset?.department ? `, ${asset.department}` : ""})`,
+        )
+        .filter((holder, index, list) => holder && list.indexOf(holder) === index);
+      const usageNotes = records
+        .filter(
+          (record) =>
+            !!record.note?.trim() ||
+            !!record.usageYears?.trim() ||
+            !!record.returnCondition?.trim() ||
+            !!record.returnPower?.trim(),
+        )
+        .map(
+          (record, index) =>
+            `${index + 1}. ${record.employeeName} (${record.recipientRole || "Employee"})\nReceived: ${formatDateOnly(record.distributedAt || record.createdAt)}\nReturned: ${record.returnedAt ? formatDateOnly(record.returnedAt) : "-"}\nUsed: ${calculateUsageDuration(record.distributedAt || record.createdAt, record.returnedAt) || record.usageYears || "-"}\nCondition: ${record.returnCondition || "-"}\nPower: ${record.returnPower || "-"}\nNote: ${record.note?.trim() || "No notes"}`,
+        );
+      return {
+      holder: currentHolderName,
+      previousHolder:
+        previousSessions.length > 0
+          ? previousSessions.map((holder, index) => `${index + 1}. ${holder}`).join("\n")
+          : "-",
+      holderRole: currentHolderRole,
+      usageNotes: usageNotes.length > 0 ? usageNotes.join("\n\n") : "No notes",
       department:
         linkedOrder?.department ?? qrContext?.department ?? asset?.department ?? "-",
       requestNumber:
@@ -412,12 +384,12 @@ export function StorageAssetDetailPage({
                   label="Request Date"
                   value={formatDisplayDate(asset.requestDate)}
                 />
+                <DisplayField label="Owner Role" value={ownershipSummary.holderRole} />
                 <DisplayField label="Owner" value={ownershipSummary.holder} />
                 <DisplayField label="Previous Holder" value={ownershipSummary.previousHolder} />
-                <DisplayField label="Owner Role" value={ownershipSummary.holderRole} />
                 <DisplayField label="Department" value={ownershipSummary.department} />
                 <DisplayField label="Storage" value={ownershipSummary.storage} />
-                <DisplayField label="Latest Note" value={ownershipSummary.latestNote} />
+                <DisplayField label="Usage Notes" value={ownershipSummary.usageNotes} />
                 <ControlField label="Confirmed Location">
                   <select
                     value={confirmedLocation}
@@ -593,7 +565,7 @@ function MobileAssetDetailView({
     holder: string;
     previousHolder: string;
     holderRole: string;
-    latestNote: string;
+    usageNotes: string;
     department: string;
     requestNumber: string;
     storage: string;
@@ -666,10 +638,10 @@ function MobileAssetDetailView({
               eyebrow="Ownership"
               subtitle="Current responsible person"
             >
+              <MobileInfoRow label="Role" value={ownershipSummary.holderRole} />
               <MobileInfoRow label="Holder" value={ownershipSummary.holder} />
               <MobileInfoRow label="Previous holder" value={ownershipSummary.previousHolder} />
-              <MobileInfoRow label="Role" value={ownershipSummary.holderRole} />
-              <MobileInfoRow label="Latest note" value={ownershipSummary.latestNote} />
+              <MobileInfoRow label="Usage notes" value={ownershipSummary.usageNotes} />
               <MobileInfoRow label="Department" value={ownershipSummary.department} />
               <MobileInfoRow label="Request" value={ownershipSummary.requestNumber} />
               <MobileInfoRow label="Storage" value={ownershipSummary.storage} />
@@ -790,25 +762,108 @@ function MobileSection({
 }
 
 function MobileInfoRow({ label, value }: { label: string; value: string }) {
+  const lines = value.split("\n").filter(Boolean);
+  const normalizedLabel = label.toLowerCase();
+  const segments = value.split("\n\n").filter(Boolean);
+  const isPreviousHolderList = normalizedLabel === "previous holder" && lines.length > 1;
+  const isUsageNotesList = normalizedLabel === "usage notes" && segments.length > 1;
   return (
     <div className="flex items-start justify-between gap-4 border-b border-[#eef2f6] py-3 last:border-b-0">
       <span className="text-[13px] text-[#667085]">{label}</span>
-      <span className="max-w-[62%] text-right text-[14px] font-medium leading-5 text-[#101828]">
-        {value}
-      </span>
+      {isPreviousHolderList ? (
+        <div className="max-w-[62%] space-y-2 text-right">
+          {lines.map((line) => (
+            <div
+              key={line}
+              className="rounded-[10px] border border-[#dbe7f3] bg-[#f8fbff] px-3 py-2 text-[13px] font-medium leading-5 text-[#101828]"
+            >
+              {line}
+            </div>
+          ))}
+        </div>
+      ) : isUsageNotesList ? (
+        <div className="max-w-[62%] space-y-2 text-left">
+          {segments.map((segment) => (
+            <div
+              key={segment}
+              className="rounded-[10px] border border-[#dbe7f3] bg-[#f8fbff] px-3 py-2 text-[13px] leading-5 text-[#101828] whitespace-pre-wrap break-words"
+            >
+              {segment}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <span className="max-w-[62%] whitespace-pre-wrap text-right text-[14px] font-medium leading-5 text-[#101828]">
+          {value}
+        </span>
+      )}
     </div>
   );
 }
 
 function DisplayField({ label, value }: { label: string; value: string }) {
+  const isMultiline = value.includes("\n") || value.length > 72;
+  const lines = value.split("\n").filter(Boolean);
+  const normalizedLabel = label.toLowerCase();
+  const segments = value.split("\n\n").filter(Boolean);
+  const isPreviousHolderList = normalizedLabel === "previous holder" && lines.length > 1;
+  const isUsageNotesList = normalizedLabel === "usage notes" && segments.length > 1;
   return (
     <div>
       <p className="mb-2 text-[13px] font-semibold text-[#111827]">{label}</p>
-      <div className="flex h-12 items-center rounded-[12px] border border-[#d0d5dd] bg-white px-4 text-[14px] text-[#344054]">
-        {value}
-      </div>
+      {isPreviousHolderList ? (
+        <div className="space-y-2 rounded-[12px] border border-[#d0d5dd] bg-[#f8fbff] p-3">
+          {lines.map((line) => (
+            <div
+              key={line}
+              className="rounded-[10px] border border-[#dbe7f3] bg-white px-3 py-2 text-[14px] font-medium leading-5 text-[#344054]"
+            >
+              {line}
+            </div>
+          ))}
+        </div>
+      ) : isUsageNotesList ? (
+        <div className="space-y-3 rounded-[12px] border border-[#d0d5dd] bg-[#f8fbff] p-3">
+          {segments.map((segment) => (
+            <div
+              key={segment}
+              className="rounded-[10px] border border-[#dbe7f3] bg-white px-3 py-3 text-[14px] leading-6 text-[#344054] whitespace-pre-wrap break-words"
+            >
+              {segment}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div
+          className={`rounded-[12px] border border-[#d0d5dd] px-4 py-3 text-[14px] leading-6 text-[#344054] ${
+            isMultiline
+              ? "min-h-[96px] whitespace-pre-wrap break-words bg-[#f8fbff]"
+              : "flex min-h-12 items-center bg-white"
+          }`}
+        >
+          {value}
+        </div>
+      )}
     </div>
   );
+}
+
+function formatDateOnly(value?: string | null) {
+  if (!value) return "-";
+  const source = value.includes("T") ? value.slice(0, 10) : value;
+  const [year, month, day] = source.split("-");
+  return year && month && day ? `${year}.${month}.${day}` : formatDisplayDate(value);
+}
+
+function calculateUsageDuration(distributedAt?: string | null, returnedAt?: string | null) {
+  if (!distributedAt || !returnedAt) return "-";
+  const start = new Date(distributedAt);
+  const end = new Date(returnedAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return "-";
+  const totalDays = Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86_400_000));
+  if (totalDays < 30) return `${totalDays} day`;
+  if (totalDays < 365) return `${Math.floor(totalDays / 30)} mo`;
+  return `${(totalDays / 365).toFixed(1).replace(/\.0$/, "")} yr`;
 }
 
 function ControlField({
@@ -841,7 +896,7 @@ function ReceiveStyleQrCard({
     holder: string;
     previousHolder: string;
     holderRole: string;
-    latestNote: string;
+    usageNotes: string;
     department: string;
     requestNumber: string;
     storage: string;
@@ -1014,7 +1069,10 @@ function buildAssetIllustration(asset: StorageAssetDto) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-function buildHistoryEntries(asset: StorageAssetDto, handoff?: HrHandoffState): HistoryEntry[] {
+function buildHistoryEntries(
+  asset: StorageAssetDto,
+  records?: DistributionRecordDto[],
+): HistoryEntry[] {
   const base = [
     {
       title: "Ordered",
@@ -1039,8 +1097,44 @@ function buildHistoryEntries(asset: StorageAssetDto, handoff?: HrHandoffState): 
     },
   ];
 
-  const handoffEntries = (handoff?.history ?? []).flatMap((raw) => {
-    const entry = splitHandoffEntry(raw);
+  const distributionEntries = (records ?? []).flatMap((record) => {
+    const entries: HistoryEntry[] = [
+      {
+        title: "Assigned by HR manager",
+        status: "good",
+        owner: record.employeeName || "Employee",
+        location: record.currentStorageName || "Assigned out",
+        date: formatDisplayDate(record.distributedAt || record.createdAt),
+      },
+    ];
+
+    if (record.returnedAt) {
+      entries.push({
+        title: "Returned to storage",
+        status: "good",
+        owner: record.employeeName || "Employee",
+        location: "Inventory Head",
+        date: formatDisplayDate(record.returnedAt),
+      });
+    }
+
+    if (record.note?.trim()) {
+      entries.push({
+        title: "Returned with note",
+        status: (record.returnCondition || "").toLowerCase() === "damaged" ? "issue" : "good",
+        owner: record.employeeName || "Employee",
+        location: `${record.usageYears || "-"} | ${record.returnCondition || "-"} | ${record.returnPower || "-"} | ${record.note}`,
+        date: formatDisplayDate(record.returnedAt || record.updatedAt),
+      });
+    }
+
+    return entries;
+  });
+
+  return [...distributionEntries, ...base];
+
+  /* const handoffEntries = (records ?? []).flatMap((record) => {
+    const entries: HistoryEntry[] = [];
     if (entry.text.startsWith("Inspection:")) {
       const [usedFor = "-", condition = "-", power = "-", notes = "No notes"] = entry.text
         .replace("Inspection: ", "")
@@ -1079,7 +1173,7 @@ function buildHistoryEntries(asset: StorageAssetDto, handoff?: HrHandoffState): 
     return [];
   });
 
-  return [...handoffEntries.reverse(), ...base];
+  return [...handoffEntries.reverse(), ...base]; */
 }
 
 function buildLocationOptions(currentLocation: string) {
@@ -1093,32 +1187,6 @@ function buildLocationOptions(currentLocation: string) {
   ];
 
   return Array.from(new Set(defaults.filter(Boolean)));
-}
-
-function buildFallbackAssignedAssets(asset: StorageAssetDto) {
-  return [
-    {
-      ...asset,
-      id: `${asset.id}-assigned-1`,
-      assetCode: "MSE-2026-012",
-      assetName: "Magic Mouse",
-      itemType: "Mouse",
-    },
-    {
-      ...asset,
-      id: `${asset.id}-assigned-2`,
-      assetCode: "MON-2026-008",
-      assetName: "Dell Monitor 27\"",
-      itemType: "Monitor",
-    },
-    {
-      ...asset,
-      id: `${asset.id}-assigned-3`,
-      assetCode: "KYB-2026-045",
-      assetName: "Magic Keyboard",
-      itemType: "Keyboard",
-    },
-  ];
 }
 
 function historyIcon(title: string) {
