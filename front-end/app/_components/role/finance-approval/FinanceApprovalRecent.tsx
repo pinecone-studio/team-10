@@ -1,0 +1,45 @@
+"use client";
+
+import { formatDisplayDate } from "../../../_lib/order-store";
+import type { StoredOrder } from "../../../_lib/order-types";
+import { formatMoney, getProcessedStatusLabel, getProcessedTone } from "./utils";
+
+export function FinanceApprovalRecent(props: { orders: StoredOrder[]; pendingCount: number }) {
+  return (
+    <section className="border-t border-[#e6eef7] px-5 py-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#6b85a7]">Recent Decisions</p>
+          <h2 className="mt-2 text-[22px] font-semibold text-[#0f172a]">Last reviewed requests</h2>
+        </div>
+        <span className="text-[14px] text-[#64748b]">{props.orders.length} records</span>
+      </div>
+      <div className="mt-5 overflow-hidden rounded-[18px] border border-[#dbe8f6]">
+        {props.orders.length === 0 ? (
+          <EmptyPanel
+            title={props.pendingCount === 0 ? "No finance decisions yet." : "No reviewed records yet."}
+            description="Reviewed requests will appear here with their latest status."
+          />
+        ) : (
+          <table className="w-full table-fixed text-left text-[13px] text-[#334155]">
+            <thead className="bg-[#eef5ff] text-[#5a7393]"><tr><Th>Request</Th><Th>Requester</Th><Th>Reviewed</Th><Th>Items</Th><Th>Amount</Th><Th>Status</Th></tr></thead>
+            <tbody>{props.orders.map((order) => <tr key={order.id} className="border-t border-[#edf2f7]">
+              <Td strong>{order.requestNumber}<div className="mt-1 text-[12px] text-[#8fa0ba]">{order.department}</div></Td>
+              <Td>{order.requester}</Td>
+              <Td>{order.financeReviewedAt ? formatDisplayDate(order.financeReviewedAt.slice(0, 10)) : "-"}</Td>
+              <Td>{order.items.length}</Td>
+              <Td>{formatMoney(order.totalAmount, order.currencyCode)}</Td>
+              <Td><span className={`rounded-full border px-3 py-1 text-[12px] font-medium ${getProcessedTone(order)}`}>{getProcessedStatusLabel(order)}</span></Td>
+            </tr>)}</tbody>
+          </table>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function EmptyPanel(props: { title: string; description: string }) {
+  return <div className="px-6 py-14 text-center"><p className="text-[18px] font-semibold text-[#0f172a]">{props.title}</p><p className="mt-3 text-[14px] text-[#64748b]">{props.description}</p></div>;
+}
+function Th({ children }: { children: React.ReactNode }) { return <th className="px-4 py-3 font-medium">{children}</th>; }
+function Td(props: { children: React.ReactNode; strong?: boolean }) { return <td className={`px-4 py-3 align-top ${props.strong ? "font-semibold text-[#0f172a]" : ""}`}>{props.children}</td>; }

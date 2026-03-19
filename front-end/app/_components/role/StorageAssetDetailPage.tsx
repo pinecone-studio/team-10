@@ -10,7 +10,7 @@ import {
   updateStorageAssetRequest,
 } from "@/app/(dashboard)/_graphql/storage/storage-api";
 import { downloadBase64File } from "@/app/_lib/download-base64";
-import { formatCurrency, formatDisplayDate } from "@/app/_lib/order-store";
+import { formatCurrency, formatDisplayDate, useOrdersStore } from "@/app/_lib/order-store";
 import { buildRegisteredAssetScanUrl } from "@/app/_lib/qr-links";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import { BrandedQrCode } from "../shared/BrandedQrCode";
@@ -29,16 +29,89 @@ type HistoryEntry = {
   date: string;
 };
 
-type MobileTab = "details" | "history" | "assets";
+type MobileTab = "details" | "history";
 type RegisteredQrMode = "employee" | "audit";
+type HrHandoffState = { holder: string | null; role: string | null; history: string[] };
+const HR_HANDOFFS_KEY = "ams-hr-asset-handoffs";
+function splitHandoffEntry(entry: string) {
+  const [date, ...rest] = entry.split(" | ");
+  return { date: rest.length ? date : "", text: rest.length ? rest.join(" | ") : entry };
+}
+function getLastHrHolder(history: string[] = []) {
+  return [...history]
+    .reverse()
+    .map((entry) => splitHandoffEntry(entry).text)
+    .find((entry) => entry.includes("->") && !entry.includes("Inventory Head"))
+    ?.split("->")
+    .at(-1)
+    ?.trim() ?? null;
+}
+function getMatchingHandoffState(
+  asset: StorageAssetDto | null,
+  handoffs: Record<string, HrHandoffState>,
+) {
+  if (!asset) return null;
+  return (
+    handoffs[asset.id] ??
+    handoffs[asset.assetCode] ??
+    (asset.serialNumber ? handoffs[asset.serialNumber] : null) ??
+    Object.entries(handoffs).find(
+      ([key]) =>
+        key.includes(asset.assetCode) ||
+        (asset.serialNumber ? key.includes(asset.serialNumber) : false),
+    )?.[1] ??
+    null
+  );
+}
+function getHandoffSessions(history: string[] = []) {
+  const sessions: Array<{
+    holder: string;
+    assignedAt: string;
+    returnedAt: string;
+    notes: string;
+  }> = [];
+  for (const raw of history) {
+    const entry = splitHandoffEntry(raw);
+    if (entry.text.includes("->") && !entry.text.includes("Inventory Head")) {
+      sessions.push({
+        holder: entry.text.split("->").at(-1)?.trim() ?? "Unknown",
+        assignedAt: entry.date || "-",
+        returnedAt: "-",
+        notes: "No notes",
+      });
+      continue;
+    }
+    if (entry.text.startsWith("Inspection:")) {
+      const current = sessions.at(-1);
+      if (!current) continue;
+      const [, , , notes = "No notes"] = entry.text.replace("Inspection: ", "").split(" | ");
+      current.notes = notes || "No notes";
+      continue;
+    }
+    if (entry.text.includes("Inventory Head") && sessions.length) {
+      sessions[sessions.length - 1]!.returnedAt = entry.date || "-";
+    }
+  }
+  return sessions;
+}
 
 export function StorageAssetDetailPage({
   assetId,
   role,
+  qrContext,
 }: {
   assetId: string;
   role: string;
+  qrContext?: {
+    orderId?: string;
+    requestNumber?: string;
+    department?: string;
+    storageLocation?: string;
+    ownerName?: string;
+    ownerRole?: string;
+  };
 }) {
+  const orders = useOrdersStore();
   const [asset, setAsset] = useState<StorageAssetDto | null>(null);
   const [hasResolvedAsset, setHasResolvedAsset] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -46,10 +119,10 @@ export function StorageAssetDetailPage({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [auditResult, setAuditResult] = useState("");
   const [confirmedLocation, setConfirmedLocation] = useState("");
-  const [allAssets, setAllAssets] = useState<StorageAssetDto[]>([]);
   const [mobileTab, setMobileTab] = useState<MobileTab>("details");
   const [registeredQrMode, setRegisteredQrMode] =
     useState<RegisteredQrMode>("employee");
+  const [hrHandoffs, setHrHandoffs] = useState<Record<string, HrHandoffState>>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -69,9 +142,10 @@ export function StorageAssetDetailPage({
         setAsset(detail);
         setAuditResult(detail.receiveNote ?? "");
         setConfirmedLocation(detail.storageName);
-        const nextAssets = await fetchStorageAssetsRequest();
-        if (!isMounted) return;
-        setAllAssets(nextAssets);
+        try {
+          const saved = window.localStorage.getItem(HR_HANDOFFS_KEY);
+          if (saved) setHrHandoffs(JSON.parse(saved));
+        } catch {}
       } catch (error) {
         if (!isMounted) return;
         setErrorMessage(
@@ -137,6 +211,64 @@ export function StorageAssetDetailPage({
     if (!asset) return "-";
     return formatCurrency(asset.unitCost ?? 0, parseCurrency(asset.currencyCode));
   }, [asset]);
+  const linkedOrder = useMemo(
+    () =>
+      asset
+        ? orders.find(
+            (order) => order.id === asset.orderId || order.id === qrContext?.orderId,
+          ) ?? null
+        : null,
+    [asset, orders, qrContext?.orderId],
+  );
+  const matchedHandoff = useMemo(
+    () => getMatchingHandoffState(asset, hrHandoffs),
+    [asset, hrHandoffs],
+  );
+  const ownershipSummary = useMemo(
+    () => {
+      const handoff = matchedHandoff;
+      const lastHrHolder = getLastHrHolder(handoff?.history);
+      const sessions = getHandoffSessions(handoff?.history);
+      const currentSession = sessions.at(-1) ?? null;
+      const previousSessions = (handoff?.holder ? sessions.slice(0, -1) : sessions)
+        .map((session) => session.holder)
+        .filter((holder, index, list) => holder && list.indexOf(holder) === index);
+      const previousSession = sessions.length > 1 ? sessions.at(-2) ?? null : null;
+      return {
+      holder:
+        handoff?.holder ??
+        lastHrHolder ??
+        qrContext?.ownerName ??
+        linkedOrder?.assignedTo ??
+        linkedOrder?.requester ??
+        asset?.requester ??
+        "Unassigned",
+      previousHolder:
+        previousSessions.length > 0
+          ? previousSessions.join(", ")
+          : previousSession?.holder ?? (handoff?.holder ? lastHrHolder : null) ?? "-",
+      holderRole:
+        handoff?.role ??
+        (lastHrHolder ? "Previous holder" : null) ??
+        qrContext?.ownerRole ??
+        linkedOrder?.assignedRole ??
+        "Unassigned",
+      latestNote: currentSession?.notes !== "No notes" ? currentSession?.notes ?? "No notes" : previousSession?.notes ?? "No notes",
+      department:
+        linkedOrder?.department ?? qrContext?.department ?? asset?.department ?? "-",
+      requestNumber:
+        linkedOrder?.requestNumber ??
+        qrContext?.requestNumber ??
+        asset?.requestNumber ??
+        "-",
+      storage:
+        linkedOrder?.storageLocation ??
+        qrContext?.storageLocation ??
+        asset?.storageName ??
+        "Main warehouse / Intake",
+    };},
+    [asset, linkedOrder, matchedHandoff, qrContext],
+  );
 
   const detailItems = useMemo(() => {
     if (!asset) return [];
@@ -162,22 +294,9 @@ export function StorageAssetDetailPage({
   const historyItems = useMemo(() => {
     if (!asset) return [];
 
-    return buildHistoryEntries(asset);
-  }, [asset]);
+    return buildHistoryEntries(asset, matchedHandoff ?? undefined);
+  }, [asset, matchedHandoff]);
 
-  const relatedAssets = useMemo(() => {
-    if (!asset) return [];
-
-    const matches = allAssets.filter(
-      (entry) => entry.id !== asset.id && entry.category === asset.category,
-    );
-
-    if (matches.length > 0) {
-      return matches.slice(0, 3);
-    }
-
-    return buildFallbackAssignedAssets(asset);
-  }, [allAssets, asset]);
   const showEmployeeView = role === "employee";
 
   return (
@@ -202,12 +321,13 @@ export function StorageAssetDetailPage({
           <div className={showEmployeeView ? "" : "lg:hidden"}>
             <MobileAssetDetailView
               asset={asset}
+              role={role}
               activeTab={mobileTab}
               onTabChange={setMobileTab}
               historyItems={historyItems}
-              relatedAssets={relatedAssets}
               qrMode={registeredQrMode}
               onQrModeChange={setRegisteredQrMode}
+              ownershipSummary={ownershipSummary}
             />
           </div>
           <div
@@ -287,11 +407,17 @@ export function StorageAssetDetailPage({
 
             <div className="space-y-5 px-5 py-5">
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <DisplayField label="Request ID" value={asset.requestNumber} />
+                <DisplayField label="Request ID" value={ownershipSummary.requestNumber} />
                 <DisplayField
                   label="Request Date"
                   value={formatDisplayDate(asset.requestDate)}
                 />
+                <DisplayField label="Owner" value={ownershipSummary.holder} />
+                <DisplayField label="Previous Holder" value={ownershipSummary.previousHolder} />
+                <DisplayField label="Owner Role" value={ownershipSummary.holderRole} />
+                <DisplayField label="Department" value={ownershipSummary.department} />
+                <DisplayField label="Storage" value={ownershipSummary.storage} />
+                <DisplayField label="Latest Note" value={ownershipSummary.latestNote} />
                 <ControlField label="Confirmed Location">
                   <select
                     value={confirmedLocation}
@@ -382,8 +508,10 @@ export function StorageAssetDetailPage({
                 <div className="mt-3 rounded-[10px] border border-[#dbeafe] bg-white p-3">
                   <ReceiveStyleQrCard
                     asset={asset}
+                    role={role}
                     mode={registeredQrMode}
                     onModeChange={setRegisteredQrMode}
+                    ownershipSummary={ownershipSummary}
                   />
                 </div>
               </div>
@@ -430,8 +558,8 @@ export function StorageAssetDetailPage({
               <div>
                 <h4 className="text-[18px] font-semibold text-[#101828]">History</h4>
                 <div className="mt-4 grid gap-3 xl:grid-cols-3">
-                  {historyItems.map((entry) => (
-                    <HistoryCard key={entry.title} entry={entry} />
+                  {historyItems.map((entry, index) => (
+                    <HistoryCard key={`${entry.title}-${entry.date}-${index}`} entry={entry} />
                   ))}
                 </div>
               </div>
@@ -446,53 +574,43 @@ export function StorageAssetDetailPage({
 
 function MobileAssetDetailView({
   asset,
+  role,
   activeTab,
   onTabChange,
   historyItems,
-  relatedAssets,
   qrMode,
   onQrModeChange,
+  ownershipSummary,
 }: {
   asset: StorageAssetDto;
+  role: string;
   activeTab: MobileTab;
   onTabChange: (value: MobileTab) => void;
   historyItems: HistoryEntry[];
-  relatedAssets: StorageAssetDto[];
   qrMode: RegisteredQrMode;
   onQrModeChange: (value: RegisteredQrMode) => void;
+  ownershipSummary: {
+    holder: string;
+    previousHolder: string;
+    holderRole: string;
+    latestNote: string;
+    department: string;
+    requestNumber: string;
+    storage: string;
+  };
 }) {
   const heroImage = asset.assetImageDataUrl || buildAssetIllustration(asset);
-  const [verifyState, setVerifyState] = useState<"idle" | "verifying" | "verified">(
-    "idle",
-  );
   const qrLink = buildRegisteredAssetScanUrl({
     qrCode: asset.qrCode,
     mode: qrMode,
+    role: qrMode === "employee" ? "employee" : role,
+    orderId: asset.orderId,
+    requestNumber: ownershipSummary.requestNumber,
+    department: ownershipSummary.department,
+    storageLocation: ownershipSummary.storage,
+    ownerName: ownershipSummary.holder,
+    ownerRole: ownershipSummary.holderRole,
   });
-  const displayedHistoryItems = useMemo(() => {
-    if (verifyState !== "verified") {
-      return historyItems;
-    }
-
-    return [
-      {
-        title: "Self-verified by employee",
-        status: "good",
-        owner: "Employee Portal",
-        location: asset.storageName,
-        date: new Date().toISOString(),
-      },
-      ...historyItems,
-    ];
-  }, [asset.storageName, historyItems, verifyState]);
-
-  async function handleVerify() {
-    if (verifyState !== "idle") return;
-
-    setVerifyState("verifying");
-    await new Promise((resolve) => window.setTimeout(resolve, 500));
-    setVerifyState("verified");
-  }
 
   return (
     <section className="overflow-hidden rounded-[24px] border border-[#d6e4f2] bg-white shadow-[0_20px_50px_rgba(148,163,184,0.16)]">
@@ -522,11 +640,10 @@ function MobileAssetDetailView({
           </span>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 rounded-[12px] bg-[#f8fafc] p-1">
+        <div className="mt-4 grid grid-cols-2 rounded-[12px] bg-[#f8fafc] p-1">
           {[
             { value: "details", label: "Details" },
             { value: "history", label: "History" },
-            { value: "assets", label: "Your assets" },
           ].map((tab) => (
             <button
               key={tab.value}
@@ -549,9 +666,13 @@ function MobileAssetDetailView({
               eyebrow="Ownership"
               subtitle="Current responsible person"
             >
-              <MobileInfoRow label="Holder" value="Sarantsetseg Baatar" />
-              <MobileInfoRow label="Department" value={asset.department || "Engineering"} />
-              <MobileInfoRow label="Contact" value="sarah.baatar@company.com" />
+              <MobileInfoRow label="Holder" value={ownershipSummary.holder} />
+              <MobileInfoRow label="Previous holder" value={ownershipSummary.previousHolder} />
+              <MobileInfoRow label="Role" value={ownershipSummary.holderRole} />
+              <MobileInfoRow label="Latest note" value={ownershipSummary.latestNote} />
+              <MobileInfoRow label="Department" value={ownershipSummary.department} />
+              <MobileInfoRow label="Request" value={ownershipSummary.requestNumber} />
+              <MobileInfoRow label="Storage" value={ownershipSummary.storage} />
             </MobileSection>
 
             <MobileSection
@@ -559,29 +680,29 @@ function MobileAssetDetailView({
               subtitle="Most recently recorded place"
             >
               <div className="rounded-[14px] border border-[#e4e7ec] bg-white px-4 py-3">
-                <p className="text-[14px] font-medium text-[#101828]">{asset.storageName}</p>
+                <p className="text-[14px] font-medium text-[#101828]">{ownershipSummary.storage}</p>
               </div>
             </MobileSection>
 
-            <MobileSection
-              eyebrow="Scan QR"
-              subtitle="Switch between employee and audit scan flows"
-            >
-              <div className="rounded-[16px] border border-[#dbeafe] bg-[#f8fbff] p-4">
-                <QrModeSwitch value={qrMode} onChange={onQrModeChange} />
-                <div className="flex flex-col items-center gap-3">
-                  <BrandedQrCode
-                    value={qrLink}
-                    title={asset.assetCode}
-                    size={132}
-                    className="w-full max-w-[210px] shrink-0 p-2 shadow-none"
-                    showValue={false}
-                  />
-                  {qrMode === "employee" ? (
-                    <div className="w-full rounded-[12px] border border-[#e2e8f0] bg-white px-3 py-3">
+            {role !== "employee" ? (
+              <MobileSection
+                eyebrow="Scan QR"
+                subtitle="Scan this code to open the asset record"
+              >
+                <div className="rounded-[16px] border border-[#dbeafe] bg-[#f8fbff] p-4">
+                  <QrModeSwitch value={qrMode} onChange={onQrModeChange} />
+                  <div className="flex flex-col items-center gap-3">
+                    <BrandedQrCode
+                      value={qrLink}
+                      title={asset.assetCode}
+                      size={132}
+                      className="w-full max-w-[210px] shrink-0 p-2 shadow-none"
+                      showValue={false}
+                    />
+                    <div className="w-full rounded-[12px] border border-[#dbe7f3] bg-white px-3 py-3">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8fa0ba]">
-                          Employee QR Link
+                          {qrMode === "employee" ? "Employee QR Link" : "Audit QR Link"}
                         </p>
                         <Link
                           href={qrLink}
@@ -594,14 +715,15 @@ function MobileAssetDetailView({
                         {qrLink}
                       </p>
                     </div>
-                  ) : (
                     <p className="text-center text-[12px] font-medium text-[#64748b]">
-                      Scan to audit and verify this asset.
+                      {qrMode === "employee"
+                        ? "Employee phone-oor scan hiigeed detail ruu orno."
+                        : "Audit team scan hiigeed storage record shalgana."}
                     </p>
-                  )}
+                  </div>
                 </div>
-              </div>
-            </MobileSection>
+              </MobileSection>
+            ) : null}
           </div>
         ) : null}
 
@@ -621,7 +743,7 @@ function MobileAssetDetailView({
               </button>
             </div>
             <div className="space-y-4">
-              {displayedHistoryItems.map((entry, index) => (
+              {historyItems.map((entry, index) => (
                 <div key={`${entry.title}-${index}`} className="flex items-start gap-3">
                   <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${historyToneClass(entry.title)}`}>
                     <span className="text-[15px] text-white">{historyIcon(entry.title)}</span>
@@ -642,76 +764,6 @@ function MobileAssetDetailView({
             </div>
           </div>
         ) : null}
-
-        {activeTab === "assets" ? (
-          <div className="mt-5 space-y-5">
-            <MobileSection
-              eyebrow="Your Assets"
-              subtitle="Open this list to see all assets currently assigned under your name."
-            >
-              <div className="grid grid-cols-3 gap-3">
-                {relatedAssets.slice(0, 3).map((relatedAsset) => (
-                  <div
-                    key={relatedAsset.id}
-                    className="overflow-hidden rounded-[16px] border border-[#dbe7f3] bg-white"
-                  >
-                    <div className="flex h-[88px] items-center justify-center bg-[#f8fbff] p-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={relatedAsset.assetImageDataUrl || buildAssetIllustration(relatedAsset)}
-                        alt={relatedAsset.assetName}
-                        className="h-full w-full object-contain"
-                      />
-                    </div>
-                    <div className="px-3 py-3">
-                      <p className="truncate text-[12px] font-medium text-[#101828]">
-                        {relatedAsset.assetName}
-                      </p>
-                      <p className="mt-1 text-[10px] text-[#98a2b3]">
-                        {relatedAsset.assetCode}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </MobileSection>
-
-            <MobileSection
-              eyebrow="Higher-up Access"
-              subtitle="Asset remains visible to management, IT, and audit roles."
-            >
-              <div className="rounded-[14px] border border-[#e4e7ec] bg-white px-4 py-3">
-                <p className="text-[14px] text-[#344054]">
-                  This registered asset is shared with storage operations, IT Admin, and audit workflows.
-                </p>
-              </div>
-            </MobileSection>
-          </div>
-        ) : null}
-
-        <div className="mt-6 border-t border-[#eef2f6] pt-4">
-          <button
-            type="button"
-            onClick={() => void handleVerify()}
-            disabled={verifyState !== "idle"}
-            className={`flex h-12 w-full items-center justify-center rounded-[14px] text-[14px] font-semibold transition ${
-              verifyState === "verified"
-                ? "bg-[#ecfff4] text-[#12a150]"
-                : "bg-[#255df0] text-white"
-            } disabled:cursor-default disabled:opacity-100`}
-          >
-            {verifyState === "verifying"
-              ? "Verifying possession..."
-              : verifyState === "verified"
-                ? "Possession Verified"
-                : "Verify Possession"}
-          </button>
-          <p className="mt-2 text-center text-[12px] text-[#667085]">
-            {verifyState === "verified"
-              ? "Your possession confirmation has been recorded in the asset history."
-              : "Confirm that this asset is currently in your possession. Assignment acknowledgment is handled separately from the emailed sign link."}
-          </p>
-        </div>
       </div>
     </section>
   );
@@ -776,16 +828,35 @@ function ControlField({
 
 function ReceiveStyleQrCard({
   asset,
+  role,
   mode,
   onModeChange,
+  ownershipSummary,
 }: {
   asset: StorageAssetDto;
+  role: string;
   mode: RegisteredQrMode;
   onModeChange: (value: RegisteredQrMode) => void;
+  ownershipSummary: {
+    holder: string;
+    previousHolder: string;
+    holderRole: string;
+    latestNote: string;
+    department: string;
+    requestNumber: string;
+    storage: string;
+  };
 }) {
   const qrLink = buildRegisteredAssetScanUrl({
     qrCode: asset.qrCode,
     mode,
+    role: mode === "employee" ? "employee" : role,
+    orderId: asset.orderId,
+    requestNumber: ownershipSummary.requestNumber,
+    department: ownershipSummary.department,
+    storageLocation: ownershipSummary.storage,
+    ownerName: ownershipSummary.holder,
+    ownerRole: ownershipSummary.holderRole,
   });
 
   return (
@@ -798,24 +869,27 @@ function ReceiveStyleQrCard({
         className="w-full max-w-[210px] shrink-0 p-2 shadow-none"
         showValue={false}
       />
-      {mode === "employee" ? (
-        <div className="w-full rounded-[12px] border border-[#e2e8f0] bg-[#f8fbff] px-3 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8fa0ba]">
-              Employee QR Link
-            </p>
-            <Link
-              href={qrLink}
-              className="text-[11px] font-semibold text-[#2563eb] underline underline-offset-2"
-            >
-              Open
-            </Link>
-          </div>
-          <p className="mt-2 break-all text-left text-[11px] leading-5 text-[#475569]">
-            {qrLink}
+      <div className="w-full rounded-[12px] border border-[#e2e8f0] bg-[#f8fbff] px-3 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8fa0ba]">
+            {mode === "employee" ? "Employee QR Link" : "Audit QR Link"}
           </p>
+          <Link
+            href={qrLink}
+            className="text-[11px] font-semibold text-[#2563eb] underline underline-offset-2"
+          >
+            Open
+          </Link>
         </div>
-      ) : null}
+        <p className="mt-2 break-all text-left text-[11px] leading-5 text-[#475569]">
+          {qrLink}
+        </p>
+      </div>
+      <p className="text-center text-[12px] font-medium text-[#64748b]">
+        {mode === "employee"
+          ? "Employee phone-oor scan hiij asset detail neene."
+          : "Audit team scan hiigeed storage record shalgana."}
+      </p>
     </div>
   );
 }
@@ -940,8 +1014,8 @@ function buildAssetIllustration(asset: StorageAssetDto) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-function buildHistoryEntries(asset: StorageAssetDto): HistoryEntry[] {
-  return [
+function buildHistoryEntries(asset: StorageAssetDto, handoff?: HrHandoffState): HistoryEntry[] {
+  const base = [
     {
       title: "Ordered",
       status: "good",
@@ -964,6 +1038,48 @@ function buildHistoryEntries(asset: StorageAssetDto): HistoryEntry[] {
       date: formatDisplayDate(asset.updatedAt),
     },
   ];
+
+  const handoffEntries = (handoff?.history ?? []).flatMap((raw) => {
+    const entry = splitHandoffEntry(raw);
+    if (entry.text.startsWith("Inspection:")) {
+      const [usedFor = "-", condition = "-", power = "-", notes = "No notes"] = entry.text
+        .replace("Inspection: ", "")
+        .split(" | ");
+      return [{
+        title: `Returned with note`,
+        status: condition.toLowerCase() === "damaged" ? "issue" : "good",
+        owner: usedFor === "-" ? "HR retrieval" : `Used ${usedFor}`,
+        location: `${condition} · ${power} · ${notes}`,
+        date: entry.date || "-",
+      }];
+    }
+
+    if (entry.text.includes("->") && !entry.text.includes("Inventory Head")) {
+      const [from, to] = entry.text.split("->").map((value) => value.trim());
+      return [{
+        title: "Assigned by HR manager",
+        status: "good",
+        owner: to || "Employee",
+        location: from || "Storage / Intake",
+        date: entry.date || "-",
+      }];
+    }
+
+    if (entry.text.includes("Inventory Head")) {
+      const [from] = entry.text.split("->").map((value) => value.trim());
+      return [{
+        title: "Returned to storage",
+        status: "good",
+        owner: from || "Employee",
+        location: "Inventory Head",
+        date: entry.date || "-",
+      }];
+    }
+
+    return [];
+  });
+
+  return [...handoffEntries.reverse(), ...base];
 }
 
 function buildLocationOptions(currentLocation: string) {

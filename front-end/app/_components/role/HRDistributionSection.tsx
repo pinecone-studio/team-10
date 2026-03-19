@@ -30,29 +30,79 @@ const roster = {
   "IT Admin": ["Namuun", "Dulguun"],
 } as const;
 
-type RoleName = keyof typeof roster;
+    try {
+      const saved = window.localStorage.getItem(ASSETS_KEY);
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? (parsed as StorageAssetDto[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [assetState, setAssetState] = useState<Record<string, AssetState>>(() => {
+    if (typeof window === "undefined") return {};
 
-export function HRDistributionSection() {
-  const [storageAssets, setStorageAssets] = useState<StorageAssetDto[]>([]);
-  const [records, setRecords] = useState<DistributionRecordDto[]>([]);
+    try {
+      const saved = window.localStorage.getItem(KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [activeView, setActiveView] = useState<"available" | "assigned" | "pending">("available");
   const [searchValue, setSearchValue] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All categories");
   const [selectedType, setSelectedType] = useState("All types");
   const [selectedRole, setSelectedRole] = useState<RoleName>("Employee");
   const [selectedEmployee, setSelectedEmployee] = useState<string>(roster.Employee[0]);
-  const [openAssetId, setOpenAssetId] = useState<string | null>(null);
-  const [retrievalDrafts, setRetrievalDrafts] = useState<Record<string, RetrievalDraft>>({});
-  const [notice, setNotice] = useState("");
+  const [openAssetId, setOpenAssetId] = useState<string | null>(null), [retrievalDrafts, setRetrievalDrafts] = useState<Record<string, RetrievalDraft>>({}), [notice, setNotice] = useState("");
+  useEffect(() => {
+    let live = true;
 
-  async function reload() {
-    const [nextStorageAssets, nextRecords] = await Promise.all([
-      fetchStorageAssetsRequest(),
-      fetchAssetDistributionsRequest(true),
-    ]);
-    setStorageAssets(nextStorageAssets);
-    setRecords(nextRecords);
-  }
+    void fetchStorageAssetsRequest()
+      .then((data) => {
+        if (!live) return;
+        setAssets(data);
+        try {
+          window.localStorage.setItem(ASSETS_KEY, JSON.stringify(data));
+        } catch {}
+      })
+      .catch(() => live && setAssets((current) => current));
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(assetState));
+    } catch {}
+  }, [assetState]);
+
+  useEffect(() => {
+    setSelectedEmployee(roster[selectedRole][0]);
+  }, [selectedRole]);
+
+  const availableBase = assets.filter((asset) => !assetState[asset.id]?.holder);
+  const categoryOptions = ["All categories", ...Array.from(new Set(availableBase.map((asset) => asset.category)))], typeOptions = ["All types", ...Array.from(new Set(availableBase.filter((asset) => selectedCategory === "All categories" || asset.category === selectedCategory).map((asset) => asset.itemType)))];
+
+  const filteredAssets = useMemo(() => {
+    const q = searchValue.trim().toLowerCase();
+    return assets.filter((asset) => {
+      if (selectedCategory !== "All categories" && asset.category !== selectedCategory) return false;
+      if (selectedType !== "All types" && asset.itemType !== selectedType) return false;
+      return !q || [asset.assetName, asset.assetCode, asset.serialNumber ?? "", asset.requestNumber, asset.storageName, asset.category, asset.itemType].some((value) => value.toLowerCase().includes(q));
+    });
+  }, [assets, searchValue, selectedCategory, selectedType]);
+
+  const available = filteredAssets.filter((asset) => !assetState[asset.id]?.holder);
+  const assigned = filteredAssets.filter((asset) => assetState[asset.id]?.holder);
+  const pending = assigned.filter((asset) => {
+    const state = assetState[asset.id];
+    if (!state?.holder) return false;
+    if (state.holder !== selectedEmployee) return false;
+    return !state.role || state.role === selectedRole;
+  });
 
   useEffect(() => { void reload(); }, []);
   useEffect(() => { setSelectedEmployee(roster[selectedRole][0]); }, [selectedRole]);

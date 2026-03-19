@@ -33,7 +33,7 @@ export function WorkspaceShell({
         {hideHeader ? null : (
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-[32px] font-semibold leading-[1.1] text-[#111111]">{title}</h1>
+              <h1 className="text-[24px] font-semibold leading-[1.1] text-[#111111]">{title}</h1>
               <p className="mt-[6px] text-[14px] text-[#737373]">{subtitle}</p>
             </div>
             {actions}
