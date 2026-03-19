@@ -179,7 +179,7 @@ export function HomeDashboard() {
   }, [activityFilter]);
 
   return (
-    <div className="min-h-screen flex-1 overflow-y-auto bg-[linear-gradient(180deg,#eef6ff_0%,#f8fbff_24%,#ffffff_100%)]">
+    <div className="min-h-full bg-[linear-gradient(180deg,#eef6ff_0%,#f8fbff_24%,#ffffff_100%)]">
       <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
         <header className="flex flex-col gap-5">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
