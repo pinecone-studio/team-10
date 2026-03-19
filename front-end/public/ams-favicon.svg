@@ -1,0 +1,16 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="16" fill="#050810"/>
+  <rect x="6" y="6" width="52" height="52" rx="12" fill="url(#bgGlow)" fill-opacity="0.22"/>
+  <path d="M14 43L22.4 20H27.7L36 43H30.9L29.2 37.9H20.5L18.8 43H14ZM21.9 33.9H27.8L24.9 25.1L21.9 33.9Z" fill="url(#amsGradient)"/>
+  <path d="M37.7 43V20H42.5L48.1 30.8L53.8 20H58V43H53.5V28.3L48.8 37.7H47.1L42.3 28.3V43H37.7Z" fill="url(#amsGradient)"/>
+  <defs>
+    <linearGradient id="amsGradient" x1="17" y1="20" x2="61" y2="43" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7AAAE8"/>
+      <stop offset="1" stop-color="#5080C8"/>
+    </linearGradient>
+    <radialGradient id="bgGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(32 18) rotate(90) scale(40)">
+      <stop stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#050810" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>
