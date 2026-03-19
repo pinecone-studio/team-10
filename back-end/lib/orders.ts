@@ -813,33 +813,49 @@ export async function createOrder(
       input.requestNumber,
     );
     const currencyCode = parseCurrencyCode();
+    const insertValues: typeof orders.$inferInsert = {
+      orderName: parseOrderName(input.orderName),
+      requestNumber,
+      requestDate,
+      requesterName: parseRequesterName(input.requester),
+      userId,
+      officeId,
+      departmentId,
+      whyOrdered: input.whyOrdered?.trim() ?? "",
+      status: parseOrderStatus(input.status, "pendingFinanceApproval"),
+      approvalTarget: parseApprovalTarget(input.approvalTarget),
+      totalCost:
+        input.totalAmount ??
+        normalizedItems.reduce(
+          (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
+          0,
+        ),
+      currencyCode,
+    };
+
+    if (input.deliveryDate) {
+      insertValues.expectedArrivalAt = input.deliveryDate;
+    }
+
+    if (input.requestedApproverId?.trim()) {
+      insertValues.requestedApproverId = input.requestedApproverId.trim();
+    }
+
+    if (input.requestedApproverName?.trim()) {
+      insertValues.requestedApproverName = input.requestedApproverName.trim();
+    }
+
+    if (input.requestedApproverRole?.trim()) {
+      insertValues.requestedApproverRole = input.requestedApproverRole.trim();
+    }
+
+    if (input.approvalMessage?.trim()) {
+      insertValues.approvalMessage = input.approvalMessage.trim();
+    }
 
     const [row] = await db
       .insert(orders)
-      .values({
-        orderName: parseOrderName(input.orderName),
-        requestNumber,
-        requestDate,
-        requesterName: parseRequesterName(input.requester),
-        userId,
-        officeId,
-        departmentId,
-        whyOrdered: input.whyOrdered?.trim() ?? "",
-        status: parseOrderStatus(input.status, "pendingFinanceApproval"),
-        approvalTarget: parseApprovalTarget(input.approvalTarget),
-        expectedArrivalAt: input.deliveryDate ?? null,
-        totalCost:
-          input.totalAmount ??
-          normalizedItems.reduce(
-            (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
-            0,
-          ),
-        currencyCode,
-        requestedApproverId: input.requestedApproverId?.trim() || null,
-        requestedApproverName: input.requestedApproverName?.trim() || null,
-        requestedApproverRole: input.requestedApproverRole?.trim() || null,
-        approvalMessage: input.approvalMessage?.trim() || null,
-      })
+      .values(insertValues)
       .returning({ id: orders.id });
 
     await replaceOrderItems(db, row.id, normalizedItems);
