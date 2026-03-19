@@ -38,9 +38,9 @@ type ReceiveRow = {
   quantityReceived: number;
   conditionStatus: ConditionStatus;
   itemNote: string | null;
-  receivedCondition: ReceivedCondition | null;
-  storageLocation: string | null;
-  serialNumbersJson: string | null;
+  receivedCondition?: ReceivedCondition | null;
+  storageLocation?: string | null;
+  serialNumbersJson?: string | null;
 };
 
 export type ReceiveRecord = {
@@ -134,6 +134,20 @@ const receiveSelection = {
   serialNumbersJson: orders.serialNumbersJson,
 };
 
+const receiveListSelection = {
+  id: receives.id,
+  orderId: receives.orderId,
+  receivedByUserId: receives.receivedByUserId,
+  officeId: receives.officeId,
+  status: receives.status,
+  receivedAt: receives.receivedAt,
+  receiveNote: receives.note,
+  orderItemId: receiveItems.orderItemId,
+  quantityReceived: receiveItems.quantityReceived,
+  conditionStatus: receiveItems.conditionStatus,
+  itemNote: receiveItems.note,
+};
+
 function parseStringArray(value: string | null): string[] {
   if (!value) return [];
 
@@ -158,9 +172,9 @@ function mapReceive(row: ReceiveRow): ReceiveRecord {
     orderItemId: String(row.orderItemId),
     quantityReceived: row.quantityReceived,
     conditionStatus: row.conditionStatus,
-    receivedCondition: row.receivedCondition,
-    storageLocation: row.storageLocation,
-    serialNumbers: parseStringArray(row.serialNumbersJson),
+    receivedCondition: row.receivedCondition ?? null,
+    storageLocation: row.storageLocation ?? null,
+    serialNumbers: parseStringArray(row.serialNumbersJson ?? null),
   };
 }
 
@@ -556,10 +570,9 @@ async function getReceiveRowById(
 
 export async function listReceives(db: AppDb): Promise<ReceiveRecord[]> {
   const rows = await db
-    .select(receiveSelection)
+    .select(receiveListSelection)
     .from(receives)
     .innerJoin(receiveItems, eq(receives.id, receiveItems.receiveId))
-    .innerJoin(orders, eq(receives.orderId, orders.id))
     .orderBy(asc(receives.id), asc(receiveItems.id));
 
   return rows.map(mapReceive);
@@ -977,7 +990,7 @@ export async function updateReceive(
       serialNumbersJson:
         input.serialNumbers !== undefined
           ? JSON.stringify(input.serialNumbers ?? [])
-          : JSON.stringify(parseStringArray(existingReceive.serialNumbersJson)),
+          : JSON.stringify(parseStringArray(existingReceive.serialNumbersJson ?? null)),
       updatedAt: new Date().toISOString(),
     })
     .where(eq(orders.id, orderId))

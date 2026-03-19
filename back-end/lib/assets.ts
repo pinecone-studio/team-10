@@ -3,8 +3,6 @@ import {
   assets,
   assetStatusValues,
   conditionStatusValues,
-  departments,
-  orderItems,
   orders,
   receiveItems,
   receives,
@@ -33,12 +31,6 @@ type StorageAssetRow = {
   receivedAt: string;
   receiveNote: string | null;
   orderId: number;
-  requestNumber: string | null;
-  requestDate: string | null;
-  requesterName: string | null;
-  departmentName: string | null;
-  unitCost: number | null;
-  currencyCode: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -88,12 +80,6 @@ const storageAssetSelection = {
   receivedAt: sql<string>`${receives.receivedAt}`.as("receivedAt"),
   receiveNote: sql<string | null>`${receiveItems.note}`.as("receiveNote"),
   orderId: sql<number>`${orders.id}`.as("orderId"),
-  requestNumber: sql<string | null>`${orders.requestNumber}`.as("requestNumber"),
-  requestDate: sql<string | null>`${orders.requestDate}`.as("requestDate"),
-  requesterName: sql<string | null>`${orders.requesterName}`.as("requesterName"),
-  departmentName: sql<string | null>`${departments.departmentName}`.as("departmentName"),
-  unitCost: sql<number | null>`${orderItems.unitCost}`.as("unitCost"),
-  currencyCode: sql<string | null>`${orderItems.currencyCode}`.as("currencyCode"),
   createdAt: sql<string>`${assets.createdAt}`.as("createdAt"),
   updatedAt: sql<string>`${assets.updatedAt}`.as("updatedAt"),
 };
@@ -122,7 +108,7 @@ async function mapStorageAsset(
   row: StorageAssetRow,
   runtimeConfig?: RuntimeConfig,
 ): Promise<StorageAssetRecord> {
-  const fallbackRequestDate = row.requestDate ?? row.receivedAt.slice(0, 10);
+  const fallbackRequestDate = row.receivedAt.slice(0, 10);
   const fallbackRequestNumber = `REQ-${fallbackRequestDate.replaceAll("-", "")}-${String(
     row.orderId,
   ).padStart(3, "0")}`;
@@ -157,12 +143,12 @@ async function mapStorageAsset(
     receivedAt: row.receivedAt,
     receiveNote: row.receiveNote,
     orderId: String(row.orderId),
-    requestNumber: row.requestNumber ?? fallbackRequestNumber,
+    requestNumber: fallbackRequestNumber,
     requestDate: fallbackRequestDate,
-    requester: row.requesterName ?? "",
-    department: row.departmentName ?? "IT Office",
-    unitCost: row.unitCost,
-    currencyCode: row.currencyCode ?? "MNT",
+    requester: "",
+    department: "IT Office",
+    unitCost: null,
+    currencyCode: "MNT",
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -175,9 +161,7 @@ function buildStorageAssetsBaseQuery(db: AppDb) {
     .innerJoin(receiveItems, eq(assets.receiveItemId, receiveItems.id))
     .innerJoin(receives, eq(receiveItems.receiveId, receives.id))
     .innerJoin(orders, eq(receives.orderId, orders.id))
-    .leftJoin(departments, eq(orders.departmentId, departments.id))
-    .leftJoin(storage, eq(assets.currentStorageId, storage.id))
-    .leftJoin(orderItems, eq(receiveItems.orderItemId, orderItems.id));
+    .leftJoin(storage, eq(assets.currentStorageId, storage.id));
 }
 
 export async function listStorageAssets(
