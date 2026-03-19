@@ -7,9 +7,11 @@ const schemaUrl = process.env.GRAPHQL_SCHEMA_URL?.trim();
 const configDir = dirname(fileURLToPath(import.meta.url));
 const backendSchemaSnapshot = "../back-end/graphql/generated/schema.graphql";
 const frontendSchemaSnapshot = "./graphql/schema.graphql";
+const isCiBuild =
+  process.env.GITHUB_ACTIONS === "true" || process.env.CI === "true";
 
 const schema =
-  schemaUrl ||
+  (!isCiBuild && schemaUrl) ||
   (existsSync(resolve(configDir, backendSchemaSnapshot))
     ? backendSchemaSnapshot
     : frontendSchemaSnapshot);
