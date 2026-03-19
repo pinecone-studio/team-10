@@ -10,7 +10,6 @@ import {
 } from "@/app/(dashboard)/_graphql/storage/storage-api";
 import { downloadBase64File } from "@/app/_lib/download-base64";
 import { formatCurrency, formatDisplayDate } from "../../_lib/order-store";
-import { FrontendLoading } from "../shared/FrontendLoading";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import {
   StorageCategoryBadge,
@@ -81,7 +80,7 @@ export function InventoryStorageSection() {
     useState<(typeof CONDITION_FILTERS)[number]>("All Conditions");
   const [selectedStatusFilter, setSelectedStatusFilter] =
     useState<(typeof STATUS_FILTERS)[number]>("All Statuses");
-  const [isLoading, setIsLoading] = useState(true);
+  const [hasResolvedAssets, setHasResolvedAssets] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
@@ -103,7 +102,6 @@ export function InventoryStorageSection() {
     let isMounted = true;
 
     void (async () => {
-      setIsLoading(true);
       setErrorMessage(null);
 
       try {
@@ -120,7 +118,7 @@ export function InventoryStorageSection() {
         );
       } finally {
         if (isMounted) {
-          setIsLoading(false);
+          setHasResolvedAssets(true);
         }
       }
     })();
@@ -389,13 +387,7 @@ export function InventoryStorageSection() {
     >
       {errorMessage ? (
         <EmptyState title="Storage data unavailable" description={errorMessage} />
-      ) : isLoading ? (
-        <FrontendLoading
-          variant="storage-list"
-          title="Loading storage assets"
-          description="Pulling live asset and storage records from the backend."
-        />
-      ) : assets.length === 0 ? (
+      ) : !hasResolvedAssets ? null : assets.length === 0 ? (
         <EmptyState
           title="No stored goods yet"
           description="Received items will appear here right after the receive step."
