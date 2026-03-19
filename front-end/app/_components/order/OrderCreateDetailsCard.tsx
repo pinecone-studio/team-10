@@ -2,15 +2,16 @@
 
 import { departmentOptions } from "../../_lib/order-catalog";
 import type { OrderCreateViewProps } from "./OrderCreateView.types";
-import { CalendarIcon, ChevronDownIcon } from "./OrderCreateIcons";
+import { CalendarIcon, CheckCircleIcon, ChevronDownIcon } from "./OrderCreateIcons";
 import { Field, Input, Select } from "./OrderFormFields";
 import { formatLongRequestDate } from "./orderCreateUtils";
 
 function ReadonlyField({ label, value }: { label: string; value: string }) {
   return (
     <Field label={label}>
-      <div className="flex h-9 items-center rounded-[6px] border border-[#e2e8f0] bg-white px-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="flex h-11 items-center justify-between rounded-[10px] border border-[#d7e7fb] bg-[#f3f8ff] px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
         <span className="text-[14px] text-[#020618]">{value}</span>
+        <CheckCircleIcon />
       </div>
     </Field>
   );
@@ -18,11 +19,12 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
 
 export function OrderCreateDetailsCard(props: Pick<OrderCreateViewProps, "draftOrder" | "onOrderChange">) {
   return (
-    <section className="rounded-[12px] border border-[#e2e8f0] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]">
-      <div className="border-b border-[#e2e8f0] bg-[rgba(241,245,249,0.3)] px-6 py-4">
-        <h3 className="text-[16px] font-semibold leading-6 text-[#020618]">Order Details</h3>
+    <section>
+      <div className="px-8 py-8">
+        <h3 className="text-[18px] font-semibold leading-7 text-[#111827]">Order Details</h3>
       </div>
-      <div className="grid gap-x-[52px] gap-y-5 px-6 py-6 md:grid-cols-2">
+      <div className="border-t border-[#dbeafb] px-8 pb-8 pt-14">
+        <div className="grid gap-x-16 gap-y-6 md:grid-cols-2">
         <ReadonlyField label="Request ID" value={props.draftOrder.requestNumber} />
         <ReadonlyField label="Request Date" value={formatLongRequestDate(props.draftOrder.requestDate)} />
         <Field label="Department">
@@ -30,7 +32,7 @@ export function OrderCreateDetailsCard(props: Pick<OrderCreateViewProps, "draftO
             <Select
               value={props.draftOrder.department}
               onChange={(event) => props.onOrderChange("department", event.target.value)}
-              className="appearance-none pr-10"
+              className="h-11 appearance-none rounded-[10px] border-[#d7e7fb] bg-white pr-10 text-[#64748b]"
             >
               {departmentOptions.map((department) => (
                 <option key={department} value={department}>
@@ -49,13 +51,14 @@ export function OrderCreateDetailsCard(props: Pick<OrderCreateViewProps, "draftO
               value={props.draftOrder.deliveryDate}
               onChange={(event) => props.onOrderChange("deliveryDate", event.target.value)}
               type="date"
-              className="pl-11 text-[#62748e]"
+              className="h-11 rounded-[10px] border-[#d7e7fb] pl-11 text-[#62748e]"
             />
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
               <CalendarIcon />
             </span>
           </div>
         </Field>
+      </div>
       </div>
     </section>
   );
