@@ -30,7 +30,7 @@ const CATEGORIES = [
 ] as const;
 const CONDITION_FILTERS = ["All Conditions", "Good", "Damaged", "Defective", "Missing"] as const;
 const STATUS_FILTERS = [
-  "All Statuses",
+  "All status",
   "Available",
   "Assigned",
   "In Repair",
@@ -79,7 +79,7 @@ export function InventoryStorageSection() {
   const [selectedConditionFilter, setSelectedConditionFilter] =
     useState<(typeof CONDITION_FILTERS)[number]>("All Conditions");
   const [selectedStatusFilter, setSelectedStatusFilter] =
-    useState<(typeof STATUS_FILTERS)[number]>("All Statuses");
+    useState<(typeof STATUS_FILTERS)[number]>("All status");
   const [hasResolvedAssets, setHasResolvedAssets] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -205,7 +205,7 @@ export function InventoryStorageSection() {
               humanizeConditionValue(asset.conditionStatus) === selectedConditionFilter,
           );
     const statusFilteredAssets =
-      selectedStatusFilter === "All Statuses"
+      selectedStatusFilter === "All status"
         ? conditionFilteredAssets
         : conditionFilteredAssets.filter(
             (asset) =>
@@ -797,7 +797,7 @@ export function InventoryStorageSection() {
                               key={option}
                               label={option}
                               preview={
-                                option === "All Statuses" ? undefined : (
+                                option === "All status" ? undefined : (
                                   <StorageStatusBadge value={statusFilterToValue(option)} />
                                 )
                               }

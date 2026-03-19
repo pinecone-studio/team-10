@@ -91,4 +91,3 @@ function Td(props: { children: React.ReactNode; right?: boolean; center?: boolea
     {props.boxed ? <div className={`flex h-[32px] w-full items-center whitespace-nowrap rounded-[6px] border border-[rgba(0,0,0,0)] bg-[rgba(255,255,255,0)] px-[10px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] ${props.right ? "justify-end" : props.center ? "justify-center" : "justify-start"}`}>{props.children}</div> : props.children}
   </td>;
 }
-console.log
