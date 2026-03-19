@@ -10,7 +10,6 @@ import {
 } from "@/app/(dashboard)/_graphql/storage/storage-api";
 import { downloadBase64File } from "@/app/_lib/download-base64";
 import { formatCurrency, formatDisplayDate } from "@/app/_lib/order-store";
-import { buildRegisteredAssetScanUrl } from "@/app/_lib/qr-links";
 import { FrontendLoading } from "../shared/FrontendLoading";
 import { EmptyState, WorkspaceShell } from "../shared/WorkspacePrimitives";
 import { BrandedQrCode } from "../shared/BrandedQrCode";

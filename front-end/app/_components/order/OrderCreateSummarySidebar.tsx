@@ -25,45 +25,21 @@ export function OrderCreateSummarySidebar(
   const currencyCode = props.draftItems[0]?.currencyCode ?? "USD";
 
   return (
-    <aside className="rounded-[12px] border border-[#e2e8f0] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]">
-      <div className="border-b border-[#e2e8f0] bg-[rgba(241,245,249,0.3)] px-6 py-4">
-        <h3 className="text-[16px] font-semibold leading-6 text-[#020618]">Order Summary</h3>
+    <aside className="flex h-full flex-col overflow-hidden rounded-[22px] border border-[#dbeafb] bg-white shadow-[0_14px_40px_rgba(125,170,232,0.18),0_8px_18px_rgba(15,23,42,0.08)] xl:h-[800px]">
+      <div className="px-8 py-8">
+        <h3 className="text-[18px] font-semibold leading-7 text-[#111827]">Order Summary</h3>
       </div>
-      <div className="space-y-5 p-5">
-        <button
-          type="button"
-          onClick={props.onFillDemo}
-          className="fx-submit-button h-10 w-full px-4 text-[13px] font-medium"
-        >
-          <span className="fx-submit-icon-wrapper">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="fx-submit-icon"
-            >
-              <path d="M12 3v18" />
-              <path d="M3 12h18" />
-            </svg>
-          </span>
-          <span className="fx-submit-label">Demo Button</span>
-        </button>
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#dbeafe] text-[12px] font-semibold text-[#0a0a0a]">
+      <div className="flex flex-1 flex-col gap-7 border-t border-[#dbeafb] px-6 pb-8 pt-14">
+        <div className="flex items-center gap-4">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#dbeafe] text-[13px] font-semibold text-[#0a0a0a]">
             {(props.draftOrder.requester || "BA").slice(0, 2).toUpperCase()}
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-[14px] font-medium leading-5 text-[#020618]">
+              <p className="text-[14px] font-semibold leading-5 text-[#020618]">
                 {props.draftOrder.requester}
               </p>
-              <span className="rounded-[6px] bg-[#dbeafe] px-[6px] py-px text-[12px] leading-[15px] text-black">
+              <span className="rounded-[8px] bg-[#eef4ff] px-2 py-1 text-[12px] leading-none text-[#475569]">
                 {props.draftOrder.department}
               </span>
             </div>
@@ -72,22 +48,22 @@ export function OrderCreateSummarySidebar(
             </p>
           </div>
         </div>
-        <div className="space-y-2 border-y border-[#e2e8f0] py-5 text-[14px] text-[#62748e]">
+        <div className="space-y-3 border-y border-[#dbeafb] py-6 text-[14px] text-[#62748e]">
           <div className="flex items-center justify-between">
             <span>Subtotal</span>
-            <span className="font-medium text-[#020618]">
+            <span className="text-[14px] font-semibold text-[#020618]">
               {formatCurrency(subtotal, currencyCode)}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span>Tax (8%)</span>
-            <span className="font-medium text-[#020618]">
+            <span className="text-[14px] font-semibold text-[#020618]">
               {formatCurrency(tax, currencyCode)}
             </span>
           </div>
-          <div className="flex items-center justify-between border-t border-[#e2e8f0] pt-2 text-[14px] font-semibold text-[#020618]">
+          <div className="flex items-center justify-between border-t border-[#dbeafb] pt-3 text-[14px] font-semibold text-[#020618]">
             <span>Grand Total</span>
-            <span className="text-[18px] font-bold leading-7 text-black">
+            <span className="text-[22px] font-bold leading-7 text-black">
               {formatCurrency(grandTotal, currencyCode)}
             </span>
           </div>
@@ -99,11 +75,11 @@ export function OrderCreateSummarySidebar(
               props.onPermissionMessageChange(event.target.value)
             }
             placeholder="Add notes for approvers..."
-            className="min-h-[64px]"
+            className="min-h-[78px] rounded-[10px] border-[#d7e7fb] px-4 py-3"
           />
         </Field>
         {!props.canSubmitDraft ? (
-          <div className="rounded-[6px] border border-dashed border-[#d9e0e8] px-4 py-3 text-[13px] text-[#94a3b8]">
+          <div className="rounded-[10px] border border-dashed border-[#d9e0e8] px-4 py-3 text-[13px] text-[#94a3b8]">
             Missing: {props.missingSubmitFields.join(", ")}
           </div>
         ) : null}
@@ -111,8 +87,11 @@ export function OrderCreateSummarySidebar(
           type="button"
           onClick={() => setIsConfirmOpen(true)}
           disabled={!props.canSubmitDraft}
-          className="inline-flex h-9 w-full items-center justify-center rounded-[6px] bg-black text-[14px] font-medium text-white transition duration-150 hover:bg-[#1f2937] active:scale-[0.98] active:bg-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black disabled:active:scale-100"
+          className="mt-auto inline-flex h-11 w-full items-center justify-center gap-3 rounded-[10px] bg-[#5d88ce] text-[14px] font-medium text-white transition duration-150 hover:bg-[#4c78c1] active:scale-[0.98] active:bg-[#436cae] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#bfdbfe] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#cbd5e1] disabled:text-white disabled:opacity-100"
         >
+          <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+            <path d="m17 3-8.6 8.6M17 3l-5.5 14-3.1-5.4L3 8.5 17 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
           Send for Approval
         </button>
         {isConfirmOpen ? (

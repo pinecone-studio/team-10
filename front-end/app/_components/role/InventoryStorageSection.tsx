@@ -1081,44 +1081,6 @@ function normalizeStorageStatus(value: string) {
   return value;
 }
 
-function humanizeConditionValue(value: string) {
-  if (value === "good") return "Good";
-  if (value === "damaged") return "Damaged";
-  if (value === "defective") return "Defective";
-  if (value === "missing") return "Missing";
-
-  return value;
-}
-
-function humanizeStatusValue(value: string) {
-  if (value === "available") return "Available";
-  if (value === "assigned") return "Assigned";
-  if (value === "inRepair") return "In Repair";
-  if (value === "pendingDisposal") return "Pending Disposal";
-  if (value === "pendingRetrieval") return "Pending Retrieval";
-
-  return value;
-}
-
-function conditionFilterToValue(value: (typeof CONDITION_FILTERS)[number]) {
-  if (value === "Good") return "good";
-  if (value === "Damaged") return "damaged";
-  if (value === "Defective") return "defective";
-  if (value === "Missing") return "missing";
-
-  return "good";
-}
-
-function statusFilterToValue(value: (typeof STATUS_FILTERS)[number]) {
-  if (value === "Available") return "available";
-  if (value === "Assigned") return "assigned";
-  if (value === "In Repair") return "inRepair";
-  if (value === "Pending Disposal") return "pendingDisposal";
-  if (value === "Pending Retrieval") return "pendingRetrieval";
-
-  return "available";
-}
-
 function StorageCensusWorkspace({
   selectedCount,
   currentSession,

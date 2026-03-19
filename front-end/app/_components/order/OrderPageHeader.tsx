@@ -34,19 +34,19 @@ function BackIcon() {
 
 export function OrderPageHeader({ title, backLabel, onBack, action }: Props) {
   return (
-    <div className="flex items-end justify-between gap-4 bg-white px-[24px] pb-0 lg:px-[44px]">
+    <div className="flex items-start justify-between gap-4 bg-transparent px-[40px] pb-6">
       <div>
         {backLabel && onBack ? (
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex h-10 items-center gap-2 rounded-[6px] py-2 text-[14px] font-medium text-[#0a0a0a] transition duration-150 hover:bg-[#f8fafc] hover:px-2 active:scale-[0.98] active:bg-[#eef2f7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
+            className="inline-flex h-10 items-center gap-2 rounded-[8px] py-2 text-[14px] font-medium text-[#1e293b] transition duration-150 hover:bg-[#f8fbff] hover:px-2 active:scale-[0.98] active:bg-[#eef5fd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
           >
             <BackIcon />
             <span>{backLabel}</span>
           </button>
         ) : null}
-        <h2 className="mt-[6px] text-[24px] font-bold leading-none text-[#111111]">
+        <h2 className="mt-3 text-[26px] font-bold leading-none text-[#111827]">
           {title}
         </h2>
       </div>

@@ -1,8 +1,7 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
-const schema =
-  process.env.GRAPHQL_SCHEMA_URL ??
-  "./graphql/schema.graphql";
+const schemaUrl = process.env.GRAPHQL_SCHEMA_URL?.trim();
+const schema = schemaUrl || "./graphql/schema.graphql";
 
 const config: CodegenConfig = {
   schema,
