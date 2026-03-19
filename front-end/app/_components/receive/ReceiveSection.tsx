@@ -78,8 +78,7 @@ export function ReceiveSection() {
     return filteredRows.slice(startIndex, startIndex + rowsPerPage);
   }, [currentPage, filteredRows, rowsPerPage]);
 
-  const activeRow =
-    rows.find((row) => row.id === selectedRowId) ?? null;
+  const activeRow = rows.find((row) => row.id === selectedRowId) ?? null;
   const activeProduct = useMemo(
     () =>
       activeRow
@@ -415,7 +414,7 @@ export function ReceiveSection() {
                           setScanResult(
                             generatedQrCodes.some((entry) => entry.token === nextValue)
                               ? "success"
-                            : "error",
+                              : "error",
                           );
                         }}
                         placeholder="Paste / scan QR token"

@@ -200,3 +200,66 @@ export async function fetchStorageAssetDetailRequest(input: {
     );
   }
 }
+
+const updateStorageAssetMutation = gql`
+  ${storageAssetFields}
+
+  mutation UpdateStorageAsset(
+    $id: ID!
+    $assetStatus: String
+    $conditionStatus: String
+  ) {
+    updateStorageAsset(
+      id: $id
+      assetStatus: $assetStatus
+      conditionStatus: $conditionStatus
+    ) {
+      ...StorageAssetFields
+    }
+  }
+`;
+
+export async function updateStorageAssetRequest(input: {
+  id: string;
+  assetStatus?: string | null;
+  conditionStatus?: string | null;
+}) {
+  try {
+    const result = await apolloClient.mutate<{
+      updateStorageAsset: StorageAssetDto;
+    }>({
+      mutation: updateStorageAssetMutation,
+      variables: {
+        id: input.id,
+        assetStatus: input.assetStatus ?? null,
+        conditionStatus: input.conditionStatus ?? null,
+      },
+    });
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    const { data } = result;
+    if (!data?.updateStorageAsset) {
+      throw new Error("Asset update did not return a record.");
+    }
+
+    return data.updateStorageAsset;
+  } catch (error) {
+    console.warn("Falling back to local storage asset update.", error);
+    const localAssets = await buildLocalStorageAssets();
+    const existingAsset = localAssets.find((asset) => asset.id === input.id);
+
+    if (!existingAsset) {
+      throw error instanceof Error ? error : new Error("Asset was not found.");
+    }
+
+    return {
+      ...existingAsset,
+      assetStatus: input.assetStatus ?? existingAsset.assetStatus,
+      conditionStatus: input.conditionStatus ?? existingAsset.conditionStatus,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+}

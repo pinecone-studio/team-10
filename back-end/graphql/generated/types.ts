@@ -107,6 +107,7 @@ export type Mutation = {
   updateCatalogProduct?: Maybe<CatalogProduct>;
   updateOrder?: Maybe<Order>;
   updateReceive?: Maybe<Receive>;
+  updateStorageAsset: StorageAsset;
 };
 
 
@@ -272,6 +273,13 @@ export type MutationUpdateReceiveArgs = {
   receivedCondition?: InputMaybe<Scalars['String']['input']>;
   serialNumbers?: InputMaybe<Array<Scalars['String']['input']>>;
   storageLocation?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationUpdateStorageAssetArgs = {
+  assetStatus?: InputMaybe<Scalars['String']['input']>;
+  conditionStatus?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
 };
 
 export type Notification = {
@@ -673,6 +681,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   updateCatalogProduct?: Resolver<Maybe<ResolversTypes['CatalogProduct']>, ParentType, ContextType, RequireFields<MutationUpdateCatalogProductArgs, 'id'>>;
   updateOrder?: Resolver<Maybe<ResolversTypes['Order']>, ParentType, ContextType, RequireFields<MutationUpdateOrderArgs, 'id'>>;
   updateReceive?: Resolver<Maybe<ResolversTypes['Receive']>, ParentType, ContextType, RequireFields<MutationUpdateReceiveArgs, 'id'>>;
+  updateStorageAsset?: Resolver<ResolversTypes['StorageAsset'], ParentType, ContextType, RequireFields<MutationUpdateStorageAssetArgs, 'id'>>;
 };
 
 export type NotificationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Notification'] = ResolversParentTypes['Notification']> = {

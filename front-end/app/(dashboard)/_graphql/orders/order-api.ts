@@ -287,7 +287,7 @@ function parseCurrencyCode() {
   return "USD" as const;
 }
 
-function parseApprovalTarget(): StoredOrder["approvalTarget"] {
+function parseApprovalTarget(_value?: string): StoredOrder["approvalTarget"] {
   return "finance";
 }
 
@@ -335,7 +335,7 @@ function mapOrder(order: OrderDto): StoredOrder {
     department: order.department,
     requester: order.requester,
     deliveryDate: order.deliveryDate,
-    approvalTarget: parseApprovalTarget(),
+    approvalTarget: parseApprovalTarget(order.approvalTarget),
     items: order.items.map(mapOrderItem),
     totalAmount: order.totalAmount,
     currencyCode: parseCurrencyCode(),

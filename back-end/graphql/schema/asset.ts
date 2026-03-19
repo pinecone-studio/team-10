@@ -29,4 +29,12 @@ export const AssetTypeDefs = `
     storageAssets: [StorageAsset!]!
     asset(id: ID, qrCode: String): StorageAsset
   }
+
+  type Mutation {
+    updateStorageAsset(
+      id: ID!
+      assetStatus: String
+      conditionStatus: String
+    ): StorageAsset!
+  }
 `;

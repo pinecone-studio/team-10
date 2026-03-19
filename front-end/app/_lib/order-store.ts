@@ -414,18 +414,19 @@ function createAssetPrefix(itemName: string) {
 }
 
 export function createAssetIds(itemName: string, receivedAt: string, quantity: number) {
+  const prefix = createAssetPrefix(itemName);
   const year = new Date(receivedAt).getFullYear() || new Date().getFullYear();
   const sequence = cachedOrdersSnapshot
     .flatMap((order) => order.assetIds)
     .map((assetId) => {
       const parts = assetId.split("-");
-      return parts[1] === String(year) ? Number(parts[2]) : 0;
+      return parts[0] === prefix && parts[1] === String(year) ? Number(parts[2]) : 0;
     })
     .reduce((max, current) => Math.max(max, Number.isFinite(current) ? current : 0), 0);
 
   return Array.from({ length: quantity }, (_, index) => {
     const nextSequence = String(sequence + index + 1).padStart(3, "0");
-    return `${createAssetPrefix(itemName)}-${year}-${nextSequence}`;
+    return `${prefix}-${year}-${nextSequence}`;
   });
 }
 
