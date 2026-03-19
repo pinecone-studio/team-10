@@ -34,6 +34,51 @@ type GraphQLContextOptions = {
   requestIpAddress?: string | null;
 };
 
+export type DatabaseResolutionInfo = {
+  hasBindingDatabase: boolean;
+  hasRuntimeHttpDatabaseConfig: boolean;
+  selectedDatabaseMode: "binding" | "http" | "unavailable";
+};
+
+export async function getDatabaseResolutionInfo(): Promise<DatabaseResolutionInfo> {
+  const hasRuntimeHttpDatabaseConfig = Boolean(
+    process.env.CLOUDFLARE_ACCOUNT_ID?.trim() &&
+      process.env.CLOUDFLARE_D1_DATABASE_ID?.trim() &&
+      (process.env.CLOUDFLARE_D1_API_TOKEN?.trim() ||
+        process.env.CLOUDFLARE_API_TOKEN?.trim()),
+  );
+
+  let hasBindingDatabase = false;
+
+  try {
+    const cloudflareContext = await getCloudflareContext({ async: true });
+    const bindingDatabase = (
+      cloudflareContext.env as Record<string, unknown>
+    ).DB as { prepare?: unknown; batch?: unknown } | undefined;
+
+    hasBindingDatabase = Boolean(
+      bindingDatabase &&
+        typeof bindingDatabase === "object" &&
+        "prepare" in bindingDatabase &&
+        typeof bindingDatabase.prepare === "function" &&
+        "batch" in bindingDatabase &&
+        typeof bindingDatabase.batch === "function",
+    );
+  } catch {
+    hasBindingDatabase = false;
+  }
+
+  return {
+    hasBindingDatabase,
+    hasRuntimeHttpDatabaseConfig,
+    selectedDatabaseMode: hasBindingDatabase
+      ? "binding"
+      : hasRuntimeHttpDatabaseConfig
+        ? "http"
+        : "unavailable",
+  };
+}
+
 export function createGraphQLContextValue(
   options: GraphQLContextOptions = {},
 ): GraphQLContext {
@@ -81,12 +126,7 @@ export async function createGraphQLContext(
   options: GraphQLContextOptions = {},
 ): Promise<GraphQLContext> {
   let resolvedDb = options.db;
-  const hasRuntimeHttpDatabaseConfig = Boolean(
-    process.env.CLOUDFLARE_ACCOUNT_ID?.trim() &&
-      process.env.CLOUDFLARE_D1_DATABASE_ID?.trim() &&
-      (process.env.CLOUDFLARE_D1_API_TOKEN?.trim() ||
-        process.env.CLOUDFLARE_API_TOKEN?.trim()),
-  );
+  const { hasRuntimeHttpDatabaseConfig } = await getDatabaseResolutionInfo();
 
   if (!resolvedDb) {
     try {
