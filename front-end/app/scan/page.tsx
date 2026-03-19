@@ -8,6 +8,7 @@ type ScanRouteProps = {
     qr?: string;
     assetName?: string;
     serialNumber?: string;
+    mode?: string;
     role?: string;
   }>;
 };
@@ -15,7 +16,13 @@ type ScanRouteProps = {
 export default async function ScanRoute({ searchParams }: ScanRouteProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const requestedRole = resolvedSearchParams?.role;
-  const role = requestedRole && isAppRole(requestedRole) ? requestedRole : "inventoryHead";
+  const mode = resolvedSearchParams?.mode?.trim() ?? "";
+  const role =
+    requestedRole && isAppRole(requestedRole)
+      ? requestedRole
+      : mode === "employee"
+        ? "employee"
+        : "inventoryHead";
   const qr = resolvedSearchParams?.qr?.trim() ?? "";
   const state = resolvedSearchParams?.state?.trim() ?? "";
   const assetName = resolvedSearchParams?.assetName?.trim() ?? "";
@@ -35,5 +42,5 @@ export default async function ScanRoute({ searchParams }: ScanRouteProps) {
     );
   }
 
-  return <QrScanResolverPage qrCode={qr} role={role} />;
+  return <QrScanResolverPage qrCode={qr} role={role} mode={mode} />;
 }
