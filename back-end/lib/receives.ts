@@ -102,6 +102,7 @@ export type UpdateReceiveInput = {
 
 export type ReceiveOrderItemInput = {
   orderId: string;
+  orderItemId?: string | null;
   catalogId?: string | null;
   itemCode: string;
   quantityReceived: number;
@@ -325,11 +326,51 @@ async function getOrderItemForReceive(
   itemCode: string,
   catalogId?: string | null,
 ) {
-  const filters = [eq(orderItems.orderId, orderId), eq(orderItems.itemCode, itemCode)];
+  const baseSelection = db
+    .select({
+      id: orderItems.id,
+      orderId: orderItems.orderId,
+      itemName: orderItems.itemName,
+      itemCode: orderItems.itemCode,
+      itemType: orderItems.itemType,
+      category: orderItems.category,
+      quantity: orderItems.quantity,
+      unitCost: orderItems.unitCost,
+      currencyCode: orderItems.currencyCode,
+      catalogItemTypeId: orderItems.catalogItemTypeId,
+      catalogProductId: orderItems.catalogProductId,
+    })
+    .from(orderItems)
+    .orderBy(asc(orderItems.id))
+    .limit(1);
 
   if (catalogId?.trim()) {
-    filters.push(eq(orderItems.catalogProductId, parseIntegerId("catalogId", catalogId)));
+    const [strictMatch] = await baseSelection.where(
+      and(
+        eq(orderItems.orderId, orderId),
+        eq(orderItems.itemCode, itemCode),
+        eq(orderItems.catalogProductId, parseIntegerId("catalogId", catalogId)),
+      ),
+    );
+
+    if (strictMatch) {
+      return strictMatch;
+    }
   }
+
+  const [orderItem] = await baseSelection.where(
+    and(eq(orderItems.orderId, orderId), eq(orderItems.itemCode, itemCode)),
+  );
+
+  return orderItem ?? null;
+}
+
+async function getOrderItemForReceiveById(
+  db: AppDb,
+  orderId: number,
+  orderItemId: string,
+) {
+  const numericOrderItemId = parseIntegerId("orderItemId", orderItemId);
 
   const [orderItem] = await db
     .select({
@@ -346,8 +387,7 @@ async function getOrderItemForReceive(
       catalogProductId: orderItems.catalogProductId,
     })
     .from(orderItems)
-    .where(and(...filters))
-    .orderBy(asc(orderItems.id))
+    .where(and(eq(orderItems.id, numericOrderItemId), eq(orderItems.orderId, orderId)))
     .limit(1);
 
   return orderItem ?? null;
@@ -607,12 +647,20 @@ export async function receiveOrderItem(
     throw new Error(`Order ${input.orderId} does not exist.`);
   }
 
-  const orderItem = await getOrderItemForReceive(
-    db,
-    orderId,
-    input.itemCode.trim(),
-    input.catalogId,
-  );
+  const trimmedOrderItemId = input.orderItemId?.trim();
+  const trimmedItemCode = input.itemCode.trim();
+  const orderItem =
+    (trimmedOrderItemId
+      ? await getOrderItemForReceiveById(db, orderId, trimmedOrderItemId)
+      : null) ??
+    (trimmedItemCode
+      ? await getOrderItemForReceive(
+          db,
+          orderId,
+          trimmedItemCode,
+          input.catalogId,
+        )
+      : null);
 
   if (!orderItem) {
     throw new Error("Order item was not found for receive intake.");

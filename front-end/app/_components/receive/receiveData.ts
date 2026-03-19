@@ -109,6 +109,8 @@ export function buildReceiveRows(orders: StoredOrder[]): ReceiveRow[] {
       return {
         id: `${order.id}-${item.catalogId}-${itemIndex}`,
         orderId: order.id,
+        orderItemId: item.id,
+        catalogId: item.catalogId,
         orderStatus:
           order.status === "assigned_hr"
             ? "assigned_hr"

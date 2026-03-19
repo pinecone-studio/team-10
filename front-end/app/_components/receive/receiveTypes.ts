@@ -11,6 +11,8 @@ export type ReceiveCondition =
 export type ReceiveRow = {
   id: string;
   orderId: string;
+  orderItemId?: string;
+  catalogId: string;
   orderStatus: "approved_finance" | "received_inventory" | "assigned_hr";
   requestNumber: string;
   department: string;

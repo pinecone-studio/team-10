@@ -43,6 +43,7 @@ export type GoodsCatalogItem = {
 };
 
 export type OrderItem = {
+  id?: string;
   catalogId: string;
   name: string;
   code: string;
@@ -124,6 +125,7 @@ export type CreateOrderInput = {
 
 export type ReceiveOrderInput = {
   orderId: string;
+  orderItemId?: string;
   catalogId: string;
   itemCode: string;
   quantityReceived: number;

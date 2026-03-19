@@ -48,6 +48,29 @@ function isPersistedOrderId(orderId: string) {
   return /^\d+$/.test(orderId.trim());
 }
 
+function isIntegerIdentifier(value: string | null | undefined) {
+  return /^\d+$/.test(value?.trim() ?? "");
+}
+
+function isSameOrderItem(
+  item: OrderItem,
+  target: Pick<ReceiveOrderInput, "orderItemId" | "catalogId" | "itemCode">,
+) {
+  if (isIntegerIdentifier(target.orderItemId)) {
+    return item.id === target.orderItemId;
+  }
+
+  if (item.code !== target.itemCode) {
+    return false;
+  }
+
+  if (!isIntegerIdentifier(target.catalogId)) {
+    return true;
+  }
+
+  return item.catalogId === target.catalogId;
+}
+
 function canDeletePendingOrder(order: StoredOrder | undefined | null) {
   if (!order) return false;
   return order.status === "pending_finance";
@@ -258,16 +281,8 @@ function preserveKnownItems(
   nextOrder: StoredOrder,
   source: Pick<StoredOrder, "items" | "totalAmount" | "currencyCode">,
 ) {
-  if (nextOrder.items.length >= source.items.length || source.items.length === 0) {
-    return nextOrder;
-  }
-
-  return normalizeOrder({
-    ...nextOrder,
-    items: source.items,
-    totalAmount: source.totalAmount,
-    currencyCode: source.currencyCode,
-  });
+  void source;
+  return nextOrder;
 }
 
 function preserveLocalOrderDetails(nextOrder: StoredOrder, source: StoredOrder) {
@@ -315,6 +330,9 @@ function mergeRemoteOrdersWithLocal(remoteOrders: StoredOrder[], localOrders: St
 function subscribe(callback: () => void) {
   subscribers.add(callback);
   ensureOrdersStoreLoaded();
+  void refreshOrdersStore().catch((error) => {
+    console.error("Failed to refresh orders for subscriber.", error);
+  });
 
   return () => {
     subscribers.delete(callback);
@@ -664,11 +682,39 @@ export async function reviewFinanceOrderItems(input: {
     updatedAt,
   });
 
-  writeOrdersSnapshot([
-    approvedOrder,
-    rejectedOrder,
-    ...cachedOrdersSnapshot.filter((order) => order.id !== existingOrder.id),
-  ]);
+  if (!isPersistedOrderId(input.orderId)) {
+    writeOrdersSnapshot([
+      approvedOrder,
+      rejectedOrder,
+      ...cachedOrdersSnapshot.filter((order) => order.id !== existingOrder.id),
+    ]);
+  } else {
+    try {
+      const updatedApprovedOrder = await updateOrderRequest(input.orderId, {
+        items: approvedItems,
+        totalAmount: sumOrderItems(approvedItems),
+        status: "approved_finance",
+        financeReviewer: input.reviewer,
+        financeReviewedAt: reviewedAt,
+        financeNote: approvalNote,
+      });
+
+      if (!updatedApprovedOrder) {
+        throw new Error("Failed to update partially approved order.");
+      }
+
+      writeOrdersSnapshot([
+        preserveLocalOrderDetails(updatedApprovedOrder, approvedOrder),
+        rejectedOrder,
+        ...cachedOrdersSnapshot.filter((order) => order.id !== existingOrder.id),
+      ]);
+    } catch (error) {
+      console.error("Finance item review failed.", error);
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to review finance order items.");
+    }
+  }
 
   try {
     await refreshNotificationsStore();
@@ -678,98 +724,30 @@ export async function reviewFinanceOrderItems(input: {
 }
 
 export async function receiveInventoryOrder(input: ReceiveOrderInput) {
-  const existingOrder = cachedOrdersSnapshot.find((order) => order.id === input.orderId);
+  const orderSnapshot = isPersistedOrderId(input.orderId)
+    ? await refreshOrdersStore().catch(() => cachedOrdersSnapshot)
+    : cachedOrdersSnapshot;
+  const existingOrder = orderSnapshot.find((order) => order.id === input.orderId);
   if (!existingOrder) {
     throw new Error("Order not found.");
   }
 
-  const targetItem = existingOrder.items.find(
-    (item) => item.catalogId === input.catalogId && item.code === input.itemCode,
-  );
+  const targetItem = existingOrder.items.find((item) => isSameOrderItem(item, input));
   if (!targetItem) {
     throw new Error("Order item not found.");
   }
-
-  const safeQuantity = Math.max(1, Math.min(input.quantityReceived, targetItem.quantity));
-  const remainingQuantity = targetItem.quantity - safeQuantity;
-  const receivedItem: OrderItem = {
-    ...targetItem,
-    quantity: safeQuantity,
-    totalPrice: targetItem.unitPrice * safeQuantity,
-  };
-  const remainingItems = existingOrder.items.flatMap((item) => {
-    if (item.catalogId !== input.catalogId || item.code !== input.itemCode) {
-      return [item];
-    }
-
-    if (remainingQuantity <= 0) {
-      return [];
-    }
-
-    return [
-      {
-        ...item,
-        quantity: remainingQuantity,
-        totalPrice: item.unitPrice * remainingQuantity,
-      },
-    ];
-  });
-  const remainingTotalAmount = remainingItems.reduce(
-    (sum, item) => sum + item.totalPrice,
-    0,
-  );
-  const receivedTotalAmount = receivedItem.totalPrice;
-  const hasRemainingItems = remainingItems.length > 0;
 
   if (!isPersistedOrderId(input.orderId)) {
     throw new Error("Receive is only supported for persisted orders.");
   }
 
   try {
-    await receiveOrderItemRequest(input);
-
-    const updatedOrder = await updateOrderRequest(input.orderId, {
-      status: hasRemainingItems ? "approved_finance" : "received_inventory",
-      receivedAt: hasRemainingItems ? null : input.receivedAt,
-      receivedCondition: hasRemainingItems ? null : input.receivedCondition,
-      receivedNote: hasRemainingItems ? "" : input.receivedNote,
-      storageLocation: hasRemainingItems ? "" : input.storageLocation,
-      serialNumbers: hasRemainingItems ? [] : input.serialNumbers,
-      items: hasRemainingItems ? remainingItems : [receivedItem],
-      totalAmount: hasRemainingItems ? remainingTotalAmount : receivedTotalAmount,
+    await receiveOrderItemRequest({
+      ...input,
+      orderItemId: isIntegerIdentifier(targetItem.id) ? targetItem.id : "",
+      catalogId: isIntegerIdentifier(targetItem.catalogId) ? targetItem.catalogId : "",
     });
-
-    if (!updatedOrder) {
-      throw new Error("Failed to save received order details.");
-    }
-
-    if (hasRemainingItems) {
-      const storedOrder = normalizeOrder({
-        ...existingOrder,
-        id: `${existingOrder.id}-received-${Date.now()}`,
-        items: [receivedItem],
-        totalAmount: receivedTotalAmount,
-        status: "received_inventory",
-        receivedAt: input.receivedAt,
-        receivedCondition: input.receivedCondition,
-        receivedNote: input.receivedNote,
-        storageLocation: input.storageLocation,
-        receivedImageDataUrl: input.assetImageDataUrl ?? null,
-        serialNumbers: input.serialNumbers,
-        assetIds: input.assetIds,
-        updatedAt: new Date().toISOString(),
-      });
-      writeOrdersSnapshot([
-        storedOrder,
-        updatedOrder,
-        ...cachedOrdersSnapshot.filter(
-          (order) => order.id !== existingOrder.id && order.id !== storedOrder.id,
-        ),
-      ]);
-      return;
-    }
-
-    upsertOrderSnapshot(updatedOrder);
+    await refreshOrdersStore();
   } catch (error) {
     console.error("Receive flow failed.", error);
     throw error instanceof Error

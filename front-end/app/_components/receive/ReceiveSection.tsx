@@ -492,14 +492,18 @@ export function ReceiveSection() {
                         1,
                         Math.min(activeRow.quantity, Number(quantityReceived) || 1),
                       );
+                      const selectedOrderItem =
+                        order.items.find(
+                          (item) =>
+                            item.code === activeRow.itemCode &&
+                            item.catalogId === activeRow.catalogId,
+                        ) ??
+                        order.items.find((item) => item.code === activeRow.itemCode) ??
+                        null;
                       await receiveInventoryOrder({
                         orderId: order.id,
-                        catalogId:
-                          activeProduct?.id ??
-                          order.items.find(
-                            (item) => item.code === activeRow.itemCode,
-                          )?.catalogId ??
-                          activeRow.itemCode,
+                        orderItemId: selectedOrderItem?.id ?? activeRow.orderItemId,
+                        catalogId: selectedOrderItem?.catalogId ?? "",
                         itemCode: activeRow.itemCode,
                         quantityReceived: resolvedQuantity,
                         receivedAt: receivedDate,
@@ -538,6 +542,9 @@ export function ReceiveSection() {
                         setUploadedImage,
                         setUploadedImageName,
                       );
+                      if (currentRole === "inventoryHead") {
+                        router.push("/inventoryHead?section=storage");
+                      }
                     } catch (error) {
                       setSubmitError(
                         error instanceof Error

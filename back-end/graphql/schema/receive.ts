@@ -40,6 +40,7 @@ export const ReceiveTypeDefs = `
   type Mutation {
     receiveOrderItem(
       orderId: ID!
+      orderItemId: ID
       catalogId: ID
       itemCode: String!
       quantityReceived: Int!

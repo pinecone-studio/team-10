@@ -230,6 +230,7 @@ export type MutationReceiveOrderItemArgs = {
   itemCode: Scalars['String']['input'];
   officeId?: InputMaybe<Scalars['ID']['input']>;
   orderId: Scalars['ID']['input'];
+  orderItemId?: InputMaybe<Scalars['ID']['input']>;
   quantityReceived: Scalars['Int']['input'];
   receivedAt?: InputMaybe<Scalars['String']['input']>;
   receivedByUserId?: InputMaybe<Scalars['ID']['input']>;
@@ -922,4 +923,3 @@ export type Resolvers<ContextType = GraphQLContext> = {
   ReceivedAsset?: ReceivedAssetResolvers<ContextType>;
   StorageAsset?: StorageAssetResolvers<ContextType>;
 };
-

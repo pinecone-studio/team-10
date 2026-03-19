@@ -316,6 +316,7 @@ function parseReceivedCondition(value: string | null): ReceivedCondition | null 
 
 function mapOrderItem(item: OrderItemDto): OrderItem {
   return {
+    id: item.id,
     catalogId: item.catalogId,
     name: item.name,
     code: item.code,
