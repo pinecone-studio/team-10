@@ -13,6 +13,7 @@ export function OrderHistoryView(props: {
   onFilterChange: (value: "all" | "pending" | "completed" | "cancelled") => void;
   onOpenCreate: () => void;
   onOpenDetail: (orderId: string) => void;
+  onDeleteOrder: (orderId: string) => void | Promise<void>;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -42,7 +43,11 @@ export function OrderHistoryView(props: {
       />
       <div className="px-0 pb-[40px] pt-6">
         <div className="mx-auto w-full max-w-[1237px] px-[24px] lg:px-[44px]">
-          <OrderHistoryTable orders={visibleOrders} onOpenDetail={props.onOpenDetail} />
+          <OrderHistoryTable
+            orders={visibleOrders}
+            onOpenDetail={props.onOpenDetail}
+            onDeleteOrder={props.onDeleteOrder}
+          />
         </div>
       </div>
     </div>
@@ -76,8 +81,8 @@ function filterOrdersByDateRange(
 function buildCounts(orders: StoredOrder[]) {
   return {
     all: orders.length,
-    pending: orders.filter((order) => ["pending_higher_up", "pending_finance"].includes(order.status)).length,
+    pending: orders.filter((order) => ["pending_finance"].includes(order.status)).length,
     completed: orders.filter((order) => ["approved_finance", "received_inventory", "assigned_hr"].includes(order.status)).length,
-    cancelled: orders.filter((order) => ["rejected_higher_up", "rejected_finance"].includes(order.status)).length,
+    cancelled: orders.filter((order) => ["rejected_finance"].includes(order.status)).length,
   };
 }

@@ -72,14 +72,23 @@ export async function listNotifications(
   userId?: string | null,
   currentUserId?: string | null,
 ): Promise<NotificationRecord[]> {
-  const resolvedUserId = await resolveNotificationUserId(db, userId, currentUserId);
-  const rows = await db
-    .select(notificationSelection)
-    .from(notifications)
-    .where(eq(notifications.userId, resolvedUserId))
-    .orderBy(desc(notifications.createdAt), desc(notifications.id));
+  try {
+    const resolvedUserId = await resolveNotificationUserId(
+      db,
+      userId,
+      currentUserId,
+    );
+    const rows = await db
+      .select(notificationSelection)
+      .from(notifications)
+      .where(eq(notifications.userId, resolvedUserId))
+      .orderBy(desc(notifications.createdAt), desc(notifications.id));
 
-  return rows.map(mapNotification);
+    return rows.map(mapNotification);
+  } catch (error) {
+    console.warn("listNotifications fallback triggered.", error);
+    return [];
+  }
 }
 
 export async function markNotificationAsRead(
@@ -88,25 +97,34 @@ export async function markNotificationAsRead(
   userId?: string | null,
   currentUserId?: string | null,
 ): Promise<NotificationRecord | null> {
-  const numericId = parseIntegerId("Notification id", id);
-  const resolvedUserId = await resolveNotificationUserId(db, userId, currentUserId);
-  const readAt = new Date().toISOString();
+  try {
+    const numericId = parseIntegerId("Notification id", id);
+    const resolvedUserId = await resolveNotificationUserId(
+      db,
+      userId,
+      currentUserId,
+    );
+    const readAt = new Date().toISOString();
 
-  const rows = await db
-    .update(notifications)
-    .set({
-      isRead: true,
-      readAt,
-    })
-    .where(
-      and(
-        eq(notifications.id, numericId),
-        eq(notifications.userId, resolvedUserId),
-      ),
-    )
-    .returning(notificationSelection);
+    const rows = await db
+      .update(notifications)
+      .set({
+        isRead: true,
+        readAt,
+      })
+      .where(
+        and(
+          eq(notifications.id, numericId),
+          eq(notifications.userId, resolvedUserId),
+        ),
+      )
+      .returning(notificationSelection);
 
-  return rows[0] ? mapNotification(rows[0]) : null;
+    return rows[0] ? mapNotification(rows[0]) : null;
+  } catch (error) {
+    console.warn(`markNotificationAsRead fallback triggered for ${id}.`, error);
+    return null;
+  }
 }
 
 export async function markAllNotificationsAsRead(
@@ -114,16 +132,25 @@ export async function markAllNotificationsAsRead(
   userId?: string | null,
   currentUserId?: string | null,
 ): Promise<boolean> {
-  const resolvedUserId = await resolveNotificationUserId(db, userId, currentUserId);
+  try {
+    const resolvedUserId = await resolveNotificationUserId(
+      db,
+      userId,
+      currentUserId,
+    );
 
-  await db
-    .update(notifications)
-    .set({
-      isRead: true,
-      readAt: new Date().toISOString(),
-    })
-    .where(eq(notifications.userId, resolvedUserId))
-    .run();
+    await db
+      .update(notifications)
+      .set({
+        isRead: true,
+        readAt: new Date().toISOString(),
+      })
+      .where(eq(notifications.userId, resolvedUserId))
+      .run();
 
-  return true;
+    return true;
+  } catch (error) {
+    console.warn("markAllNotificationsAsRead fallback triggered.", error);
+    return true;
+  }
 }

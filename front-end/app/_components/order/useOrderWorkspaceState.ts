@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { createOrder, useOrdersStore } from "../../_lib/order-store";
+import { createOrder, deletePendingOrder, useOrdersStore } from "../../_lib/order-store";
 import type { OrderItem } from "../../_lib/order-types";
 import { buildDemoDraftItems } from "./orderDemoData";
 import {
@@ -12,7 +12,6 @@ import {
   getOffsetDateInputValue,
 } from "./orderDraftState";
 import {
-  getDefaultHigherUpApproverId,
   getHigherUpApproverById,
 } from "./orderApprovers";
 import { createOrderItem, filterOrders } from "./orderWorkspaceHelpers";
@@ -50,13 +49,11 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
   );
   const canSubmitDraft = Boolean(
     draftOrder.deliveryDate &&
-      draftItems.length > 0 &&
-      draftOrder.requestedApproverId.trim(),
+      draftItems.length > 0,
   );
   const missingSubmitFields = [
     !draftOrder.deliveryDate && "Delivery date",
     draftItems.length === 0 && "At least one added good",
-    !draftOrder.requestedApproverId.trim() && "Approver",
   ].filter(Boolean) as string[];
   const summaryTotal = draftItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const filteredOrders = useMemo(() => filterOrders(orders, selectedFilter), [orders, selectedFilter]);
@@ -72,16 +69,6 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
     value: (typeof draftOrder)[Key],
   ) {
     setDraftOrder((current) => {
-      if (key === "department") {
-        return {
-          ...current,
-          department: value as typeof current.department,
-          requestedApproverId: getDefaultHigherUpApproverId(
-            value as typeof current.department,
-          ),
-        };
-      }
-
       return { ...current, [key]: value };
     });
   }
@@ -124,6 +111,28 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
     );
   }
 
+  async function handleDeleteOrder(orderId: string) {
+    try {
+      const targetOrder = orders.find((order) => order.id === orderId);
+      if (!targetOrder) return;
+
+      const confirmed =
+        typeof window === "undefined"
+          ? true
+          : window.confirm(`Delete pending order ${targetOrder.requestNumber}?`);
+      if (!confirmed) return;
+
+      await deletePendingOrder(orderId);
+
+      if (selectedOrderId === orderId) {
+        setSelectedOrderId(null);
+        setStage(canViewHistory ? "history" : "create");
+      }
+    } catch (error) {
+      console.error("Failed to delete pending order.", error);
+    }
+  }
+
   return {
     orders,
     stage,
@@ -142,6 +151,7 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
     openCreate: () => { resetDraft(); setSelectedOrderId(null); setStage("create"); },
     openHistory: () => { if (canViewHistory) { setStage("history"); setSelectedOrderId(null); } },
     openDetail: (orderId: string) => { setSelectedOrderId(orderId); setStage("detail"); },
+    deleteOrder: handleDeleteOrder,
     updateDraftOrder,
     setPermissionMessage,
     updateGoodsDraftField,
@@ -163,18 +173,18 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
         ...createDraftOrder(),
         requester: DEFAULT_ORDER_REQUESTER,
         deliveryDate: getOffsetDateInputValue(3),
-        requestedApproverId: getDefaultHigherUpApproverId("IT Office"),
+        requestedApproverId: "finance-review",
       });
       setDraftItems(await buildDemoDraftItems());
       setGoodsDrafts([createGoodsDraft(getNextGoodsCode())]);
     },
     submit: async () => {
-      const selectedApprover = getHigherUpApproverById(draftOrder.requestedApproverId);
       const resolvedRequester = draftOrder.requester.trim() || DEFAULT_ORDER_REQUESTER;
       const resolvedOrderName =
         draftOrder.orderName.trim() ||
         draftItems[0]?.name ||
         `${draftOrder.department} inventory request`;
+      const selectedApprover = getHigherUpApproverById(draftOrder.requestedApproverId);
       const nextOrder = await createOrder({
         orderName: resolvedOrderName,
         requestNumber: draftOrder.requestNumber,
@@ -182,11 +192,11 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
         department: draftOrder.department,
         requester: resolvedRequester,
         deliveryDate: draftOrder.deliveryDate,
-        approvalTarget: draftOrder.approvalTarget,
+        approvalTarget: "finance",
         items: draftItems,
-        requestedApproverId: draftOrder.requestedApproverId,
-        requestedApproverName: selectedApprover?.fullName ?? null,
-        requestedApproverRole: selectedApprover?.positionLabel ?? null,
+        requestedApproverId: "finance-review",
+        requestedApproverName: selectedApprover?.fullName ?? "Finance",
+        requestedApproverRole: selectedApprover?.positionLabel ?? "Finance Reviewer",
         approvalMessage: permissionMessage,
       });
       setSelectedOrderId(nextOrder.id);

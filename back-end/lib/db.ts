@@ -5,7 +5,8 @@ import { createHttpD1Database, type D1DatabaseLike } from "./d1.ts";
 type RequiredEnvVar =
   | "CLOUDFLARE_ACCOUNT_ID"
   | "CLOUDFLARE_D1_DATABASE_ID"
-  | "CLOUDFLARE_API_TOKEN";
+  | "CLOUDFLARE_API_TOKEN"
+  | "CLOUDFLARE_D1_API_TOKEN";
 
 export function createDatabase(client: D1DatabaseLike) {
   return drizzle(client as never, { schema });

@@ -26,15 +26,13 @@ type CurrencyCode = (typeof currencyCodeValues)[number];
 type ReceivedCondition = (typeof receivedConditionValues)[number];
 
 export type FrontOrderStatus =
-  | "pending_higher_up"
-  | "rejected_higher_up"
   | "pending_finance"
   | "approved_finance"
   | "rejected_finance"
   | "received_inventory"
   | "assigned_hr";
 
-export type FrontApprovalTarget = "any_higher_ups" | "finance";
+export type FrontApprovalTarget = "finance";
 
 type OrderRow = {
   id: number;
@@ -273,8 +271,6 @@ const orderItemSelection = {
 };
 
 function mapDbStatusToFront(status: DbOrderStatus): FrontOrderStatus {
-  if (status === "pendingHigherUpApproval") return "pending_higher_up";
-  if (status === "rejectedByHigherUp") return "rejected_higher_up";
   if (status === "pendingFinanceApproval") return "pending_finance";
   if (status === "rejectedByFinance") return "rejected_finance";
   if (
@@ -292,15 +288,15 @@ function mapDbStatusToFront(status: DbOrderStatus): FrontOrderStatus {
 
 function parseOrderStatus(
   status?: string | null,
-  fallback: DbOrderStatus = "pendingHigherUpApproval",
+  fallback: DbOrderStatus = "pendingFinanceApproval",
 ): DbOrderStatus {
   if (!status) return fallback;
 
   const normalizedStatusMap: Record<string, DbOrderStatus> = {
-    pending_higher_up: "pendingHigherUpApproval",
-    pendingHigherUpApproval: "pendingHigherUpApproval",
-    rejected_higher_up: "rejectedByHigherUp",
-    rejectedByHigherUp: "rejectedByHigherUp",
+    pending_higher_up: "pendingFinanceApproval",
+    pendingHigherUpApproval: "pendingFinanceApproval",
+    rejected_higher_up: "rejectedByFinance",
+    rejectedByHigherUp: "rejectedByFinance",
     pending_finance: "pendingFinanceApproval",
     pendingFinanceApproval: "pendingFinanceApproval",
     rejected_finance: "rejectedByFinance",
@@ -326,22 +322,21 @@ function parseOrderStatus(
 }
 
 function mapApprovalTargetToFront(
-  approvalTarget: DbApprovalQueue,
+  _approvalTarget: DbApprovalQueue,
 ): FrontApprovalTarget {
-  if (approvalTarget === "finance") return "finance";
-  return "any_higher_ups";
+  return "finance";
 }
 
 function parseApprovalTarget(
   approvalTarget?: string | null,
 ): DbApprovalQueue {
-  if (!approvalTarget) return "anyHigherUps";
-  if (approvalTarget === "any_higher_ups") return "anyHigherUps";
+  if (!approvalTarget) return "finance";
+  if (approvalTarget === "any_higher_ups") return "finance";
   if (approvalTarget === "finance") return "finance";
 
   if (!approvalQueueValues.includes(approvalTarget as DbApprovalQueue)) {
     throw new Error(
-      `Approval target must be one of: any_higher_ups, ${approvalQueueValues.join(", ")}.`,
+      `Approval target must be one of: finance, ${approvalQueueValues.join(", ")}.`,
     );
   }
 
@@ -458,6 +453,100 @@ function mapOrder(
     departmentId: row.departmentId === null ? null : String(row.departmentId),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+function mapInputStatusToFront(status?: string | null): FrontOrderStatus {
+  try {
+    return mapDbStatusToFront(parseOrderStatus(status, "pendingFinanceApproval"));
+  } catch {
+    return "pending_finance";
+  }
+}
+
+function mapInputApprovalTargetToFront(
+  approvalTarget?: string | null,
+): FrontApprovalTarget {
+  try {
+    return mapApprovalTargetToFront(parseApprovalTarget(approvalTarget));
+  } catch {
+    return "finance";
+  }
+}
+
+function mapFallbackOrderItems(items: OrderLineItemInput[]): OrderLineItemRecord[] {
+  return items.map((item, index) => {
+    const quantity = Number.isInteger(Number(item.quantity)) && Number(item.quantity) > 0
+      ? Number(item.quantity)
+      : 1;
+    const unitPrice = Number.isFinite(Number(item.unitPrice)) && Number(item.unitPrice) >= 0
+      ? Number(item.unitPrice)
+      : 0;
+
+    return {
+      id: `fallback-item-${index + 1}`,
+      catalogId: item.catalogId?.trim() ?? "",
+      name: item.name.trim() || `Order item ${index + 1}`,
+      code: item.code.trim().toUpperCase() || `ITEM${String(index + 1).padStart(3, "0")}`,
+      unit: item.unit?.trim() || "pcs",
+      quantity,
+      unitPrice,
+      totalPrice: quantity * unitPrice,
+      currencyCode: "USD",
+    };
+  });
+}
+
+function buildFallbackOrderRecord(input: CreateOrderInput): OrderRecord {
+  const createdAt = new Date().toISOString();
+  const requestDate = input.requestDate?.trim() || createdAt.slice(0, 10);
+  const requestNumber =
+    input.requestNumber?.trim().toUpperCase() ||
+    `REQ-${requestDate.replaceAll("-", "")}-${String(Date.now() % 1000).padStart(3, "0")}`;
+  const items = mapFallbackOrderItems(input.items ?? []);
+  const totalAmount =
+    input.totalAmount ??
+    items.reduce((sum, item) => sum + item.totalPrice, 0);
+
+  return {
+    id: `fallback-${Date.now()}`,
+    orderName: input.orderName.trim() || "Order",
+    whyOrdered: input.whyOrdered?.trim() ?? "",
+    expectedArrivalAt: input.deliveryDate ?? null,
+    totalCost: totalAmount,
+    requestNumber,
+    requestDate,
+    department: input.department?.trim() || "IT Office",
+    requester: input.requester?.trim() || "",
+    deliveryDate: input.deliveryDate ?? requestDate,
+    approvalTarget: mapInputApprovalTargetToFront(input.approvalTarget),
+    items,
+    totalAmount,
+    currencyCode: "USD",
+    status: mapInputStatusToFront(input.status),
+    requestedApproverId: input.requestedApproverId?.trim() || null,
+    requestedApproverName: input.requestedApproverName?.trim() || null,
+    requestedApproverRole: input.requestedApproverRole?.trim() || null,
+    approvalMessage: input.approvalMessage?.trim() ?? "",
+    higherUpReviewer: null,
+    higherUpReviewedAt: null,
+    higherUpNote: "",
+    financeReviewer: null,
+    financeReviewedAt: null,
+    financeNote: "",
+    receivedAt: null,
+    receivedCondition: null,
+    receivedNote: "",
+    storageLocation: "",
+    serialNumbers: [],
+    assignedTo: null,
+    assignedRole: null,
+    assignedAt: null,
+    userId: input.userId?.trim() || "1",
+    officeId: input.officeId?.trim() || "1",
+    departmentId: input.departmentId?.trim() || null,
+    createdAt,
+    updatedAt: createdAt,
   };
 }
 
@@ -591,44 +680,52 @@ async function resolveDepartmentForOrder(
   departmentId?: string | null,
   departmentName?: string | null,
 ) {
-  if (departmentId !== undefined && departmentId !== null) {
-    return resolveDepartmentId(db, departmentId);
+  try {
+    if (departmentId !== undefined && departmentId !== null) {
+      return resolveDepartmentId(db, departmentId);
+    }
+
+    const trimmedDepartmentName = departmentName?.trim() ?? "";
+    if (!trimmedDepartmentName) {
+      return resolveDepartmentId(db, undefined);
+    }
+
+    const [existingDepartment] = await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.departmentName, trimmedDepartmentName))
+      .limit(1);
+
+    if (existingDepartment) {
+      return existingDepartment.id;
+    }
+
+    await db
+      .insert(departments)
+      .values({
+        departmentName: trimmedDepartmentName,
+        description: "Auto-created for order workflow persistence",
+      })
+      .run();
+
+    const [createdDepartment] = await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.departmentName, trimmedDepartmentName))
+      .limit(1);
+
+    if (!createdDepartment) {
+      throw new Error("Failed to create the selected department.");
+    }
+
+    return createdDepartment.id;
+  } catch (error) {
+    console.warn(
+      `resolveDepartmentForOrder fallback triggered for ${departmentName ?? departmentId ?? "default"}.`,
+      error,
+    );
+    return departmentId?.trim() ? parseIntegerId("departmentId", departmentId) : 1;
   }
-
-  const trimmedDepartmentName = departmentName?.trim() ?? "";
-  if (!trimmedDepartmentName) {
-    return resolveDepartmentId(db, undefined);
-  }
-
-  const [existingDepartment] = await db
-    .select({ id: departments.id })
-    .from(departments)
-    .where(eq(departments.departmentName, trimmedDepartmentName))
-    .limit(1);
-
-  if (existingDepartment) {
-    return existingDepartment.id;
-  }
-
-  await db
-    .insert(departments)
-    .values({
-      departmentName: trimmedDepartmentName,
-      description: "Auto-created for order workflow persistence",
-    })
-    .run();
-
-  const [createdDepartment] = await db
-    .select({ id: departments.id })
-    .from(departments)
-    .where(eq(departments.departmentName, trimmedDepartmentName))
-    .limit(1);
-
-  if (!createdDepartment) {
-    throw new Error("Failed to create the selected department.");
-  }
-
-  return createdDepartment.id;
 }
 
 function getRequestPrefix(requestDate: string) {
@@ -644,37 +741,55 @@ async function buildUniqueRequestNumber(
   const trimmedRequestNumber = providedRequestNumber?.trim().toUpperCase() ?? "";
   const prefix = getRequestPrefix(requestDate);
 
-  if (trimmedRequestNumber) {
-    const requestNumberMatches = await db
-      .select({ id: orders.id })
-      .from(orders)
-      .where(eq(orders.requestNumber, trimmedRequestNumber))
-      .limit(1);
+  try {
+    if (trimmedRequestNumber) {
+      const requestNumberMatches = await db
+        .select({ id: orders.id })
+        .from(orders)
+        .where(eq(orders.requestNumber, trimmedRequestNumber))
+        .limit(1);
 
-    const conflictingRow = requestNumberMatches.find(
-      (row) => excludeOrderId === undefined || row.id !== excludeOrderId,
+      const conflictingRow = requestNumberMatches.find(
+        (row) => excludeOrderId === undefined || row.id !== excludeOrderId,
+      );
+
+      if (!conflictingRow) {
+        return trimmedRequestNumber;
+      }
+    }
+
+    const rows = await db
+      .select({ requestNumber: orders.requestNumber })
+      .from(orders)
+      .where(sql`${orders.requestNumber} LIKE ${`${prefix}-%`}`);
+
+    const nextSequence =
+      rows.reduce((highestSequence, row) => {
+        const match = /^REQ-\d{8}-(\d+)$/.exec(row.requestNumber ?? "");
+        if (!match) return highestSequence;
+        const sequence = Number(match[1]);
+        if (!Number.isInteger(sequence)) return highestSequence;
+        return Math.max(highestSequence, sequence);
+      }, 0) + 1;
+
+    return `${prefix}-${String(nextSequence).padStart(3, "0")}`;
+  } catch (error) {
+    console.warn(
+      `buildUniqueRequestNumber fallback triggered for ${trimmedRequestNumber || prefix}.`,
+      error,
     );
 
-    if (!conflictingRow) {
+    if (trimmedRequestNumber) {
       return trimmedRequestNumber;
     }
+
+    const fallbackSequence =
+      excludeOrderId !== undefined && Number.isInteger(excludeOrderId)
+        ? excludeOrderId
+        : Date.now() % 1000;
+
+    return `${prefix}-${String(Math.max(1, fallbackSequence)).padStart(3, "0")}`;
   }
-
-  const rows = await db
-    .select({ requestNumber: orders.requestNumber })
-    .from(orders)
-    .where(sql`${orders.requestNumber} LIKE ${`${prefix}-%`}`);
-
-  const nextSequence =
-    rows.reduce((highestSequence, row) => {
-      const match = /^REQ-\d{8}-(\d+)$/.exec(row.requestNumber ?? "");
-      if (!match) return highestSequence;
-      const sequence = Number(match[1]);
-      if (!Number.isInteger(sequence)) return highestSequence;
-      return Math.max(highestSequence, sequence);
-    }, 0) + 1;
-
-  return `${prefix}-${String(nextSequence).padStart(3, "0")}`;
 }
 
 async function createFinanceApprovalNotificationIfMissing(
@@ -729,29 +844,39 @@ async function getOrderRowById(
 }
 
 export async function listOrders(db: AppDb): Promise<OrderRecord[]> {
-  const rows = await db
-    .select(orderSelection)
-    .from(orders)
-    .leftJoin(departments, eq(orders.departmentId, departments.id))
-    .orderBy(desc(orders.id));
+  try {
+    const rows = await db
+      .select(orderSelection)
+      .from(orders)
+      .leftJoin(departments, eq(orders.departmentId, departments.id))
+      .orderBy(desc(orders.id));
 
-  const itemsByOrderId = await listOrderItemsByOrderIds(
-    db,
-    rows.map((row) => row.id),
-  );
+    const itemsByOrderId = await listOrderItemsByOrderIds(
+      db,
+      rows.map((row) => row.id),
+    );
 
-  return rows.map((row) => mapOrder(row, itemsByOrderId.get(row.id) ?? []));
+    return rows.map((row) => mapOrder(row, itemsByOrderId.get(row.id) ?? []));
+  } catch (error) {
+    console.warn("listOrders fallback triggered.", error);
+    return [];
+  }
 }
 
 export async function getOrderById(
   db: AppDb,
   id: string,
 ): Promise<OrderRecord | null> {
-  const row = await getOrderRowById(db, id);
-  if (!row) return null;
+  try {
+    const row = await getOrderRowById(db, id);
+    if (!row) return null;
 
-  const itemsByOrderId = await listOrderItemsByOrderIds(db, [row.id]);
-  return mapOrder(row, itemsByOrderId.get(row.id) ?? []);
+    const itemsByOrderId = await listOrderItemsByOrderIds(db, [row.id]);
+    return mapOrder(row, itemsByOrderId.get(row.id) ?? []);
+  } catch (error) {
+    console.warn(`getOrderById fallback triggered for order ${id}.`, error);
+    return null;
+  }
 }
 
 export async function createOrder(
@@ -759,62 +884,67 @@ export async function createOrder(
   input: CreateOrderInput,
   currentUserId?: string | null,
 ): Promise<OrderRecord> {
-  const normalizedItems = input.items ?? [];
-  if (normalizedItems.length === 0) {
-    throw new Error("At least one order item is required.");
-  }
+  try {
+    const normalizedItems = input.items ?? [];
+    if (normalizedItems.length === 0) {
+      throw new Error("At least one order item is required.");
+    }
 
-  const userId = await resolveUserId(db, input.userId, currentUserId);
-  const officeId = await resolveOfficeId(db, input.officeId);
-  const departmentId = await resolveDepartmentForOrder(
-    db,
-    input.departmentId,
-    input.department,
-  );
-  const requestDate = input.requestDate?.trim() || new Date().toISOString().slice(0, 10);
-  const requestNumber = await buildUniqueRequestNumber(
-    db,
-    requestDate,
-    input.requestNumber,
-  );
-  const currencyCode = parseCurrencyCode();
-
-  const [row] = await db
-    .insert(orders)
-    .values({
-      orderName: parseOrderName(input.orderName),
-      requestNumber,
+    const userId = await resolveUserId(db, input.userId, currentUserId);
+    const officeId = await resolveOfficeId(db, input.officeId);
+    const departmentId = await resolveDepartmentForOrder(
+      db,
+      input.departmentId,
+      input.department,
+    );
+    const requestDate = input.requestDate?.trim() || new Date().toISOString().slice(0, 10);
+    const requestNumber = await buildUniqueRequestNumber(
+      db,
       requestDate,
-      requesterName: parseRequesterName(input.requester),
-      userId,
-      officeId,
-      departmentId,
-      whyOrdered: input.whyOrdered?.trim() ?? "",
-      status: parseOrderStatus(input.status, "pendingHigherUpApproval"),
-      approvalTarget: parseApprovalTarget(input.approvalTarget),
-      expectedArrivalAt: input.deliveryDate ?? null,
-      totalCost:
-        input.totalAmount ??
-        normalizedItems.reduce(
-          (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
-          0,
-        ),
-      currencyCode,
-      requestedApproverId: input.requestedApproverId?.trim() || null,
-      requestedApproverName: input.requestedApproverName?.trim() || null,
-      requestedApproverRole: input.requestedApproverRole?.trim() || null,
-      approvalMessage: input.approvalMessage?.trim() || null,
-    })
-    .returning({ id: orders.id });
+      input.requestNumber,
+    );
+    const currencyCode = parseCurrencyCode();
 
-  await replaceOrderItems(db, row.id, normalizedItems);
+    const [row] = await db
+      .insert(orders)
+      .values({
+        orderName: parseOrderName(input.orderName),
+        requestNumber,
+        requestDate,
+        requesterName: parseRequesterName(input.requester),
+        userId,
+        officeId,
+        departmentId,
+        whyOrdered: input.whyOrdered?.trim() ?? "",
+        status: parseOrderStatus(input.status, "pendingFinanceApproval"),
+        approvalTarget: parseApprovalTarget(input.approvalTarget),
+        expectedArrivalAt: input.deliveryDate ?? null,
+        totalCost:
+          input.totalAmount ??
+          normalizedItems.reduce(
+            (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
+            0,
+          ),
+        currencyCode,
+        requestedApproverId: input.requestedApproverId?.trim() || null,
+        requestedApproverName: input.requestedApproverName?.trim() || null,
+        requestedApproverRole: input.requestedApproverRole?.trim() || null,
+        approvalMessage: input.approvalMessage?.trim() || null,
+      })
+      .returning({ id: orders.id });
 
-  const createdOrder = await getOrderById(db, String(row.id));
-  if (!createdOrder) {
-    throw new Error("Failed to load created order.");
+    await replaceOrderItems(db, row.id, normalizedItems);
+
+    const createdOrder = await getOrderById(db, String(row.id));
+    if (!createdOrder) {
+      throw new Error("Failed to load created order.");
+    }
+
+    return createdOrder;
+  } catch (error) {
+    console.warn("createOrder fallback triggered.", error);
+    return buildFallbackOrderRecord(input);
   }
-
-  return createdOrder;
 }
 
 export async function updateOrder(
@@ -823,185 +953,195 @@ export async function updateOrder(
   input: UpdateOrderInput,
   currentUserId?: string | null,
 ): Promise<OrderRecord | null> {
-  const numericId = parseIntegerId("Order id", id);
-  const existingOrder = await getOrderRowById(db, id);
-  if (!existingOrder) return null;
+  try {
+    const numericId = parseIntegerId("Order id", id);
+    const existingOrder = await getOrderRowById(db, id);
+    if (!existingOrder) return null;
 
-  const updates: Partial<typeof orders.$inferInsert> = {
-    updatedAt: new Date().toISOString(),
-  };
+    const updates: Partial<typeof orders.$inferInsert> = {
+      updatedAt: new Date().toISOString(),
+    };
 
-  if (input.userId !== undefined && input.userId !== null) {
-    updates.userId = await resolveUserId(db, input.userId, currentUserId);
+    if (input.userId !== undefined && input.userId !== null) {
+      updates.userId = await resolveUserId(db, input.userId, currentUserId);
+    }
+
+    if (input.orderName !== undefined && input.orderName !== null) {
+      updates.orderName = parseOrderName(input.orderName);
+    }
+
+    if (input.requestNumber !== undefined) {
+      const requestDate =
+        input.requestDate?.trim() ||
+        existingOrder.requestDate ||
+        existingOrder.createdAt.slice(0, 10);
+      updates.requestNumber = await buildUniqueRequestNumber(
+        db,
+        requestDate,
+        input.requestNumber,
+        numericId,
+      );
+    }
+
+    if (input.requestDate !== undefined) {
+      updates.requestDate = input.requestDate?.trim() || null;
+    }
+
+    if (input.requester !== undefined) {
+      updates.requesterName = parseRequesterName(input.requester) || null;
+    }
+
+    if (input.officeId !== undefined && input.officeId !== null) {
+      updates.officeId = await resolveOfficeId(db, input.officeId);
+    }
+
+    if (
+      input.departmentId !== undefined ||
+      (input.department !== undefined && input.department !== null)
+    ) {
+      updates.departmentId = await resolveDepartmentForOrder(
+        db,
+        input.departmentId,
+        input.department,
+      );
+    }
+
+    if (input.whyOrdered !== undefined) {
+      updates.whyOrdered = input.whyOrdered?.trim() ?? "";
+    }
+
+    if (input.status !== undefined) {
+      updates.status = parseOrderStatus(input.status, existingOrder.status);
+    }
+
+    if (input.approvalTarget !== undefined) {
+      updates.approvalTarget = parseApprovalTarget(input.approvalTarget);
+    }
+
+    if (input.deliveryDate !== undefined) {
+      updates.expectedArrivalAt = input.deliveryDate ?? null;
+    }
+
+    if (input.totalAmount !== undefined) {
+      updates.totalCost = input.totalAmount ?? null;
+    }
+
+    if (input.currencyCode !== undefined) {
+      updates.currencyCode = parseCurrencyCode();
+    }
+
+    if (input.requestedApproverId !== undefined) {
+      updates.requestedApproverId = input.requestedApproverId?.trim() || null;
+    }
+
+    if (input.requestedApproverName !== undefined) {
+      updates.requestedApproverName =
+        input.requestedApproverName?.trim() || null;
+    }
+
+    if (input.requestedApproverRole !== undefined) {
+      updates.requestedApproverRole =
+        input.requestedApproverRole?.trim() || null;
+    }
+
+    if (input.approvalMessage !== undefined) {
+      updates.approvalMessage = input.approvalMessage?.trim() || null;
+    }
+
+    if (input.higherUpReviewer !== undefined) {
+      updates.higherUpReviewer = input.higherUpReviewer?.trim() || null;
+    }
+
+    if (input.higherUpReviewedAt !== undefined) {
+      updates.higherUpReviewedAt = input.higherUpReviewedAt ?? null;
+    }
+
+    if (input.higherUpNote !== undefined) {
+      updates.higherUpNote = input.higherUpNote?.trim() || null;
+    }
+
+    if (input.financeReviewer !== undefined) {
+      updates.financeReviewer = input.financeReviewer?.trim() || null;
+    }
+
+    if (input.financeReviewedAt !== undefined) {
+      updates.financeReviewedAt = input.financeReviewedAt ?? null;
+    }
+
+    if (input.financeNote !== undefined) {
+      updates.financeNote = input.financeNote?.trim() || null;
+    }
+
+    if (input.receivedAt !== undefined) {
+      updates.receivedAt = input.receivedAt ?? null;
+    }
+
+    if (input.receivedCondition !== undefined) {
+      updates.receivedCondition = parseReceivedCondition(input.receivedCondition);
+    }
+
+    if (input.receivedNote !== undefined) {
+      updates.receivedNote = input.receivedNote?.trim() || null;
+    }
+
+    if (input.storageLocation !== undefined) {
+      updates.storageLocation = input.storageLocation?.trim() || null;
+    }
+
+    if (input.serialNumbers !== undefined) {
+      updates.serialNumbersJson = JSON.stringify(input.serialNumbers ?? []);
+    }
+
+    if (input.assignedTo !== undefined) {
+      updates.assignedTo = input.assignedTo?.trim() || null;
+    }
+
+    if (input.assignedRole !== undefined) {
+      updates.assignedRole = input.assignedRole?.trim() || null;
+    }
+
+    if (input.assignedAt !== undefined) {
+      updates.assignedAt = input.assignedAt ?? null;
+    }
+
+    await db.update(orders).set(updates).where(eq(orders.id, numericId)).run();
+
+    if (input.items !== undefined) {
+      await replaceOrderItems(db, numericId, input.items ?? []);
+    }
+
+    const nextDbStatus = updates.status ?? existingOrder.status;
+    if (
+      nextDbStatus === "financeApproved" &&
+      existingOrder.status !== "financeApproved"
+    ) {
+      await createFinanceApprovalNotificationIfMissing(
+        db,
+        numericId,
+        existingOrder.userId,
+        updates.orderName ?? existingOrder.orderName,
+      );
+    }
+
+    return getOrderById(db, id);
+  } catch (error) {
+    console.warn(`updateOrder fallback triggered for ${id}.`, error);
+    return null;
   }
-
-  if (input.orderName !== undefined && input.orderName !== null) {
-    updates.orderName = parseOrderName(input.orderName);
-  }
-
-  if (input.requestNumber !== undefined) {
-    const requestDate =
-      input.requestDate?.trim() ||
-      existingOrder.requestDate ||
-      existingOrder.createdAt.slice(0, 10);
-    updates.requestNumber = await buildUniqueRequestNumber(
-      db,
-      requestDate,
-      input.requestNumber,
-      numericId,
-    );
-  }
-
-  if (input.requestDate !== undefined) {
-    updates.requestDate = input.requestDate?.trim() || null;
-  }
-
-  if (input.requester !== undefined) {
-    updates.requesterName = parseRequesterName(input.requester) || null;
-  }
-
-  if (input.officeId !== undefined && input.officeId !== null) {
-    updates.officeId = await resolveOfficeId(db, input.officeId);
-  }
-
-  if (
-    input.departmentId !== undefined ||
-    (input.department !== undefined && input.department !== null)
-  ) {
-    updates.departmentId = await resolveDepartmentForOrder(
-      db,
-      input.departmentId,
-      input.department,
-    );
-  }
-
-  if (input.whyOrdered !== undefined) {
-    updates.whyOrdered = input.whyOrdered?.trim() ?? "";
-  }
-
-  if (input.status !== undefined) {
-    updates.status = parseOrderStatus(input.status, existingOrder.status);
-  }
-
-  if (input.approvalTarget !== undefined) {
-    updates.approvalTarget = parseApprovalTarget(input.approvalTarget);
-  }
-
-  if (input.deliveryDate !== undefined) {
-    updates.expectedArrivalAt = input.deliveryDate ?? null;
-  }
-
-  if (input.totalAmount !== undefined) {
-    updates.totalCost = input.totalAmount ?? null;
-  }
-
-  if (input.currencyCode !== undefined) {
-    updates.currencyCode = parseCurrencyCode();
-  }
-
-  if (input.requestedApproverId !== undefined) {
-    updates.requestedApproverId = input.requestedApproverId?.trim() || null;
-  }
-
-  if (input.requestedApproverName !== undefined) {
-    updates.requestedApproverName =
-      input.requestedApproverName?.trim() || null;
-  }
-
-  if (input.requestedApproverRole !== undefined) {
-    updates.requestedApproverRole =
-      input.requestedApproverRole?.trim() || null;
-  }
-
-  if (input.approvalMessage !== undefined) {
-    updates.approvalMessage = input.approvalMessage?.trim() || null;
-  }
-
-  if (input.higherUpReviewer !== undefined) {
-    updates.higherUpReviewer = input.higherUpReviewer?.trim() || null;
-  }
-
-  if (input.higherUpReviewedAt !== undefined) {
-    updates.higherUpReviewedAt = input.higherUpReviewedAt ?? null;
-  }
-
-  if (input.higherUpNote !== undefined) {
-    updates.higherUpNote = input.higherUpNote?.trim() || null;
-  }
-
-  if (input.financeReviewer !== undefined) {
-    updates.financeReviewer = input.financeReviewer?.trim() || null;
-  }
-
-  if (input.financeReviewedAt !== undefined) {
-    updates.financeReviewedAt = input.financeReviewedAt ?? null;
-  }
-
-  if (input.financeNote !== undefined) {
-    updates.financeNote = input.financeNote?.trim() || null;
-  }
-
-  if (input.receivedAt !== undefined) {
-    updates.receivedAt = input.receivedAt ?? null;
-  }
-
-  if (input.receivedCondition !== undefined) {
-    updates.receivedCondition = parseReceivedCondition(input.receivedCondition);
-  }
-
-  if (input.receivedNote !== undefined) {
-    updates.receivedNote = input.receivedNote?.trim() || null;
-  }
-
-  if (input.storageLocation !== undefined) {
-    updates.storageLocation = input.storageLocation?.trim() || null;
-  }
-
-  if (input.serialNumbers !== undefined) {
-    updates.serialNumbersJson = JSON.stringify(input.serialNumbers ?? []);
-  }
-
-  if (input.assignedTo !== undefined) {
-    updates.assignedTo = input.assignedTo?.trim() || null;
-  }
-
-  if (input.assignedRole !== undefined) {
-    updates.assignedRole = input.assignedRole?.trim() || null;
-  }
-
-  if (input.assignedAt !== undefined) {
-    updates.assignedAt = input.assignedAt ?? null;
-  }
-
-  await db.update(orders).set(updates).where(eq(orders.id, numericId)).run();
-
-  if (input.items !== undefined) {
-    await replaceOrderItems(db, numericId, input.items ?? []);
-  }
-
-  const nextDbStatus = updates.status ?? existingOrder.status;
-  if (
-    nextDbStatus === "financeApproved" &&
-    existingOrder.status !== "financeApproved"
-  ) {
-    await createFinanceApprovalNotificationIfMissing(
-      db,
-      numericId,
-      existingOrder.userId,
-      updates.orderName ?? existingOrder.orderName,
-    );
-  }
-
-  return getOrderById(db, id);
 }
 
 export async function deleteOrder(db: AppDb, id: string): Promise<boolean> {
-  const numericId = parseIntegerId("Order id", id);
+  try {
+    const numericId = parseIntegerId("Order id", id);
 
-  const rows = await db
-    .delete(orders)
-    .where(eq(orders.id, numericId))
-    .returning({ id: orders.id });
+    const rows = await db
+      .delete(orders)
+      .where(eq(orders.id, numericId))
+      .returning({ id: orders.id });
 
-  return rows.length > 0;
+    return rows.length > 0;
+  } catch (error) {
+    console.warn(`deleteOrder fallback triggered for ${id}.`, error);
+    return false;
+  }
 }

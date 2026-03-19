@@ -29,10 +29,7 @@ export function OrderCreateDetailsCard(props: Pick<OrderCreateViewProps, "draftO
           <div className="relative">
             <Select
               value={props.draftOrder.department}
-              onChange={(event) => {
-                props.onOrderChange("department", event.target.value);
-                props.onOrderChange("requestedApproverId", "");
-              }}
+              onChange={(event) => props.onOrderChange("department", event.target.value)}
               className="appearance-none pr-10"
             >
               {departmentOptions.map((department) => (

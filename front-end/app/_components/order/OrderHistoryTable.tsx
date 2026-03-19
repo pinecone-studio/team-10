@@ -47,32 +47,37 @@ function SortIcon() {
 }
 
 function StatusBadge({ status }: { status: StoredOrder["status"] }) {
-  const label =
-    status === "pending_higher_up" || status === "pending_finance"
-      ? "Pending"
-      : status === "rejected_higher_up" || status === "rejected_finance"
-        ? "Rejected"
+  const presentation =
+    status === "pending_finance"
+      ? {
+          label: "Pending Finance",
+          tone: "border-[#fde047] bg-[#fef9c3] text-[#ca8a04]",
+        }
+      : status === "rejected_finance"
+        ? {
+            label: "Rejected",
+            tone: "border-[#fca5a5] bg-[#fee2e2] text-[#dc2626]",
+          }
         : status === "approved_finance"
-          ? "Approved"
-          : status === "assigned_hr"
-            ? "Cancelled"
-          : "Completed";
-  const tone =
-    label === "Pending"
-      ? "border-[#fde047] bg-[#fef9c3] text-[#ca8a04]"
-      : label === "Rejected"
-        ? "border-[#fca5a5] bg-[#fee2e2] text-[#dc2626]"
-        : label === "Cancelled"
-          ? "border-[#d1d5db] bg-[#f3f4f6] text-[#4b5563]"
-          : label === "Approved"
-            ? "border-[#93c5fd] bg-[#dbeafe] text-[#2563eb]"
-            : "border-[#86efac] bg-[#dcfce7] text-[#16a34a]";
+          ? {
+              label: "Approved",
+              tone: "border-[#93c5fd] bg-[#dbeafe] text-[#2563eb]",
+            }
+          : status === "received_inventory"
+            ? {
+                label: "Received",
+                tone: "border-[#86efac] bg-[#dcfce7] text-[#16a34a]",
+              }
+            : {
+                label: "Assigned",
+                tone: "border-[#cbd5e1] bg-[#f8fafc] text-[#475569]",
+              };
 
   return (
     <span
-      className={`inline-flex rounded-full border px-[10px] py-[2px] text-[12px] font-normal leading-normal ${tone}`}
+      className={`inline-flex rounded-full border px-[10px] py-[2px] text-[12px] font-normal leading-normal ${presentation.tone}`}
     >
-      {label}
+      {presentation.label}
     </span>
   );
 }
@@ -80,12 +85,13 @@ function StatusBadge({ status }: { status: StoredOrder["status"] }) {
 export function OrderHistoryTable(props: {
   orders: StoredOrder[];
   onOpenDetail: (orderId: string) => void;
+  onDeleteOrder: (orderId: string) => void | Promise<void>;
 }) {
   return (
     <section className="rounded-[12px] border border-[#e2e8f0] bg-white px-4 py-6">
       <div className="overflow-x-auto">
         <div className="min-w-[920px]">
-          <div className="grid grid-cols-[100px_1.45fr_1.35fr_120px_130px_130px] items-center rounded-[6px] border border-[#e3e4e8] bg-[#f1f5f9] px-6 py-6 text-[14px] font-medium text-[#475569]">
+          <div className="grid grid-cols-[100px_1.35fr_1.2fr_120px_130px_120px_130px] items-center rounded-[6px] border border-[#e3e4e8] bg-[#f1f5f9] px-6 py-6 text-[14px] font-medium text-[#475569]">
             <span className="inline-flex items-center gap-1">
           <span>Order ID</span>
           <SortIcon />
@@ -97,6 +103,7 @@ export function OrderHistoryTable(props: {
           <SortIcon />
         </span>
             <span>Status</span>
+            <span className="text-center">Action</span>
             <span className="inline-flex items-center justify-end gap-1 text-right">
           <span>Total Amount</span>
           <SortIcon />
@@ -105,11 +112,18 @@ export function OrderHistoryTable(props: {
           <div className="mt-5 space-y-[6px]">
             {props.orders.length > 0 ? (
               props.orders.map((order) => (
-                <button
+                <div
                   key={order.id}
-                  type="button"
                   onClick={() => props.onOpenDetail(order.id)}
-                  className="grid w-full grid-cols-[100px_1.45fr_1.35fr_120px_130px_130px] items-center rounded-[6px] border border-[#e3e4e8] bg-white px-6 py-4 text-left transition duration-150 hover:border-[#cbd5e1] hover:bg-[#fcfcfd] active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      props.onOpenDetail(order.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  className="grid w-full grid-cols-[100px_1.35fr_1.2fr_120px_130px_120px_130px] items-center rounded-[6px] border border-[#e3e4e8] bg-white px-6 py-4 text-left transition duration-150 hover:border-[#cbd5e1] hover:bg-[#fcfcfd] active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
                 >
                   <span className="text-[14px] font-medium text-[#2563eb]">
                     #{order.requestNumber.slice(-6)}
@@ -127,10 +141,26 @@ export function OrderHistoryTable(props: {
                     {formatDisplayDate(order.requestDate)}
                   </span>
                   <StatusBadge status={order.status} />
+                  <div className="flex justify-center">
+                    {order.status === "pending_finance" ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void props.onDeleteOrder(order.id);
+                        }}
+                        className="inline-flex min-w-[82px] items-center justify-center rounded-[10px] border border-[#fecaca] bg-[#fff1f2] px-3 py-2 text-sm font-medium text-[#dc2626] transition duration-150 hover:border-[#fda4af] hover:bg-[#ffe4e6] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fecdd3] focus-visible:ring-offset-2"
+                      >
+                        Delete
+                      </button>
+                    ) : (
+                      <span className="text-sm text-[#94a3b8]">-</span>
+                    )}
+                  </div>
                   <span className="text-right text-[14px] font-medium text-[#475569]">
                     {formatCurrency(order.totalAmount, order.currencyCode)}
                   </span>
-                </button>
+                </div>
               ))
             ) : (
               <div className="rounded-[6px] border border-[#e3e4e8] px-6 py-16 text-center text-[14px] text-[#94a3b8]">

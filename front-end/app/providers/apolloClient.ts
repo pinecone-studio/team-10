@@ -1,6 +1,13 @@
 "use client";
 
-import { ApolloClient, HttpLink, InMemoryCache } from "@apollo/client/core";
+import {
+  ApolloClient,
+  ApolloLink,
+  from,
+  HttpLink,
+  InMemoryCache,
+  Observable,
+} from "@apollo/client/core";
 
 function getGraphqlUrl() {
   if (typeof window !== "undefined") {
@@ -16,8 +23,48 @@ function getGraphqlUrl() {
   return new URL("/api/graphql", appUrl).toString();
 }
 
+let activeRequestCount = 0;
+
+function syncBackendBusyState() {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  document.documentElement.dataset.backendBusy =
+    activeRequestCount > 0 ? "true" : "false";
+}
+
+const backendBusyLink = new ApolloLink((operation, forward) => {
+  if (!forward) {
+    return new Observable((observer) => {
+      observer.complete();
+    });
+  }
+
+  activeRequestCount += 1;
+  syncBackendBusyState();
+
+  return new Observable((observer) => {
+    const subscription = forward(operation).subscribe({
+      next: (value) => observer.next(value),
+      error: (error) => {
+        observer.error(error);
+      },
+      complete: () => {
+        observer.complete();
+      },
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      activeRequestCount = Math.max(0, activeRequestCount - 1);
+      syncBackendBusyState();
+    };
+  });
+});
+
 export const apolloClient = new ApolloClient({
-  link: new HttpLink({ uri: getGraphqlUrl() }),
+  link: from([backendBusyLink, new HttpLink({ uri: getGraphqlUrl() })]),
   cache: new InMemoryCache(),
   ssrMode: typeof window === "undefined",
 });

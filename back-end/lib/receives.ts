@@ -264,6 +264,36 @@ async function resolveStorageId(
   return createdStorage.id;
 }
 
+async function moveReceivedAssetsToStorage(
+  db: AppDb,
+  assetIds: number[],
+  storageId: number,
+) {
+  if (assetIds.length === 0) {
+    return;
+  }
+
+  try {
+    const updatedAt = new Date().toISOString();
+
+    for (const assetId of assetIds) {
+      await db
+        .update(assets)
+        .set({
+          assetStatus: "inStorage",
+          currentStorageId: storageId,
+          updatedAt,
+        })
+        .where(eq(assets.id, assetId))
+        .run();
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown storage transition error.";
+    throw new Error(`Failed to move received assets into storage: ${message}`);
+  }
+}
+
 async function getOrderItemForReceive(
   db: AppDb,
   orderId: number,
@@ -299,19 +329,52 @@ async function getOrderItemForReceive(
 }
 
 async function computeRemainingOrderState(db: AppDb, orderId: number) {
-  const rows = await db
+  const orderItemRows = await db
     .select({
+      id: orderItems.id,
       quantity: orderItems.quantity,
       unitCost: orderItems.unitCost,
     })
     .from(orderItems)
     .where(eq(orderItems.orderId, orderId));
 
-  const remainingQuantity = rows.reduce((sum, row) => sum + row.quantity, 0);
-  const remainingTotalCost = rows.reduce(
-    (sum, row) => sum + row.quantity * row.unitCost,
-    0,
+  if (orderItemRows.length === 0) {
+    return {
+      remainingQuantity: 0,
+      remainingTotalCost: 0,
+    };
+  }
+
+  const receivedRows = await db
+    .select({
+      orderItemId: receiveItems.orderItemId,
+      quantityReceived: receiveItems.quantityReceived,
+    })
+    .from(receiveItems)
+    .innerJoin(orderItems, eq(receiveItems.orderItemId, orderItems.id))
+    .where(eq(orderItems.orderId, orderId));
+
+  const receivedQuantityByOrderItemId = receivedRows.reduce(
+    (accumulator, row) => {
+      accumulator.set(
+        row.orderItemId,
+        (accumulator.get(row.orderItemId) ?? 0) + row.quantityReceived,
+      );
+      return accumulator;
+    },
+    new Map<number, number>(),
   );
+
+  const remainingQuantity = orderItemRows.reduce((sum, row) => {
+    const receivedQuantity = receivedQuantityByOrderItemId.get(row.id) ?? 0;
+    return sum + Math.max(0, row.quantity - receivedQuantity);
+  }, 0);
+
+  const remainingTotalCost = orderItemRows.reduce((sum, row) => {
+    const receivedQuantity = receivedQuantityByOrderItemId.get(row.id) ?? 0;
+    const remainingItemQuantity = Math.max(0, row.quantity - receivedQuantity);
+    return sum + remainingItemQuantity * row.unitCost;
+  }, 0);
 
   return {
     remainingQuantity,
@@ -593,26 +656,18 @@ export async function receiveOrderItem(
     catalogProductId: orderItem.catalogProductId,
     serialNumber,
     conditionStatus,
-    assetStatus: "inStorage" as const,
-    currentStorageId: storageId,
+    assetStatus: "received" as const,
+    currentStorageId: null,
   }));
 
+  let createdAssetIds: number[] = [];
   if (assetValues.length > 0) {
-    await db.insert(assets).values(assetValues).run();
-  }
+    const createdAssets = await db
+      .insert(assets)
+      .values(assetValues)
+      .returning({ id: assets.id });
 
-  const nextQuantity = orderItem.quantity - quantityReceived;
-  if (nextQuantity > 0) {
-    await db
-      .update(orderItems)
-      .set({
-        quantity: nextQuantity,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(orderItems.id, orderItem.id))
-      .run();
-  } else {
-    await db.delete(orderItems).where(eq(orderItems.id, orderItem.id)).run();
+    createdAssetIds = createdAssets.map((asset) => asset.id);
   }
 
   const { remainingQuantity, remainingTotalCost } = await computeRemainingOrderState(
@@ -650,6 +705,8 @@ export async function receiveOrderItem(
     })
     .where(eq(orders.id, orderId))
     .run();
+
+  await moveReceivedAssetsToStorage(db, createdAssetIds, storageId);
 
   const nextOrder = await getOrderById(db, input.orderId);
   if (!nextOrder) {

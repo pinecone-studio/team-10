@@ -231,18 +231,41 @@ export function InventoryStorageSection() {
             </div>
             <div className="space-y-5 p-5">
               <div className="flex flex-wrap gap-2">
-                <input
-                  value={lookupValue}
-                  onChange={(event) => setLookupValue(event.target.value)}
-                  placeholder="Enter asset ID or QR-..."
-                  className="h-10 min-w-[260px] flex-1 rounded-[10px] border border-[#dbe7f3] bg-white px-4 text-[12px] outline-none placeholder:text-[#94a3b8]"
-                />
+                <div className="fx-group min-w-[260px] flex-1" data-filled={lookupValue ? "true" : "false"}>
+                  <input
+                    value={lookupValue}
+                    onChange={(event) => setLookupValue(event.target.value)}
+                    className="fx-input"
+                  />
+                  <span className="fx-highlight" />
+                  <span className="fx-bar" />
+                  <span className="fx-label">Enter asset ID or QR-...</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => void handleLookupSubmit()}
-                  className="h-10 rounded-[10px] border border-[#d9e7f2] bg-white px-4 text-[12px] font-medium text-[#0f172a] shadow-[0_1px_2px_rgba(15,23,42,0.06)]"
+                  className="fx-submit-button h-10 px-4 text-[12px] font-medium"
                 >
-                  {isDetailLoading ? "Looking up..." : "Find"}
+                  <span className="fx-submit-icon-wrapper">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="fx-submit-icon"
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.3-4.3" />
+                    </svg>
+                  </span>
+                  <span className="fx-submit-label">
+                    {isDetailLoading ? "Looking up..." : "Find"}
+                  </span>
                 </button>
               </div>
               <div className="grid gap-3 md:grid-cols-3">
@@ -286,10 +309,7 @@ export function InventoryStorageSection() {
       {errorMessage ? (
         <EmptyState title="Storage data unavailable" description={errorMessage} />
       ) : isLoading ? (
-        <EmptyState
-          title="Loading storage assets"
-          description="Pulling live asset and storage records from the backend."
-        />
+        <StorageLoadingState />
       ) : visibleAssets.length === 0 ? (
         <EmptyState
           title="No stored goods yet"
@@ -299,19 +319,40 @@ export function InventoryStorageSection() {
         <div className="overflow-hidden rounded-[20px] border border-[#d7e5f3] bg-white shadow-[0_18px_42px_rgba(148,163,184,0.14)]">
           <div className="bg-[linear-gradient(180deg,#cfe3fb_0%,#d9ebff_26%,#eef6ff_68%,#ffffff_100%)] px-6 pb-5 pt-6">
             <div className="flex flex-wrap gap-2">
-              <input
-                value={searchValue}
-                onChange={(event) => setSearchValue(event.target.value)}
-                placeholder="Search by QR, asset, requester, or department..."
-                className="h-10 min-w-[260px] flex-1 rounded-[10px] border border-[#dbe7f3] bg-white/90 px-4 text-[12px] outline-none placeholder:text-[#94a3b8]"
-              />
+              <div className="fx-group min-w-[260px] flex-1" data-filled={searchValue ? "true" : "false"}>
+                <input
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                  className="fx-input"
+                />
+                <span className="fx-highlight" />
+                <span className="fx-bar" />
+                <span className="fx-label">Search by QR, asset, requester, or department...</span>
+              </div>
               {ACTIONS.map((action) => (
                 <button
                   key={action}
                   type="button"
-                  className="h-10 rounded-[10px] border border-[#d9e7f2] bg-white px-4 text-[12px] font-medium text-[#0f172a] shadow-[0_1px_2px_rgba(15,23,42,0.06)]"
+                  className="fx-submit-button h-10 px-4 text-[12px] font-medium"
                 >
-                  + {action}
+                  <span className="fx-submit-icon-wrapper">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="fx-submit-icon"
+                    >
+                      <path d="M12 5v14" />
+                      <path d="M5 12h14" />
+                    </svg>
+                  </span>
+                  <span className="fx-submit-label">{action}</span>
                 </button>
               ))}
             </div>
@@ -508,6 +549,29 @@ function QrCard({ title, value }: { title: string; value: string }) {
       </div>
       <p className="mt-2 truncate text-[11px] font-medium text-[#111827]">{title}</p>
       <p className="mt-1 truncate text-[10px] text-[#64748b]">{value}</p>
+    </div>
+  );
+}
+
+function StorageLoadingState() {
+  return (
+    <div className="flex min-h-[420px] flex-col items-center justify-center gap-6 rounded-[18px] border border-dashed border-[#d9e9f9] bg-white/80 px-6 py-10 text-center">
+      <div className="inventory-loader" aria-hidden="true">
+        <div className="inventory-loader-ground">
+          <div />
+        </div>
+        {Array.from({ length: 8 }, (_, index) => (
+          <div key={index} className={`inventory-loader-box inventory-loader-box${index}`}>
+            <div />
+          </div>
+        ))}
+      </div>
+      <div>
+        <p className="text-[18px] font-semibold text-[#0f172a]">Loading storage assets</p>
+        <p className="mt-2 max-w-[360px] text-[13px] text-[#64748b]">
+          Pulling live asset and storage records from the backend.
+        </p>
+      </div>
     </div>
   );
 }

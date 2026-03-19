@@ -32,6 +32,7 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
           onFilterChange={state.setSelectedFilter}
           onOpenCreate={state.openCreate}
           onOpenDetail={state.openDetail}
+          onDeleteOrder={state.deleteOrder}
         />
       ) : null}
       {state.stage === "create" ? (
@@ -63,6 +64,7 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
           order={state.selectedOrder}
           onBack={canViewHistory ? state.openHistory : state.openCreate}
           onCreateNote={() => {}}
+          onDeleteOrder={state.deleteOrder}
         />
       ) : null}
     </WorkspaceShell>

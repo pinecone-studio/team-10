@@ -277,18 +277,22 @@ const updateOrderMutation = gql`
   }
 `;
 
+const deleteOrderMutation = gql`
+  mutation DeleteOrder($id: ID!) {
+    deleteOrder(id: $id)
+  }
+`;
+
 function parseCurrencyCode() {
   return "USD" as const;
 }
 
 function parseApprovalTarget(value: string): StoredOrder["approvalTarget"] {
-  return value === "finance" ? "finance" : "any_higher_ups";
+  return "finance";
 }
 
 function parseOrderStatus(value: string): OrderStatus {
   if (
-    value === "pending_higher_up" ||
-    value === "rejected_higher_up" ||
     value === "pending_finance" ||
     value === "approved_finance" ||
     value === "rejected_finance" ||
@@ -298,7 +302,7 @@ function parseOrderStatus(value: string): OrderStatus {
     return value;
   }
 
-  return "pending_higher_up";
+  return "pending_finance";
 }
 
 function parseReceivedCondition(value: string | null): ReceivedCondition | null {
@@ -428,4 +432,14 @@ export async function updateOrderRequest(
   });
 
   return data?.updateOrder ? mapOrder(data.updateOrder) : null;
+}
+
+export async function deleteOrderRequest(id: string) {
+  const { data } = await apolloClient.mutate<{ deleteOrder: boolean }>({
+    mutation: deleteOrderMutation,
+    variables: { id },
+    fetchPolicy: "no-cache",
+  });
+
+  return Boolean(data?.deleteOrder);
 }

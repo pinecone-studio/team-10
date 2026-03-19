@@ -12,9 +12,9 @@ export function filterOrders(
     return orders.filter((order) => ["approved_finance", "received_inventory", "assigned_hr"].includes(order.status));
   }
   if (filter === "cancelled") {
-    return orders.filter((order) => ["rejected_higher_up", "rejected_finance"].includes(order.status));
+    return orders.filter((order) => ["rejected_finance"].includes(order.status));
   }
-  return orders.filter((order) => ["pending_higher_up", "pending_finance"].includes(order.status));
+  return orders.filter((order) => ["pending_finance"].includes(order.status));
 }
 
 export function createOrderItem(

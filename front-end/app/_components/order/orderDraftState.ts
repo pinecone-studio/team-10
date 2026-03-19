@@ -9,8 +9,6 @@ import type {
   CurrencyCode,
   DepartmentOption,
 } from "../../_lib/order-types";
-import { getDefaultHigherUpApproverId } from "./orderApprovers";
-
 export const DEFAULT_ORDER_REQUESTER = "Batbayar Dorj";
 
 export type DraftOrder = {
@@ -60,8 +58,8 @@ export function createDraftOrder(): DraftOrder {
     department,
     requester: DEFAULT_ORDER_REQUESTER,
     deliveryDate: getTodayDateInputValue(),
-    approvalTarget: "any_higher_ups",
-    requestedApproverId: getDefaultHigherUpApproverId(department),
+    approvalTarget: "finance",
+    requestedApproverId: "finance-review",
   };
 }
 

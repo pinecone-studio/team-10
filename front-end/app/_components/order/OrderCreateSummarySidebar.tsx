@@ -14,6 +14,7 @@ export function OrderCreateSummarySidebar(
     | "permissionMessage"
     | "canSubmitDraft"
     | "missingSubmitFields"
+    | "onFillDemo"
     | "onOrderChange"
     | "onPermissionMessageChange"
     | "onSubmit"
@@ -29,6 +30,30 @@ export function OrderCreateSummarySidebar(
         <h3 className="text-[16px] font-semibold leading-6 text-[#020618]">Order Summary</h3>
       </div>
       <div className="space-y-5 p-5">
+        <button
+          type="button"
+          onClick={props.onFillDemo}
+          className="fx-submit-button h-10 w-full px-4 text-[13px] font-medium"
+        >
+          <span className="fx-submit-icon-wrapper">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="fx-submit-icon"
+            >
+              <path d="M12 3v18" />
+              <path d="M3 12h18" />
+            </svg>
+          </span>
+          <span className="fx-submit-label">Demo Button</span>
+        </button>
         <div className="flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#dbeafe] text-[12px] font-semibold text-[#0a0a0a]">
             {(props.draftOrder.requester || "BA").slice(0, 2).toUpperCase()}

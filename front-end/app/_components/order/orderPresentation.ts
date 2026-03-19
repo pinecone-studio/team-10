@@ -10,12 +10,6 @@ import {
 export type FeedEvent = { date: string; actor: string; message: string };
 
 export function getOrderPresentation(status: OrderStatus) {
-  if (status === "pending_higher_up") {
-    return { type: "Higher-up review", status: "Waiting for Any Higher-ups" };
-  }
-  if (status === "rejected_higher_up") {
-    return { type: "Higher-up review", status: "Rejected by higher-up" };
-  }
   if (status === "pending_finance") {
     return { type: "Finance review", status: "Waiting for finance" };
   }
@@ -50,20 +44,10 @@ export function buildFeedEvents(order: StoredOrder) {
     {
       date: formatDisplayDate(order.createdAt.slice(0, 10)),
       actor: order.requester,
-      message: `submitted the order to ${getApprovalTargetLabel(order.approvalTarget)}.`,
+      message: `submitted the order to ${getApprovalTargetLabel(order.approvalTarget)} review.`,
     },
   ];
 
-  if (order.higherUpReviewedAt) {
-    events.unshift({
-      date: formatDisplayDate(order.higherUpReviewedAt.slice(0, 10)),
-      actor: order.higherUpReviewer ?? "Any Higher-ups",
-      message:
-        order.status === "rejected_higher_up"
-          ? "rejected the permission request."
-          : "approved the request and forwarded it to Finance.",
-    });
-  }
   if (order.financeReviewedAt) {
     events.unshift({
       date: formatDisplayDate(order.financeReviewedAt.slice(0, 10)),
