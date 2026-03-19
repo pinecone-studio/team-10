@@ -63,6 +63,7 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
         <OrderDetailView
           order={state.selectedOrder}
           onBack={canViewHistory ? state.openHistory : state.openCreate}
+          onOpenDetail={state.openDetail}
           onCreateNote={() => {}}
           onDeleteOrder={state.deleteOrder}
         />
