@@ -135,6 +135,20 @@ export const distributionStatusValues = [
   "cancelled",
 ] as const;
 
+export const assignmentAcknowledgmentStatusValues = [
+  "pending",
+  "confirmed",
+  "expired",
+  "void",
+] as const;
+
+export const emailDeliveryStatusValues = [
+  "pending",
+  "sent",
+  "failed",
+  "skipped",
+] as const;
+
 export const disposalStatusValues = [
   "pending",
   "financeApproved",
@@ -863,6 +877,56 @@ export const assetDistributions = sqliteTable(
     index("idx_asset_distributions_asset_id").on(table.assetId),
     index("idx_asset_distributions_employee_id").on(table.employeeId),
     index("idx_asset_distributions_status").on(table.status),
+  ],
+);
+
+export const assetAssignmentAcknowledgments = sqliteTable(
+  "asset_assignment_acknowledgments",
+  {
+    id: idColumn(),
+    assignmentRequestId: integer("assignment_request_id")
+      .notNull()
+      .unique()
+      .references(() => assetAssignmentRequests.id, { onDelete: "cascade" }),
+    assetId: integer("asset_id")
+      .notNull()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    employeeId: integer("employee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    recipientName: text("recipient_name").notNull(),
+    recipientEmail: text("recipient_email").notNull(),
+    recipientRole: text("recipient_role"),
+    jwtId: text("jwt_id").notNull().unique(),
+    expiresAt: text("expires_at").notNull(),
+    tokenConsumedAt: text("token_consumed_at"),
+    emailStatus: text("email_status", { enum: emailDeliveryStatusValues })
+      .notNull()
+      .default("pending"),
+    emailSentAt: text("email_sent_at"),
+    signerName: text("signer_name"),
+    signerIpAddress: text("signer_ip_address"),
+    signatureText: text("signature_text"),
+    signedAt: text("signed_at"),
+    pdfObjectKey: text("pdf_object_key"),
+    pdfFileName: text("pdf_file_name"),
+    pdfUploadedAt: text("pdf_uploaded_at"),
+    status: text("status", { enum: assignmentAcknowledgmentStatusValues })
+      .notNull()
+      .default("pending"),
+    ...timestamps(),
+  },
+  (table) => [
+    index("idx_asset_assignment_acknowledgments_assignment_request_id").on(
+      table.assignmentRequestId,
+    ),
+    index("idx_asset_assignment_acknowledgments_asset_id").on(table.assetId),
+    index("idx_asset_assignment_acknowledgments_employee_id").on(table.employeeId),
+    index("idx_asset_assignment_acknowledgments_jwt_id").on(table.jwtId),
+    index("idx_asset_assignment_acknowledgments_status").on(table.status),
+    index("idx_asset_assignment_acknowledgments_email_status").on(
+      table.emailStatus,
+    ),
   ],
 );
 

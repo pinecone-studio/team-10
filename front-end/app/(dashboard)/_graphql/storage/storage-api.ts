@@ -116,6 +116,24 @@ function buildLocalStorageAssets(): Promise<StorageAssetDto[]> {
   );
 }
 
+async function findLocalStorageAssetDetail(input: {
+  id?: string | null;
+  qrCode?: string | null;
+}) {
+  const normalizedId = input.id?.trim() || null;
+  const normalizedQrCode = input.qrCode?.trim() || null;
+  const localAssets = await buildLocalStorageAssets();
+
+  return (
+    localAssets.find(
+      (asset) =>
+        (normalizedId &&
+          (asset.id === normalizedId || asset.assetCode === normalizedId)) ||
+        (normalizedQrCode && asset.qrCode === normalizedQrCode),
+    ) ?? null
+  );
+}
+
 const storageAssetFields = gql`
   fragment StorageAssetFields on StorageAsset {
     id
@@ -205,17 +223,20 @@ export async function fetchStorageAssetDetailRequest(input: {
       fetchPolicy: "no-cache",
     });
 
-    return data?.asset ?? null;
+    if (data?.asset) {
+      return data.asset;
+    }
+
+    return findLocalStorageAssetDetail({
+      id: normalizedId,
+      qrCode: normalizedQrCode,
+    });
   } catch (error) {
     console.warn("Falling back to local storage asset detail.", error);
-    const localAssets = await buildLocalStorageAssets();
-    return (
-      localAssets.find(
-        (asset) =>
-          (normalizedId && asset.id === normalizedId) ||
-          (normalizedQrCode && asset.qrCode === normalizedQrCode),
-      ) ?? null
-    );
+    return findLocalStorageAssetDetail({
+      id: normalizedId,
+      qrCode: normalizedQrCode,
+    });
   }
 }
 
