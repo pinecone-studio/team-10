@@ -9,7 +9,7 @@ export function FinanceApprovalRecent(props: { orders: StoredOrder[]; pendingCou
     <section className="border-t border-[#e6eef7] px-5 py-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#6b85a7]">Recent Decisions</p>
+          <p className="font-[var(--font-inter)] text-[14px] font-normal uppercase leading-[20px] text-[#64748B]">RECENT DECISIONS</p>
           <h2 className="mt-2 text-[22px] font-semibold text-[#0f172a]">Last reviewed requests</h2>
         </div>
         <span className="text-[14px] text-[#64748b]">{props.orders.length} records</span>

@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { reviewFinanceOrder, reviewFinanceOrderItems, useOrdersStore } from "../../_lib/order-store";
-import type { StoredOrder } from "../../_lib/order-types";
+import { reviewFinanceOrder, reviewFinanceOrderItems, StoredOrder, useOrdersStore } from "../../_lib/order-store";
 import { WorkspaceShell } from "../shared/WorkspacePrimitives";
 import { FinanceApprovalHeader } from "./finance-approval/FinanceApprovalHeader";
 import { FinanceApprovalOrderCard } from "./finance-approval/FinanceApprovalOrderCard";
@@ -35,15 +34,8 @@ export function FinanceApprovalSection() {
     setDecisionState((current) => ({ ...current, [orderId]: { ...(current[orderId] ?? {}), [key]: decision } }));
   }
 
-  function applyDecisionToAll(order: StoredOrder, decision: Exclude<ItemDecision, "pending">) {
-    setDecisionState((current) => ({
-      ...current,
-      [order.id]: Object.fromEntries(order.items.map((item) => [`${item.catalogId}::${item.code}`, decision])),
-    }));
-  }
-
   async function submitOrder(order: StoredOrder) {
-    const decisions = order.items.map((item) => ({
+    const decisions = order.items.map((item: { catalogId: string; code: string; }) => ({
       catalogId: item.catalogId,
       code: item.code,
       approved: getItemDecision(decisionState, order.id, item.catalogId, item.code) === "approved",
@@ -90,7 +82,6 @@ export function FinanceApprovalSection() {
               order={order}
               decisionState={decisionState}
               onSetDecision={setItemDecision}
-              onApproveAll={applyDecisionToAll}
               onSubmit={submitOrder}
             />
           ))}
