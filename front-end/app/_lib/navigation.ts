@@ -32,7 +32,6 @@ export type NavItem = {
 };
 
 export const navItems: readonly NavItem[] = [
-  { label: "HOME", icon: "home", section: "home", homeOnly: true },
   { label: "ORDER", icon: "order", section: "order" },
   { label: "RECEIVE", icon: "receive", section: "receive" },
   { label: "STORAGE", icon: "storage", section: "storage" },

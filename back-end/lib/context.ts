@@ -181,6 +181,17 @@ export async function createGraphQLContext(
   options: GraphQLContextOptions = {},
 ): Promise<GraphQLContext> {
   let resolvedDb = options.db;
+  const preferHttpD1InLocalDev = process.env.NODE_ENV !== "production";
+
+  // In local dev, prefer the explicit HTTP D1 config from .env so the app
+  // talks to the same remote database that the rest of the tooling uses.
+  if (!resolvedDb && preferHttpD1InLocalDev) {
+    try {
+      resolvedDb = getDatabase();
+    } catch {
+      resolvedDb = undefined;
+    }
+  }
 
   // In Cloudflare Workers, prefer bound D1 first to avoid API-token auth failures.
   if (!resolvedDb) {
@@ -205,7 +216,7 @@ export async function createGraphQLContext(
     }
   }
 
-  // Fall back to HTTP D1 runtime config for local/dev and non-worker environments.
+  // Fall back to HTTP D1 runtime config for non-worker environments.
   if (!resolvedDb) {
     try {
       resolvedDb = getDatabase();

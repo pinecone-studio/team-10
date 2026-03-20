@@ -21,7 +21,7 @@ export function ReceivePageFrame(props: {
             <button
               type="button"
               onClick={props.onBack}
-              className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-[8px] py-2 text-[14px] font-medium text-[#1e293b] transition duration-150 hover:bg-[#f8fbff] hover:px-2 active:scale-[0.98] active:bg-[#eef5fd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
+              className="mb-5 inline-flex min-h-[2.75rem] w-auto cursor-pointer items-center justify-center gap-2 rounded-[0.25rem] border border-[rgba(0,0,0,0.1)] bg-white px-5 py-3 text-[15px] font-semibold leading-[1.2] text-[rgba(0,0,0,0.85)] shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all duration-[250ms] select-none hover:-translate-y-px hover:border-[rgba(0,0,0,0.15)] hover:text-[rgba(0,0,0,0.65)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] focus:border-[rgba(0,0,0,0.15)] focus:text-[rgba(0,0,0,0.65)] focus:shadow-[0_4px_12px_rgba(0,0,0,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2 active:translate-y-0 active:border-[rgba(0,0,0,0.15)] active:bg-[#F0F0F1] active:text-[rgba(0,0,0,0.65)] active:shadow-[0_2px_4px_rgba(0,0,0,0.06)]"
             >
               <span aria-hidden="true">{"<-"}</span>
               <span>{props.backLabel}</span>

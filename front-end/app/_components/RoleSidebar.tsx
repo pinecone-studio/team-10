@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { AppRole } from "../_lib/roles";
 import {
   getSectionHref,
@@ -22,11 +22,8 @@ export function RoleSidebar({
   currentSection = "order",
 }: RoleSidebarProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const visibleItems = navItems.filter(
-    (item) =>
-      item.section === "home" ||
-      (role ? roleNavSections[role].includes(item.section) : false),
+    (item) => (role ? roleNavSections[role].includes(item.section) : false),
   );
 
   return (
@@ -59,10 +56,7 @@ export function RoleSidebar({
                     ? "ASSETS"
                     : item.label;
                 const isActive =
-                  item.section === "home"
-                    ? pathname === "/" &&
-                      (role ? searchParams.get("role") === role : !searchParams.get("role"))
-                    : pathname === `/${role}` && currentSection === item.section;
+                  pathname === `/${role}` && currentSection === item.section;
 
                 return (
                   <Link

@@ -31,11 +31,19 @@ function buildCandidateUrls(request: NextRequest) {
     .filter((value): value is string => Boolean(value?.trim()))
     .map((value) => normalizeGraphqlUrl(value, request));
 
+  const developmentFallbackUrls =
+    process.env.NODE_ENV === "production"
+      ? []
+      : [
+          DEFAULT_BACKEND_GRAPHQL_URL,
+          "http://localhost:3003/api/graphql",
+        ];
+
   if (explicitUrls.length > 0) {
-    return [...new Set(explicitUrls)];
+    return [...new Set([...explicitUrls, ...developmentFallbackUrls])];
   }
 
-  return [DEFAULT_BACKEND_GRAPHQL_URL];
+  return [...new Set(developmentFallbackUrls)];
 }
 
 function defaultPort(protocol: string) {
