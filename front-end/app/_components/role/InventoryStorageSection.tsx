@@ -415,7 +415,6 @@ export function InventoryStorageSection() {
           availableLocations={Array.from(
             new Set(assets.map((asset) => asset.storageName)),
           )}
-          onBack={() => setView("assets")}
           onTitleChange={setCensusTitle}
           onLocationChange={setCensusLocation}
           onScopeChange={setCensusScope}
