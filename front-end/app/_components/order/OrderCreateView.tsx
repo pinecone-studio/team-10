@@ -56,7 +56,7 @@ export function OrderCreateView(props: OrderCreateViewProps) {
               canAddItems={props.canAddItems}
               onGoodsDraftChange={props.onGoodsDraftChange}
               onAddItem={props.onAddItem}
-              onRemoveItem={props.onRemoveDraftRow}
+              onRemoveItem={props.onRemoveItem}
               onUpdateItemQuantity={props.onUpdateItemQuantity}
             />
           </div>

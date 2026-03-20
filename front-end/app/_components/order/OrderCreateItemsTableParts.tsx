@@ -71,7 +71,7 @@ export function OrderCreateItemRow({
       <Input value={draft.unitPrice} onChange={(e) => onChange(draft.id, "unitPrice", e.target.value)} type="number" min="0" placeholder="0" className="h-9 min-w-0 rounded-[10px] border-[#edf4fb] bg-white px-[8px] text-[12px] text-[#0f172a]" />
       <Cell className={`h-9 justify-center px-[8px] text-[12px] font-medium ${canAdd ? "text-[#0f172a]" : "text-[#94a3b8]"}`}>{total}</Cell>
       <div className="flex items-center justify-center">
-        <button type="button" onClick={() => onRemove(draft.id)} disabled={!draft.itemName.trim() && !draft.unitPrice.trim()} className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-[10px] bg-transparent text-[#94a3b8] transition hover:bg-[#fff1f2] hover:text-[#ef4444] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fecdd3] focus-visible:ring-offset-2 disabled:cursor-default disabled:text-[#cbd5e1] disabled:hover:bg-transparent" aria-label="Remove item row">
+        <button type="button" onClick={() => onRemove(draft.id)} className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-[10px] bg-transparent text-[#94a3b8] transition hover:bg-[#fff1f2] hover:text-[#ef4444] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fecdd3] focus-visible:ring-offset-2" aria-label="Remove item row">
           <TrashIcon active={hasValue} />
         </button>
       </div>
