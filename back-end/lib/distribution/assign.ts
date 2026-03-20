@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import {
-  assetAssignmentAcknowledgments,
   assetAssignmentRequests,
   assetDistributions,
   assets,
@@ -11,11 +10,6 @@ import type { AppDb } from "../db.ts";
 import { resolveUserId, parseIntegerId } from "../reference-resolvers.ts";
 import { resolveEmployeeByName } from "./users.ts";
 import {
-  createAssignmentAcknowledgment,
-  notifyHrManagersOfAssignmentConflict,
-} from "./assignment-acknowledgment.ts";
-import {
-  createDistributionNotification,
   getDistributionById,
   sanitizeName,
   type DistributionRecord,
@@ -26,6 +20,7 @@ export async function assignAssetDistribution(
   runtimeConfig: RuntimeConfig,
   input: {
     assetId: string;
+    employeeId?: string | null;
     employeeName: string;
     recipientRole?: string | null;
     note?: string | null;
@@ -57,7 +52,9 @@ export async function assignAssetDistribution(
 
     if (activeDistribution) throw new Error(`Asset ${asset.assetCode} is already assigned.`);
 
-    const employeeId = await resolveEmployeeByName(db, employeeName);
+    const employeeId = input.employeeId?.trim()
+      ? parseIntegerId("Employee id", input.employeeId)
+      : await resolveEmployeeByName(db, employeeName);
     const [employee] = await db
       .select({
         id: users.id,
@@ -70,23 +67,6 @@ export async function assignAssetDistribution(
 
     if (!employee) {
       throw new Error(`Employee '${employeeName}' was not found.`);
-    }
-
-    const [existingPendingAcknowledgment] = await db
-      .select({ id: assetAssignmentAcknowledgments.id })
-      .from(assetAssignmentAcknowledgments)
-      .where(
-        and(
-          eq(assetAssignmentAcknowledgments.assetId, assetId),
-          eq(assetAssignmentAcknowledgments.status, "pending"),
-        ),
-      )
-      .limit(1);
-
-    if (existingPendingAcknowledgment) {
-      throw new Error(
-        `Asset ${asset.assetCode} already has a pending acknowledgment request.`,
-      );
     }
 
     const distributedByUserId = await resolveUserId(db, undefined, currentUserId);
@@ -130,9 +110,9 @@ export async function assignAssetDistribution(
         distributedByUserId,
         distributedAt: now,
         recipientRole,
-        status: "pendingHandover",
+        status: "active",
         note:
-          [input.note?.trim(), conflictWarning, "Awaiting employee acknowledgment."]
+          [input.note?.trim(), conflictWarning]
             .filter(Boolean)
             .join(" | ") || null,
       })
@@ -141,50 +121,11 @@ export async function assignAssetDistribution(
     await db
       .update(assets)
       .set({
-        assetStatus: "pendingAssignment",
+        assetStatus: "assigned",
         updatedAt: now,
       })
       .where(eq(assets.id, assetId))
       .run();
-
-    const acknowledgment = await createAssignmentAcknowledgment(db, runtimeConfig, {
-      assignmentRequestId: assignmentRequest.id,
-      assetId,
-      assetCode: asset.assetCode,
-      assetName: asset.assetName,
-      employeeId: employee.id,
-      employeeName: employee.fullName,
-      employeeEmail: employee.email,
-      recipientRole,
-    });
-
-    await createDistributionNotification(
-      db,
-      employee.id,
-      "Asset assignment pending your signature",
-      `${asset.assetName} (${asset.assetCode}) was requested for assignment. Please sign the emailed acknowledgment link within 72 hours.`,
-      String(distribution.id),
-    );
-
-    if (conflictWarning) {
-      await notifyHrManagersOfAssignmentConflict(db, {
-        employeeId: employee.id,
-        employeeName: employee.fullName,
-        category: asset.category,
-        assetCode: asset.assetCode,
-        conflictAssetCode: conflict?.conflictAssetCode ?? "-",
-      });
-    }
-
-    if (acknowledgment.emailStatus !== "sent") {
-      await createDistributionNotification(
-        db,
-        distributedByUserId,
-        "Assignment email delivery issue",
-        `Acknowledgment email for ${employee.fullName} was not sent (${acknowledgment.emailStatus}). ${acknowledgment.emailError ?? ""}`.trim(),
-        String(distribution.id),
-      );
-    }
 
     const detail = await getDistributionById(db, distribution.id);
     if (!detail) throw new Error("Assigned distribution could not be reloaded.");

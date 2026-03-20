@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export type DistributionTab = "distributions" | "available-assets" | "employee-requests" | "pending-retrieval";
+export type DistributionTab = "available-assets" | "assigned-assets" | "pending-retrieval";
 export type DistributionStatusFilter =
   | "All status"
   | "Pending signature"
@@ -11,9 +11,8 @@ export type DistributionStatusFilter =
   | "Pending Retrieval";
 
 const tabs = [
-  ["distributions", "Distributions", 4, "min-w-[150px]"],
   ["available-assets", "Available assets", 6, "min-w-[185px]"],
-  ["employee-requests", "Employee requests", 3, "min-w-[180px]"],
+  ["assigned-assets", "Assigned assets", 3, "min-w-[180px]"],
   ["pending-retrieval", "Pending retrieval", 3, "min-w-[170px]"],
 ] as const satisfies ReadonlyArray<readonly [DistributionTab, string, number, string]>;
 
@@ -32,57 +31,78 @@ export default function DistributionFilterPanel(props: {
   onTabChange: (value: DistributionTab) => void;
   selectedStatus: DistributionStatusFilter;
   onStatusChange: (value: DistributionStatusFilter) => void;
+  selectedRole: string;
+  onRoleChange: (value: string) => void;
+  selectedEmployee: string;
+  onEmployeeChange: (value: string) => void;
+  selectedCategory: string;
+  onCategoryChange: (value: string) => void;
+  selectedType: string;
+  onTypeChange: (value: string) => void;
+  roleOptions: string[];
+  employeeOptions: string[];
+  categoryOptions: string[];
+  typeOptions: string[];
   counts: Record<DistributionTab, number>;
 }) {
   const [open, setOpen] = useState(false);
 
   return (
     <section className="w-full rounded-[24px] border border-[#d9e7f7] bg-[rgba(255,255,255,0.62)] p-5 shadow-[0_18px_40px_rgba(191,219,254,0.22)]">
-      <div className="flex self-stretch rounded-[14px] border border-[#D8E8FF] bg-white px-4 pt-8 pb-10">
-        <div className="flex w-full flex-col items-start gap-4 lg:flex-row">
-          <label className="relative flex h-[36px] flex-1 items-center rounded-[12px] border border-[#d7e4f2] bg-white px-4 shadow-[0_4px_16px_rgba(148,163,184,0.08)]">
-            <SearchIcon />
-            <input
-              value={props.searchValue}
-              onChange={(event) => props.onSearchChange(event.target.value)}
-              placeholder="Search by distribution number, recipient, or department..."
-              className="w-full bg-transparent pl-8 text-[14px] text-[#0f172a] outline-none placeholder:text-[#7b8ca4]"
-            />
-          </label>
-          <div className="relative w-[192px]">
-            <button
-              type="button"
-              onClick={() => setOpen((current) => !current)}
-              className="flex h-[36px] w-[192px] items-center justify-between rounded-[12px] border border-[#d7e4f2] bg-white px-3 py-2 shadow-[0_4px_16px_rgba(148,163,184,0.08)]"
-            >
-              <span className="flex w-full items-center justify-between text-[14px] text-[#111827]">
-                <span className="flex items-center gap-3">
-                  <FilterIcon />
-                  <span>{props.selectedStatus}</span>
+      <div className="flex self-stretch rounded-[14px] border border-[#D8E8FF] bg-white px-4 pt-8 pb-6">
+        <div className="flex w-full flex-col items-start gap-4">
+          <div className="flex w-full flex-col items-start gap-4 lg:flex-row">
+            <label className="relative flex h-[36px] flex-1 items-center rounded-[12px] border border-[#d7e4f2] bg-white px-4 shadow-[0_4px_16px_rgba(148,163,184,0.08)]">
+              <SearchIcon />
+              <input
+                value={props.searchValue}
+                onChange={(event) => props.onSearchChange(event.target.value)}
+                placeholder="Search by asset code, asset name, or holder..."
+                className="w-full bg-transparent pl-8 text-[14px] text-[#0f172a] outline-none placeholder:text-[#7b8ca4]"
+              />
+            </label>
+            <div className="relative w-[192px]">
+              <button
+                type="button"
+                onClick={() => setOpen((current) => !current)}
+                className="flex h-[36px] w-[192px] items-center justify-between rounded-[12px] border border-[#d7e4f2] bg-white px-3 py-2 shadow-[0_4px_16px_rgba(148,163,184,0.08)]"
+              >
+                <span className="flex w-full items-center justify-between text-[14px] text-[#111827]">
+                  <span className="flex items-center gap-3">
+                    <FilterIcon />
+                    <span>{props.selectedStatus}</span>
+                  </span>
+                  <ChevronDown />
                 </span>
-                <ChevronDown />
-              </span>
-            </button>
-            {open ? (
-              <div className="absolute top-[calc(100%+4px)] z-20 flex w-[192px] flex-col items-start gap-[6px] rounded-[8px] border border-[#E2E8F0] bg-white p-[6px] shadow-[0_12px_28px_rgba(148,163,184,0.18)]">
-                <div className="flex w-full flex-col gap-[6px]">
-                  {statuses.map((status) => (
-                    <button
-                      key={status}
-                      type="button"
-                      onClick={() => {
-                        props.onStatusChange(status);
-                        setOpen(false);
-                      }}
-                      className={`flex h-[44px] items-center justify-between rounded-[8px] px-4 text-left text-[14px] text-[#111827] ${props.selectedStatus === status ? "bg-[#edf3fb]" : "bg-transparent"}`}
-                    >
-                      <span>{status}</span>
-                      {props.selectedStatus === status ? <CheckIcon /> : <span className="h-5 w-5" />}
-                    </button>
-                  ))}
+              </button>
+              {open ? (
+                <div className="absolute top-[calc(100%+4px)] z-20 flex w-[192px] flex-col items-start gap-[6px] rounded-[8px] border border-[#E2E8F0] bg-white p-[6px] shadow-[0_12px_28px_rgba(148,163,184,0.18)]">
+                  <div className="flex w-full flex-col gap-[6px]">
+                    {statuses.map((status) => (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => {
+                          props.onStatusChange(status);
+                          setOpen(false);
+                        }}
+                        className={`flex h-[44px] items-center justify-between rounded-[8px] px-4 text-left text-[14px] text-[#111827] ${props.selectedStatus === status ? "bg-[#edf3fb]" : "bg-transparent"}`}
+                      >
+                        <span>{status}</span>
+                        {props.selectedStatus === status ? <CheckIcon /> : <span className="h-5 w-5" />}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid w-full gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <SelectFilter label="Role" value={props.selectedRole} options={props.roleOptions} onChange={props.onRoleChange} />
+            <SelectFilter label="Employee" value={props.selectedEmployee} options={props.employeeOptions} onChange={props.onEmployeeChange} />
+            <SelectFilter label="Category" value={props.selectedCategory} options={props.categoryOptions} onChange={props.onCategoryChange} />
+            <SelectFilter label="Type" value={props.selectedType} options={props.typeOptions} onChange={props.onTypeChange} />
           </div>
         </div>
       </div>
@@ -106,6 +126,30 @@ export default function DistributionFilterPanel(props: {
         ))}
       </div>
     </section>
+  );
+}
+
+function SelectFilter(props: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[12px] text-[#64748b]">{props.label}</span>
+      <select
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value)}
+        className="h-[38px] w-full rounded-[12px] border border-[#d7e4f2] bg-white px-3 text-[14px] text-[#111827] shadow-[0_4px_16px_rgba(148,163,184,0.08)] outline-none"
+      >
+        {props.options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

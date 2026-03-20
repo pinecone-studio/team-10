@@ -37,6 +37,8 @@ export type EmployeeDirectoryEntryDto = {
   email: string;
   role: string;
   position: string;
+  departmentId: string | null;
+  departmentName: string | null;
   isActive: boolean;
 };
 
@@ -128,6 +130,8 @@ const employeeDirectoryQuery = gql`
       email
       role
       position
+      departmentId
+      departmentName
       isActive
     }
   }
@@ -179,8 +183,8 @@ const distributionsQuery = gql`
 
 const assignMutation = gql`
   ${distributionFields}
-  mutation AssignAssetDistribution($assetId: ID!, $employeeName: String!, $recipientRole: String, $note: String) {
-    assignAssetDistribution(assetId: $assetId, employeeName: $employeeName, recipientRole: $recipientRole, note: $note) {
+  mutation AssignAssetDistribution($assetId: ID!, $employeeId: ID, $employeeName: String!, $recipientRole: String, $note: String) {
+    assignAssetDistribution(assetId: $assetId, employeeId: $employeeId, employeeName: $employeeName, recipientRole: $recipientRole, note: $note) {
       ...DistributionFields
     }
   }
@@ -288,6 +292,7 @@ export async function fetchAssignmentAcknowledgmentPdfRequest(token: string) {
 
 export async function assignAssetDistributionRequest(input: {
   assetId: string;
+  employeeId?: string | null;
   employeeName: string;
   recipientRole?: string | null;
   note?: string | null;

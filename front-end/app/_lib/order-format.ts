@@ -35,7 +35,8 @@ export function getTodayDateInputValue() {
 
 export function formatDisplayDate(value: string) {
   if (!value) return "";
-  const [year, month, day] = value.split("-");
+  const normalized = value.includes("T") ? value.split("T")[0] : value;
+  const [year, month, day] = normalized.split("-");
   if (!year || !month || !day) return value;
   return `${year}.${month}.${day}`;
 }
