@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { GlobalBusyOverlay } from "./_components/shared/GlobalBusyOverlay";
 import { GraphqlProvider } from "./providers/GraphqlProvider";
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <GraphqlProvider>{children}</GraphqlProvider>
+        <GlobalBusyOverlay />
       </body>
     </html>
   );
