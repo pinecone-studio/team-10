@@ -26,6 +26,8 @@ function AssignmentAcknowledgmentContent() {
   const [signedResult, setSignedResult] = useState<SignAssignmentAcknowledgmentResultDto | null>(
     null,
   );
+  const isSigned = signedResult?.status === "confirmed";
+  const previewCustomAttributes = preview?.customAttributes ?? [];
 
   function resolveEmployeeNameValue(record: AssignmentAcknowledgmentPreviewDto) {
     const employeeName = record.employeeName?.trim() ?? "";
@@ -134,6 +136,11 @@ function AssignmentAcknowledgmentContent() {
   }
 
   async function openSignedPdf() {
+    if (!isSigned) {
+      setNotice("Please sign acknowledgment first to open the signed PDF.");
+      return;
+    }
+
     if (!token) {
       setNotice("Missing acknowledgment token.");
       return;
@@ -176,6 +183,11 @@ function AssignmentAcknowledgmentContent() {
   }
 
   async function downloadSignedPdf() {
+    if (!isSigned) {
+      setNotice("Please sign acknowledgment first to download the signed PDF.");
+      return;
+    }
+
     setIsDownloadingPdf(true);
     setNotice("");
 
@@ -202,23 +214,41 @@ function AssignmentAcknowledgmentContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f1f5f9] px-4 py-10 text-slate-900">
-      <section className="mx-auto w-full max-w-[760px] rounded-[18px] border border-[#dbe4ee] bg-white p-6 shadow-[0_14px_36px_rgba(15,23,42,0.08)]">
-        <h1 className="text-[24px] font-semibold text-[#0f172a]">Asset Assignment Acknowledgment</h1>
-        <p className="mt-2 text-[14px] text-[#64748b]">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#d8ebff_0%,#eef6ff_36%,#ffffff_74%)] px-4 py-10 text-slate-900">
+      <section className="mx-auto w-full max-w-[860px] rounded-[24px] border border-[#d8e8ff] bg-[rgba(255,255,255,0.86)] p-6 shadow-[0_22px_48px_rgba(30,64,175,0.14)] md:p-8">
+        <h1 className="text-[34px] leading-[1.12] font-bold text-[#0f172a]">Asset Assignment Acknowledgment</h1>
+        <p className="mt-3 text-[16px] text-[#64748b]">
           Sign this one-time form to confirm your assignment.
         </p>
 
         {isLoading ? (
           <p className="mt-6 text-[14px] text-[#334155]">Loading acknowledgment details...</p>
         ) : preview ? (
-          <div className="mt-6 space-y-5">
-            <div className="grid gap-3 rounded-[14px] border border-[#e2e8f0] bg-[#f8fafc] p-4 md:grid-cols-2">
+          <div className="mt-7 space-y-6">
+            <div className="grid gap-3 rounded-[18px] border border-[#d8e8ff] bg-white/75 p-4 md:grid-cols-2">
               <Info label="Employee" value={resolveEmployeeNameValue(preview)} />
               <Info label="Email" value={resolveEmployeeEmailValue(preview)} />
               <Info label="Asset Name" value={preview.assetName} />
               <Info label="Asset Code" value={preview.assetCode} />
               <Info label="Asset Category" value={preview.category} />
+              <Info label="Role" value={preview.recipientRole} />
+            </div>
+
+            <div className="rounded-[18px] border border-[#d8e8ff] bg-white/75 p-4">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[#94a3b8]">Custom Attributes</p>
+              {previewCustomAttributes.length > 0 ? (
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {previewCustomAttributes.map((attribute) => (
+                    <Info
+                      key={`${attribute.attributeName}-${attribute.attributeValue}`}
+                      label={attribute.attributeName}
+                      value={attribute.attributeValue}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-[13px] text-[#64748b]">No custom attributes on this asset.</p>
+              )}
             </div>
 
             <label className="flex flex-col gap-2 text-[13px] text-[#334155]">
@@ -226,7 +256,7 @@ function AssignmentAcknowledgmentContent() {
               <input
                 value={signerName}
                 onChange={(event) => setSignerName(event.target.value)}
-                className="h-11 rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none"
+                className="h-11 rounded-[12px] border border-[#d7e4f2] bg-white px-3 text-[14px] text-[#0f172a] outline-none"
                 placeholder="Full name"
               />
             </label>
@@ -237,7 +267,7 @@ function AssignmentAcknowledgmentContent() {
                 value={signatureText}
                 onChange={(event) => setSignatureText(event.target.value)}
                 rows={4}
-                className="rounded-[10px] border border-[#dbe4ee] bg-white px-3 py-2 text-[14px] text-[#0f172a] outline-none"
+                className="rounded-[12px] border border-[#d7e4f2] bg-white px-3 py-2 text-[14px] text-[#0f172a] outline-none"
                 placeholder="Type your signature (example: I agree, John Doe)"
               />
             </label>
@@ -245,37 +275,35 @@ function AssignmentAcknowledgmentContent() {
             <button
               type="button"
               onClick={() => void signAcknowledgment()}
-              disabled={isSubmitting}
-              className="h-11 rounded-[10px] bg-[#0f172a] px-5 text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isSubmitting || isSigned}
+              className="h-12 rounded-[12px] bg-[#0f172a] px-6 text-[15px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting ? "Signing..." : "Sign acknowledgment"}
+              {isSigned ? "Acknowledgment signed" : isSubmitting ? "Signing..." : "Sign acknowledgment"}
             </button>
 
-            {signedResult?.status === "confirmed" ? (
-              <div className="grid gap-3 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => void openSignedPdf()}
-                  disabled={isOpeningPdf}
-                  className="h-11 rounded-[10px] border border-[#0f172a] bg-white px-5 text-[14px] font-semibold text-[#0f172a] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isOpeningPdf ? "Opening PDF..." : "Open signed PDF"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void downloadSignedPdf()}
-                  disabled={isDownloadingPdf}
-                  className="h-11 rounded-[10px] bg-[#0f172a] px-5 text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isDownloadingPdf ? "Downloading..." : "Download signed PDF"}
-                </button>
-              </div>
-            ) : null}
+            <div className="grid gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => void openSignedPdf()}
+                disabled={isOpeningPdf || !isSigned}
+                className="h-12 rounded-[12px] border border-[#0f172a] bg-white px-5 text-[15px] font-semibold text-[#0f172a] disabled:cursor-not-allowed disabled:border-[#cbd5e1] disabled:bg-[#f1f5f9] disabled:text-[#94a3b8]"
+              >
+                {isOpeningPdf ? "Opening PDF..." : "Open signed PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void downloadSignedPdf()}
+                disabled={isDownloadingPdf || !isSigned}
+                className="h-12 rounded-[12px] bg-[#0f172a] px-5 text-[15px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#cbd5e1] disabled:text-[#475569]"
+              >
+                {isDownloadingPdf ? "Downloading..." : "Download signed PDF"}
+              </button>
+            </div>
           </div>
         ) : null}
 
         {notice ? (
-          <p className="mt-5 rounded-[10px] border border-[#dbe4ee] bg-[#f8fafc] px-4 py-3 text-[13px] text-[#1e293b]">
+          <p className="mt-6 rounded-[12px] border border-[#d7e4f2] bg-white/80 px-4 py-3 text-[13px] text-[#1e293b]">
             {notice}
           </p>
         ) : null}
@@ -288,8 +316,8 @@ export default function AssignmentAcknowledgmentPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-[#f1f5f9] px-4 py-10 text-slate-900">
-          <section className="mx-auto w-full max-w-[760px] rounded-[18px] border border-[#dbe4ee] bg-white p-6 shadow-[0_14px_36px_rgba(15,23,42,0.08)]">
+        <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#d8ebff_0%,#eef6ff_36%,#ffffff_74%)] px-4 py-10 text-slate-900">
+          <section className="mx-auto w-full max-w-[860px] rounded-[24px] border border-[#d8e8ff] bg-[rgba(255,255,255,0.86)] p-6 shadow-[0_22px_48px_rgba(30,64,175,0.14)]">
             <p className="text-[14px] text-[#334155]">Loading acknowledgment page...</p>
           </section>
         </main>
@@ -302,7 +330,7 @@ export default function AssignmentAcknowledgmentPage() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[10px] border border-[#e2e8f0] bg-white px-3 py-3">
+    <div className="rounded-[12px] border border-[#d7e4f2] bg-white px-3 py-3">
       <p className="text-[11px] uppercase tracking-[0.12em] text-[#94a3b8]">{label}</p>
       <p className="mt-1 text-[13px] text-[#0f172a]">{value}</p>
     </div>

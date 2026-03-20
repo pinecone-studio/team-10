@@ -16,6 +16,11 @@ type AssetLabelPdf {
   fileName: String!
 }
 
+type AssignmentAcknowledgmentCustomAttribute {
+  attributeName: String!
+  attributeValue: String!
+}
+
 type AssignmentAcknowledgmentPdf {
   base64: String!
   contentType: String!
@@ -29,6 +34,7 @@ type AssignmentAcknowledgmentPreview {
   assetName: String!
   assignmentRequestId: ID!
   category: String!
+  customAttributes: [AssignmentAcknowledgmentCustomAttribute!]!
   employeeEmail: String!
   employeeId: ID!
   employeeName: String!

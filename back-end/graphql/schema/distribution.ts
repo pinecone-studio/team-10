@@ -1,4 +1,9 @@
 export const DistributionTypeDefs = `
+  type AssignmentAcknowledgmentCustomAttribute {
+    attributeName: String!
+    attributeValue: String!
+  }
+
   type EmployeeDirectoryEntry {
     id: ID!
     fullName: String!
@@ -15,6 +20,7 @@ export const DistributionTypeDefs = `
     assetCode: String!
     assetName: String!
     category: String!
+    customAttributes: [AssignmentAcknowledgmentCustomAttribute!]!
     employeeId: ID!
     employeeName: String!
     employeeEmail: String!

@@ -98,6 +98,18 @@ function buildForwardHeaders(request: NextRequest) {
     }
   }
 
+  // Preserve the frontend origin so backend-generated email links use the deployed UI URL.
+  headers.set("x-app-origin", request.nextUrl.origin);
+  if (!headers.get("origin")) {
+    headers.set("origin", request.nextUrl.origin);
+  }
+  if (!headers.get("x-forwarded-proto")) {
+    headers.set("x-forwarded-proto", request.nextUrl.protocol.replace(":", ""));
+  }
+  if (!headers.get("x-forwarded-host")) {
+    headers.set("x-forwarded-host", request.nextUrl.host);
+  }
+
   return headers;
 }
 
