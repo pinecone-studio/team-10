@@ -24,8 +24,8 @@ export default function DistributionFilterPanel(props: {
   const [open, setOpen] = useState(false);
 
   return (
-    <section className="w-full rounded-[24px] border border-[#d9e7f7] bg-[rgba(255,255,255,0.62)] p-5 shadow-[0_18px_40px_rgba(191,219,254,0.22)]">
-      <div className="flex self-stretch rounded-[14px] border border-[#D8E8FF] bg-white px-4 pt-8 pb-10">
+    <section className="w-full rounded-[24px] border border-[#d9e7f7] bg-[rgba(255,255,255,0.62)] p-4 shadow-[0_18px_40px_rgba(191,219,254,0.22)]">
+      <div className="flex self-stretch rounded-[14px] border border-[#D8E8FF] bg-white px-3 pt-8 pb-10">
         <div className="flex w-full flex-col items-start gap-4 lg:flex-row">
           <label className="relative flex h-[36px] flex-1 items-center rounded-[12px] border border-[#d7e4f2] bg-white px-4 shadow-[0_4px_16px_rgba(148,163,184,0.08)]">
             <SearchIcon />
@@ -51,7 +51,7 @@ export default function DistributionFilterPanel(props: {
               </span>
             </button>
             {open ? (
-              <div className="absolute top-[calc(100%+4px)] z-20 flex w-[192px] flex-col items-start gap-[6px] rounded-[8px] border border-[#E2E8F0] bg-white p-[6px] shadow-[0_12px_28px_rgba(148,163,184,0.18)]">
+              <div className="absolute top-[calc(100%+4px)] left-1/2 z-20 flex w-[192px] -translate-x-1/2 flex-col items-start gap-[6px] rounded-[8px] border border-[#E2E8F0] bg-white p-[6px] shadow-[0_12px_28px_rgba(148,163,184,0.18)]">
                 <div className="flex w-full flex-col gap-[6px]">
                   {statuses.map((status) => (
                     <button

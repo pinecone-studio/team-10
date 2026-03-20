@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchAssetDistributionsRequest, type DistributionRecordDto } from "@/app/(dashboard)/_graphql/distribution/distribution-api";
 import { fetchStorageAssetsRequest, type StorageAssetDto } from "@/app/(dashboard)/_graphql/storage/storage-api";
 import DistributionAssetGrid from "../distribution/DistributionAssetGrid";
+import EmployeeOrder from "../distribution/EmployeeOrder";
 import DistributionFilterPanel, { type DistributionTab } from "../distribution/DistributionFilterPanel";
 import DistributionHeader from "../distribution/DistributionHeader";
 import DistributionOrder from "../distribution/DistributionOrder";
+import PendingRetrievalPanel from "../distribution/PendingRetrievalPanel";
 import { buildAssignedItems, buildAvailableItems, buildHistoryMap, matchesAssetQuery } from "../distribution/hrDistributionHelpers";
 import { WorkspaceShell } from "../shared/WorkspacePrimitives";
 
@@ -32,7 +34,11 @@ export function HRDistributionSection() {
   const distributionRows = useMemo(() => records.filter((record) => [record.employeeName, record.assetName, record.assetCode, record.currentStorageName ?? "", record.recipientRole ?? ""].some((value) => value.toLowerCase().includes(searchValue.trim().toLowerCase()))), [records, searchValue]);
   const available = useMemo(() => buildAvailableItems(storageAssets, historyMap).filter((item) => item.holder === null && item.storageName !== "Assigned to employee" && matchesAssetQuery(item, searchValue)), [historyMap, searchValue, storageAssets]);
   const assigned = useMemo(() => buildAssignedItems(records).filter((item) => matchesAssetQuery(item, searchValue)), [records, searchValue]);
-  const requested = useMemo(() => records.filter((record) => (record.status ?? "").toLowerCase().includes("pending")), [records]);
+  const requested = useMemo(() => records.filter((record) => {
+    const query = searchValue.trim().toLowerCase();
+    const matchesQuery = !query || [record.employeeName, record.assetName, record.note ?? "", record.recipientRole ?? ""].some((value) => value.toLowerCase().includes(query));
+    return matchesQuery && ((record.status ?? "").toLowerCase().includes("pending") || Boolean(record.assignmentRequestId));
+  }), [records, searchValue]);
   const pendingRetrieval = useMemo(() => assigned.filter((item) => item.assetStatus.toLowerCase().includes("return") || item.assetStatus.toLowerCase().includes("retrieval")), [assigned]);
   const metricStats = useMemo(() => {
     const norm = (value?: string | null) => (value ?? "").toLowerCase();
@@ -60,6 +66,8 @@ export function HRDistributionSection() {
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
           {activeTab === "distributions" ? <DistributionOrder rows={distributionRows} /> : null}
           {activeTab === "available-assets" ? <DistributionAssetGrid items={visibleItems.slice(0, 6)} /> : null}
+          {activeTab === "employee-requests" ? <EmployeeOrder rows={requested} /> : null}
+          {activeTab === "pending-retrieval" ? <PendingRetrievalPanel items={pendingRetrieval} /> : null}
         </div>
       </div>
     </WorkspaceShell>
