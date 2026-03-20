@@ -53,7 +53,7 @@ export function OrderCreateItemsEditor(
           <button
             type="button"
             onClick={props.onAddItem}
-            className="inline-flex h-9 items-center justify-center gap-[7px] rounded-[10px] border border-dashed border-[#a5b4fc] bg-white px-3.5 text-[13px] font-semibold text-[#111827] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:bg-[#f8fbff] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
+            className="inline-flex h-9 cursor-pointer items-center justify-center gap-[7px] rounded-[10px] border border-dashed border-[#a5b4fc] bg-white px-3.5 text-[13px] font-semibold text-[#111827] shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition duration-150 hover:bg-[#f8fbff] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
           >
             <PlusIcon />
             <span>Add Item</span>

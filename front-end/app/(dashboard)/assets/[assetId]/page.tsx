@@ -30,23 +30,25 @@ export default async function AssetDetailRoute({
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#efefef] text-slate-900">
-      <section className="flex min-h-screen overflow-x-hidden">
-        <div className="hidden lg:block">
+    <main className="h-screen overflow-hidden bg-[#eef5fb] text-slate-900">
+      <section className="flex h-full items-stretch overflow-hidden">
+        <div className="hidden h-full lg:block">
           <RoleSidebar role={role} currentSection="storage" />
         </div>
-        <StorageAssetDetailPage
-          assetId={assetId}
-          role={role}
-          qrContext={{
-            orderId: resolvedSearchParams?.orderId,
-            requestNumber: resolvedSearchParams?.requestNumber,
-            department: resolvedSearchParams?.department,
-            storageLocation: resolvedSearchParams?.storageLocation,
-            ownerName: resolvedSearchParams?.ownerName,
-            ownerRole: resolvedSearchParams?.ownerRole,
-          }}
-        />
+        <div className="min-w-0 flex-1 overflow-y-auto bg-[#eef5fb]">
+          <StorageAssetDetailPage
+            assetId={assetId}
+            role={role}
+            qrContext={{
+              orderId: resolvedSearchParams?.orderId,
+              requestNumber: resolvedSearchParams?.requestNumber,
+              department: resolvedSearchParams?.department,
+              storageLocation: resolvedSearchParams?.storageLocation,
+              ownerName: resolvedSearchParams?.ownerName,
+              ownerRole: resolvedSearchParams?.ownerRole,
+            }}
+          />
+        </div>
       </section>
     </main>
   );
