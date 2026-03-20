@@ -1,9 +1,10 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import PDFDocument from "pdfkit/js/pdfkit.standalone.js";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import {
   assetAssignmentAcknowledgments,
   assetAssignmentRequests,
+  assetAttributes,
   assetDistributions,
   assets,
   notifications,
@@ -45,6 +46,7 @@ export type AssignmentAcknowledgmentPreviewRecord = {
   assetCode: string;
   assetName: string;
   category: string;
+  customAttributes: AssignmentAcknowledgmentCustomAttributeRecord[];
   employeeId: string;
   employeeName: string;
   employeeEmail: string;
@@ -70,6 +72,11 @@ export type AssignmentAcknowledgmentPdfRecord = {
   fileName: string;
   contentType: string;
   base64: string;
+};
+
+export type AssignmentAcknowledgmentCustomAttributeRecord = {
+  attributeName: string;
+  attributeValue: string;
 };
 
 type PendingAcknowledgmentRow = {
@@ -546,6 +553,7 @@ async function renderAcknowledgmentPdf(input: {
   assetName: string;
   assetCode: string;
   category: string;
+  customAttributes: AssignmentAcknowledgmentCustomAttributeRecord[];
   signerName: string;
   signatureText: string;
   signedAt: string;
@@ -610,6 +618,23 @@ async function renderAcknowledgmentPdf(input: {
     .text(`Asset Code: ${input.assetCode}`)
     .text(`Asset Category: ${input.category}`);
 
+  if (input.customAttributes.length > 0) {
+    document.moveDown(0.5);
+    document
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .fillColor("#0f172a")
+      .text("Custom Attributes");
+
+    document
+      .font("Helvetica")
+      .fontSize(10)
+      .fillColor("#334155");
+    for (const attribute of input.customAttributes) {
+      document.text(`${attribute.attributeName}: ${attribute.attributeValue}`);
+    }
+  }
+
   document.moveDown(1);
   document
     .font("Helvetica-Bold")
@@ -668,6 +693,25 @@ async function uploadAcknowledgmentPdfToR2(
     objectKey,
     fileName: `assignment-acknowledgment-${input.acknowledgmentId}.pdf`,
   };
+}
+
+async function loadAssetCustomAttributes(
+  db: AppDb,
+  assetId: number,
+): Promise<AssignmentAcknowledgmentCustomAttributeRecord[]> {
+  const rows = await db
+    .select({
+      attributeName: assetAttributes.attributeName,
+      attributeValue: assetAttributes.attributeValue,
+    })
+    .from(assetAttributes)
+    .where(eq(assetAttributes.assetId, assetId))
+    .orderBy(asc(assetAttributes.attributeName), asc(assetAttributes.id));
+
+  return rows.map((row) => ({
+    attributeName: row.attributeName,
+    attributeValue: row.attributeValue,
+  }));
 }
 
 async function notifyRolesOnAcknowledgmentConfirmation(
@@ -876,6 +920,10 @@ export async function getAssignmentAcknowledgmentPreviewByToken(
       acknowledgment.expiresAt,
       payload.exp,
     );
+    const customAttributes = await loadAssetCustomAttributes(
+      db,
+      acknowledgment.assetId,
+    );
 
     return {
       acknowledgmentId: String(acknowledgment.acknowledgmentId),
@@ -884,6 +932,7 @@ export async function getAssignmentAcknowledgmentPreviewByToken(
       assetCode: acknowledgment.assetCode,
       assetName: acknowledgment.assetName,
       category: acknowledgment.category,
+      customAttributes,
       employeeId: String(acknowledgment.employeeId),
       employeeName: acknowledgment.employeeName,
       employeeEmail: acknowledgment.employeeEmail,
@@ -1032,6 +1081,11 @@ export async function signAssignmentAcknowledgment(
       throw new Error("Related distribution record details were not found.");
     }
 
+    const customAttributes = await loadAssetCustomAttributes(
+      db,
+      distributionContext.assetId,
+    );
+
     if (distributionContext.status !== "pendingHandover") {
       await db
         .update(assetDistributions)
@@ -1051,6 +1105,7 @@ export async function signAssignmentAcknowledgment(
       assetName: distributionContext.assetName,
       assetCode: distributionContext.assetCode,
       category: distributionContext.category,
+      customAttributes,
       signerName,
       signatureText,
       signedAt,

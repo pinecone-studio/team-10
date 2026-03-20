@@ -47,6 +47,10 @@ export type AssignmentAcknowledgmentPreviewDto = {
   assetCode: string;
   assetName: string;
   category: string;
+  customAttributes: Array<{
+    attributeName: string;
+    attributeValue: string;
+  }>;
   employeeId: string;
   employeeName: string;
   employeeEmail: string;
@@ -138,6 +142,10 @@ const assignmentAcknowledgmentQuery = gql`
       assetCode
       assetName
       category
+      customAttributes {
+        attributeName
+        attributeValue
+      }
       employeeId
       employeeName
       employeeEmail

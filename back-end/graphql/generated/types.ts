@@ -37,6 +37,12 @@ export type AssetLabelPdf = {
   fileName: Scalars['String']['output'];
 };
 
+export type AssignmentAcknowledgmentCustomAttribute = {
+  __typename?: 'AssignmentAcknowledgmentCustomAttribute';
+  attributeName: Scalars['String']['output'];
+  attributeValue: Scalars['String']['output'];
+};
+
 export type AssignmentAcknowledgmentPdf = {
   __typename?: 'AssignmentAcknowledgmentPdf';
   base64: Scalars['String']['output'];
@@ -52,6 +58,7 @@ export type AssignmentAcknowledgmentPreview = {
   assetName: Scalars['String']['output'];
   assignmentRequestId: Scalars['ID']['output'];
   category: Scalars['String']['output'];
+  customAttributes: Array<AssignmentAcknowledgmentCustomAttribute>;
   employeeEmail: Scalars['String']['output'];
   employeeId: Scalars['ID']['output'];
   employeeName: Scalars['String']['output'];
@@ -758,6 +765,7 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 export type ResolversTypes = {
   AssetAuditEntry: ResolverTypeWrapper<AssetAuditEntry>;
   AssetLabelPdf: ResolverTypeWrapper<AssetLabelPdf>;
+  AssignmentAcknowledgmentCustomAttribute: ResolverTypeWrapper<AssignmentAcknowledgmentCustomAttribute>;
   AssignmentAcknowledgmentPdf: ResolverTypeWrapper<AssignmentAcknowledgmentPdf>;
   AssignmentAcknowledgmentPreview: ResolverTypeWrapper<AssignmentAcknowledgmentPreview>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
@@ -792,6 +800,7 @@ export type ResolversTypes = {
 export type ResolversParentTypes = {
   AssetAuditEntry: AssetAuditEntry;
   AssetLabelPdf: AssetLabelPdf;
+  AssignmentAcknowledgmentCustomAttribute: AssignmentAcknowledgmentCustomAttribute;
   AssignmentAcknowledgmentPdf: AssignmentAcknowledgmentPdf;
   AssignmentAcknowledgmentPreview: AssignmentAcknowledgmentPreview;
   Boolean: Scalars['Boolean']['output'];
@@ -842,6 +851,12 @@ export type AssetLabelPdfResolvers<ContextType = GraphQLContext, ParentType exte
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type AssignmentAcknowledgmentCustomAttributeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AssignmentAcknowledgmentCustomAttribute'] = ResolversParentTypes['AssignmentAcknowledgmentCustomAttribute']> = {
+  attributeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  attributeValue?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type AssignmentAcknowledgmentPdfResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AssignmentAcknowledgmentPdf'] = ResolversParentTypes['AssignmentAcknowledgmentPdf']> = {
   base64?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   contentType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -856,6 +871,7 @@ export type AssignmentAcknowledgmentPreviewResolvers<ContextType = GraphQLContex
   assetName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   assignmentRequestId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  customAttributes?: Resolver<Array<ResolversTypes['AssignmentAcknowledgmentCustomAttribute']>, ParentType, ContextType>;
   employeeEmail?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   employeeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   employeeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1177,6 +1193,7 @@ export type TerminationResultResolvers<ContextType = GraphQLContext, ParentType 
 export type Resolvers<ContextType = GraphQLContext> = {
   AssetAuditEntry?: AssetAuditEntryResolvers<ContextType>;
   AssetLabelPdf?: AssetLabelPdfResolvers<ContextType>;
+  AssignmentAcknowledgmentCustomAttribute?: AssignmentAcknowledgmentCustomAttributeResolvers<ContextType>;
   AssignmentAcknowledgmentPdf?: AssignmentAcknowledgmentPdfResolvers<ContextType>;
   AssignmentAcknowledgmentPreview?: AssignmentAcknowledgmentPreviewResolvers<ContextType>;
   CatalogCategory?: CatalogCategoryResolvers<ContextType>;
