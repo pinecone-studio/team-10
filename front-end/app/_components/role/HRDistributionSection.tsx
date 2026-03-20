@@ -6,6 +6,7 @@ import {
   fetchAssetDistributionsRequest,
   fetchEmployeeDirectoryRequest,
   returnAssetDistributionRequest,
+  type DistributionRecordDto,
   type EmployeeDirectoryEntryDto,
 } from "@/app/(dashboard)/_graphql/distribution/distribution-api";
 import {
