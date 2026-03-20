@@ -13,11 +13,25 @@ import {
 } from "./receiveSpecifications";
 import type { ReceiveCondition, ReceiveStatusFilterValue } from "./receiveTypes";
 
+function isPersistedReceiveOrderId(orderId: string) {
+  return /^\d+$/.test(orderId.trim());
+}
+
 export function useReceiveSectionState() {
   const today = new Date().toISOString().slice(0, 10);
   const orders = useOrdersStore();
   const catalog = useCatalogStore();
-  const rows = useMemo(() => buildReceiveRows(orders.filter((order) => ["approved_finance", "received_inventory", "assigned_hr"].includes(order.status))), [orders]);
+  const rows = useMemo(
+    () =>
+      buildReceiveRows(
+        orders.filter(
+          (order) =>
+            order.status === "approved_finance" &&
+            isPersistedReceiveOrderId(order.id),
+        ),
+      ),
+    [orders],
+  );
   const [search, setSearch] = useState("");
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [completedRowIds, setCompletedRowIds] = useState<string[]>([]);
@@ -40,11 +54,14 @@ export function useReceiveSectionState() {
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
     return rows.filter((row) => {
+      if (completedRowIds.includes(row.id)) {
+        return false;
+      }
       const matchesSearch = !normalizedSearch || [row.assetName, row.category, row.requestNumber].join(" ").toLowerCase().includes(normalizedSearch);
       const matchesStatus = statusFilter === "all" || row.condition === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [rows, search, statusFilter]);
+  }, [completedRowIds, rows, search, statusFilter]);
   const sortedRows = useMemo(() => [...filteredRows].sort((left, right) => expectedDateSortDirection === "desc" ? right.expectedDate.localeCompare(left.expectedDate) : left.expectedDate.localeCompare(right.expectedDate)), [expectedDateSortDirection, filteredRows]);
   const totalPages = Math.max(1, Math.ceil(sortedRows.length / rowsPerPage));
   const currentPage = Math.min(page, totalPages);

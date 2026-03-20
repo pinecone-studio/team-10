@@ -763,15 +763,32 @@ export async function receiveInventoryOrder(input: ReceiveOrderInput) {
     throw new Error("Order item not found.");
   }
 
-  if (!isPersistedOrderId(input.orderId)) {
-    throw new Error("Receive is only supported for persisted orders.");
+  const resolvedOrderId = isPersistedOrderId(existingOrder.id)
+    ? existingOrder.id
+    : isPersistedOrderId(input.orderId)
+      ? input.orderId
+      : "";
+  const resolvedOrderItemId = isIntegerIdentifier(targetItem.id)
+    ? targetItem.id
+    : isIntegerIdentifier(input.orderItemId)
+      ? input.orderItemId
+      : "";
+  const resolvedCatalogId = isIntegerIdentifier(targetItem.catalogId)
+    ? targetItem.catalogId
+    : isIntegerIdentifier(input.catalogId)
+      ? input.catalogId
+      : "";
+
+  if (!resolvedOrderId) {
+    throw new Error("Receive requires a synced persisted order.");
   }
 
   try {
     await receiveOrderItemRequest({
       ...input,
-      orderItemId: isIntegerIdentifier(targetItem.id) ? targetItem.id : "",
-      catalogId: isIntegerIdentifier(targetItem.catalogId) ? targetItem.catalogId : "",
+      orderId: resolvedOrderId,
+      orderItemId: resolvedOrderItemId || undefined,
+      catalogId: resolvedCatalogId,
     });
     await refreshOrdersStore();
   } catch (error) {

@@ -440,14 +440,10 @@ async function withOrderSchemaCompatibility<T>(
 function mapDbStatusToFront(status: DbOrderStatus): FrontOrderStatus {
   if (status === "pendingFinanceApproval") return "pending_finance";
   if (status === "rejectedByFinance") return "rejected_finance";
-  if (
-    status === "financeApproved" ||
-    status === "ordered" ||
-    status === "partiallyReceived"
-  ) {
+  if (status === "financeApproved" || status === "ordered") {
     return "approved_finance";
   }
-  if (status === "received") {
+  if (status === "received" || status === "partiallyReceived") {
     return "received_inventory";
   }
   return "assigned_hr";
