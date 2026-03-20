@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   downloadAssetLabelsPdfRequest,
   fetchStorageAssetsRequest,
-  fetchStorageLocationsRequest,
   type StorageAssetDto,
 } from "@/app/(dashboard)/_graphql/storage/storage-api";
 import { downloadBase64File } from "@/app/_lib/download-base64";
@@ -43,10 +42,9 @@ const CONDITION_FILTERS = [
   "Missing",
 ] as const;
 const STATUS_FILTERS = [
-  "All status",
+  "All Statuses",
   "Available",
   "Assigned",
-  "Pending Assignment",
   "In Repair",
   "Pending Disposal",
   "Pending Retrieval",
@@ -82,7 +80,6 @@ type CensusSession = {
 export function InventoryStorageSection() {
   const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
   const [assets, setAssets] = useState<StorageAssetDto[]>([]);
-  const [storageLocations, setStorageLocations] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [selectedCategory, setSelectedCategory] =
     useState<(typeof CATEGORIES)[number]>("All Categories");
@@ -95,7 +92,7 @@ export function InventoryStorageSection() {
   const [selectedConditionFilter, setSelectedConditionFilter] =
     useState<(typeof CONDITION_FILTERS)[number]>("All Conditions");
   const [selectedStatusFilter, setSelectedStatusFilter] =
-    useState<(typeof STATUS_FILTERS)[number]>("All status");
+    useState<(typeof STATUS_FILTERS)[number]>("All Statuses");
   const [hasResolvedAssets, setHasResolvedAssets] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -129,13 +126,9 @@ export function InventoryStorageSection() {
       setErrorMessage(null);
 
       try {
-        const [nextAssets, nextStorageLocations] = await Promise.all([
-          fetchStorageAssetsRequest(),
-          fetchStorageLocationsRequest(),
-        ]);
+        const nextAssets = await fetchStorageAssetsRequest();
         if (!isMounted) return;
         setAssets(nextAssets);
-        setStorageLocations(nextStorageLocations);
         setSessionHistory(createInitialCensusHistory(nextAssets));
       } catch (error) {
         if (!isMounted) return;
@@ -172,7 +165,6 @@ export function InventoryStorageSection() {
         mapCategory(asset.category),
         asset.itemType,
         asset.storageName,
-        asset.assignedEmployeeName ?? "",
         asset.serialNumber ?? "",
         asset.qrCode,
         humanizeConditionValue(asset.conditionStatus),
@@ -203,14 +195,9 @@ export function InventoryStorageSection() {
   const locationOptions = useMemo(
     () => [
       "All Locations",
-      ...Array.from(
-        new Set([
-          ...storageLocations,
-          ...searchedAssets.map((asset) => asset.storageName).filter(Boolean),
-        ]),
-      ).sort((left, right) => left.localeCompare(right)),
+      ...Array.from(new Set(searchedAssets.map((asset) => asset.storageName))),
     ],
-    [searchedAssets, storageLocations],
+    [searchedAssets],
   );
 
   const visibleAssets = useMemo(() => {
@@ -235,7 +222,7 @@ export function InventoryStorageSection() {
               selectedConditionFilter,
           );
     const statusFilteredAssets =
-      selectedStatusFilter === "All status"
+      selectedStatusFilter === "All Statuses"
         ? conditionFilteredAssets
         : conditionFilteredAssets.filter(
             (asset) =>
@@ -754,88 +741,44 @@ export function InventoryStorageSection() {
                                 current === "status" ? null : "status",
                               );
                             }}
-                          />
-                          {CATEGORIES.filter((category) => category !== "All Categories").map((category) => (
-                            <HeaderMenuItem
-                              key={category}
-                              label={category}
-                              preview={<StorageCategoryBadge label={category} />}
-                              selected={selectedCategory === category}
-                              onClick={() => {
-                                setSelectedCategory(category);
-                                setSelectedType("All Types");
-                                setOpenHeaderMenu(null);
-                              }}
-                            />
-                          ))}
-                        </TableHeaderTrigger>
-                      </th>
-                      <th className="w-[14%] px-2 py-3 text-left align-middle">
-                        <TableHeaderTrigger
-                          label="Location"
-                          open={openHeaderMenu === "location"}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setOpenHeaderMenu((current) => (current === "location" ? null : "location"));
-                          }}
-                        >
-                          {locationOptions.map((location) => (
-                            <HeaderMenuItem
-                              key={location}
-                              label={location}
-                              selected={selectedLocationFilter === location}
-                              onClick={() => {
-                                setSelectedLocationFilter(location);
-                                setOpenHeaderMenu(null);
-                              }}
-                            />
-                          ))}
-                        </TableHeaderTrigger>
-                      </th>
-                      <th className="w-[12%] px-2 py-3 text-left align-middle">Employee</th>
-                      <th className="w-[12%] px-2 py-3 text-left align-middle">
-                        <TableHeaderTrigger
-                          label="Condition"
-                          open={openHeaderMenu === "condition"}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setOpenHeaderMenu((current) => (current === "condition" ? null : "condition"));
-                          }}
-                        >
-                          {CONDITION_FILTERS.map((option) => (
-                            <HeaderMenuItem
-                              key={option}
-                              label={option}
-                              preview={
-                                option === "All Conditions" ? undefined : (
-                                  <StorageConditionBadge value={conditionFilterToValue(option)} />
-                                )
+                          >
+                            {STATUS_FILTERS.map((option) => (
+                              <HeaderMenuItem
+                                key={option}
+                                label={option}
+                                preview={
+                                  option === "All Statuses" ? undefined : (
+                                    <StorageStatusBadge
+                                      value={statusFilterToValue(option)}
+                                    />
+                                  )
+                                }
+                                selected={selectedStatusFilter === option}
+                                onClick={() => {
+                                  setSelectedStatusFilter(option);
+                                  setOpenHeaderMenu(null);
+                                }}
+                              />
+                            ))}
+                          </TableHeaderTrigger>
+                        </th>
+                        <th className="w-[92px] px-2 py-3 text-right align-middle">
+                          <div className="flex justify-end">
+                            <TableHeaderSortTrigger
+                              label="Unit Cost"
+                              align="right"
+                              direction={
+                                sortMode === "cost_desc"
+                                  ? "desc"
+                                  : sortMode === "cost_asc"
+                                    ? "asc"
+                                    : null
                               }
-                              selected={selectedConditionFilter === option}
-                              onClick={() => {
-                                setSelectedConditionFilter(option);
-                                setOpenHeaderMenu(null);
-                              }}
-                            />
-                          ))}
-                        </TableHeaderTrigger>
-                      </th>
-                      <th className="w-[12%] px-2 py-3 text-left align-middle">
-                        <TableHeaderTrigger
-                          label="Status"
-                          open={openHeaderMenu === "status"}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setOpenHeaderMenu((current) => (current === "status" ? null : "status"));
-                          }}
-                        >
-                          {STATUS_FILTERS.map((option) => (
-                            <HeaderMenuItem
-                              key={option}
-                              label={option}
-                              preview={
-                                option === "All status" ? undefined : (
-                                  <StorageStatusBadge value={statusFilterToValue(option)} />
+                              onClick={() =>
+                                setSortMode((current) =>
+                                  current === "cost_desc"
+                                    ? "cost_asc"
+                                    : "cost_desc",
                                 )
                               }
                             />
@@ -885,94 +828,53 @@ export function InventoryStorageSection() {
                               className="block truncate font-medium leading-5 text-[#111827] hover:text-[#2563eb]"
                             >
                               {asset.assetName}
-                            </Link>
-                          </div>
-                        </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <div className="leading-5">{formatDisplayDate(asset.receivedAt)}</div>
-                        </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <div className="flex items-center">
-                            <StorageCategoryBadge label={mapCategory(asset.category)} />
-                          </div>
-                        </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <div className="leading-5">
-                            <span className="block break-words">{asset.storageName}</span>
-                          </div>
-                        </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <div className="leading-5">
-                            <span className="block break-words">
-                              {asset.assignedEmployeeName ?? "-"}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <div className="flex items-center">
-                            <StorageConditionBadge value={asset.conditionStatus} />
-                          </div>
-                        </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
-                          <div className="flex w-[170px] items-center">
-                            <StorageStatusBadge
-                              value={normalizeStorageStatus(asset.assetStatus)}
-                              fixedWidth
-                            />
-                          </div>
-                        </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 text-right align-middle">
-                          <div className="leading-5">
-                            {formatCurrency(
-                              asset.unitCost ?? 0,
-                              parseCurrency(asset.currencyCode),
-                            )}
-                          </div>
-                        </td>
-                        <td className="border-t border-[#edf2f7] px-2 py-3 text-center align-middle">
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setOpenRowActionId((current) => current === asset.id ? null : asset.id);
-                              }}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[18px] leading-none text-[#94a3b8] transition hover:bg-[#f1f5f9]"
-                            >
-                              &#8942;
-                            </button>
-                            {openRowActionId === asset.id ? (
-                              <div
-                                onClick={(event) => event.stopPropagation()}
-                                className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[150px] rounded-[14px] border border-[#d7e2ef] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
-                              >
-                                <Link
-                                  href={`/assets/${asset.id}?role=${currentRole}`}
-                                  className="flex items-center justify-between rounded-[10px] px-3 py-2 text-[14px] text-[#344054] hover:bg-[#f8fbff]"
-                                >
-                                  <span>View Details</span>
-                                  <span aria-hidden="true">{"->"}</span>
-                                </Link>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setAssets((current) => current.filter((entry) => entry.id !== asset.id));
-                                    setSelectedIds((current) => current.filter((id) => id !== asset.id));
-                                    setOpenRowActionId(null);
-                                  }}
-                                  className="mt-1 flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-[14px] text-[#dc2626] hover:bg-[#fff1f3]"
-                                >
-                                  <span>Delete</span>
-                                  <span aria-hidden="true">{"×"}</span>
-                                </button>
-                              </div>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                              </Link>
+                            </div>
+                          </td>
+                          <td className="border-t border-[#edf2f7] px-1 py-3 align-middle">
+                            <div className="leading-5">
+                              {formatDisplayDate(asset.receivedAt)}
+                            </div>
+                          </td>
+                          <td className="border-t border-[#edf2f7] px-2 py-3 text-center align-middle">
+                            <div className="leading-5">
+                              <span className="block truncate text-center">
+                                {asset.storageName}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
+                            <div className="flex items-center">
+                              <StorageConditionBadge
+                                value={asset.conditionStatus}
+                              />
+                            </div>
+                          </td>
+                          <td className="border-t border-[#edf2f7] px-2 py-3 align-middle">
+                            <div className="flex items-center">
+                              <StorageStatusBadge
+                                value={normalizeStorageStatus(
+                                  asset.assetStatus,
+                                )}
+                              />
+                            </div>
+                          </td>
+                          <td className="border-t border-[#edf2f7] rounded-r-[12px] px-2 py-3 text-right align-middle">
+                            <div className="leading-5">
+                              {formatCurrency(
+                                asset.unitCost ?? 0,
+                                parseCurrency(asset.currencyCode),
+                              )}
+                            </div>
+                          </td>
+                            </>
+                          );
+                        })()}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
             <div className="flex items-center justify-end gap-4 px-1 pt-4 text-[10px] text-[#64748b]">
@@ -1225,7 +1127,11 @@ function parseCurrency(value: string) {
 }
 
 function normalizeStorageStatus(value: string) {
-  if (value === "inStorage" || value === "received") {
+  if (
+    value === "inStorage" ||
+    value === "received" ||
+    value === "pendingAssignment"
+  ) {
     return "available";
   }
 
@@ -1244,7 +1150,6 @@ function humanizeConditionValue(value: string) {
 function humanizeStatusValue(value: string) {
   if (value === "available") return "Available";
   if (value === "assigned") return "Assigned";
-  if (value === "pendingAssignment") return "Pending Assignment";
   if (value === "inRepair") return "In Repair";
   if (value === "pendingDisposal") return "Pending Disposal";
   if (value === "pendingRetrieval") return "Pending Retrieval";
@@ -1264,7 +1169,6 @@ function conditionFilterToValue(value: (typeof CONDITION_FILTERS)[number]) {
 function statusFilterToValue(value: (typeof STATUS_FILTERS)[number]) {
   if (value === "Available") return "available";
   if (value === "Assigned") return "assigned";
-  if (value === "Pending Assignment") return "pendingAssignment";
   if (value === "In Repair") return "inRepair";
   if (value === "Pending Disposal") return "pendingDisposal";
   if (value === "Pending Retrieval") return "pendingRetrieval";
