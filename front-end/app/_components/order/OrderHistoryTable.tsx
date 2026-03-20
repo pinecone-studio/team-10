@@ -84,32 +84,68 @@ function StatusBadge({ status }: { status: StoredOrder["status"] }) {
 
 export function OrderHistoryTable(props: {
   orders: StoredOrder[];
+  sortKey:
+    | "requestNumber"
+    | "orderName"
+    | "requester"
+    | "requestDate"
+    | "status"
+    | "totalAmount";
+  sortDirection: "asc" | "desc";
+  onSortChange: (
+    key:
+      | "requestNumber"
+      | "orderName"
+      | "requester"
+      | "requestDate"
+      | "status"
+      | "totalAmount",
+  ) => void;
   onOpenDetail: (orderId: string) => void;
   onDeleteOrder: (orderId: string) => void | Promise<void>;
 }) {
   const hasOrders = props.orders.length > 0;
+  const headerButtonClassName =
+    "order-sort-trigger inline-flex cursor-pointer items-center gap-1 text-left transition hover:text-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2 rounded-[8px]";
+
+  function renderSortableHeader(
+    label: string,
+    key:
+      | "requestNumber"
+      | "orderName"
+      | "requester"
+      | "requestDate"
+      | "status"
+      | "totalAmount",
+    align: "left" | "right" = "left",
+  ) {
+    const isActive = props.sortKey === key;
+    return (
+      <button
+        type="button"
+        onClick={() => props.onSortChange(key)}
+        className={`${headerButtonClassName} ${align === "right" ? "justify-end" : ""}`}
+      >
+        <span>{label}</span>
+        <span className={`${isActive ? "opacity-100" : "opacity-55"}`}>
+          <SortIcon />
+        </span>
+      </button>
+    );
+  }
 
   return (
     <section className={`flex min-h-0 flex-col overflow-hidden rounded-[20px] border border-[#e2efff] bg-white px-4 py-5 shadow-[0_14px_34px_rgba(125,170,232,0.12),0_6px_16px_rgba(15,23,42,0.05)] ${hasOrders ? "h-[760px]" : "shrink-0"}`}>
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="flex h-full min-w-[920px] min-h-0 flex-col">
           <div className="grid grid-cols-[100px_1.35fr_1.2fr_120px_130px_120px_130px] items-center rounded-[10px] border border-[#e3efff] bg-[#eef6ff] px-6 py-5 text-[14px] font-medium text-[#475569]">
-            <span className="inline-flex items-center gap-1">
-          <span>Order ID</span>
-          <SortIcon />
-        </span>
-            <span>Order Name</span>
-            <span>Requester</span>
-            <span className="inline-flex items-center gap-1">
-          <span>Date</span>
-          <SortIcon />
-        </span>
-            <span>Status</span>
+            {renderSortableHeader("Order ID", "requestNumber")}
+            {renderSortableHeader("Order Name", "orderName")}
+            {renderSortableHeader("Requester", "requester")}
+            {renderSortableHeader("Date", "requestDate")}
+            {renderSortableHeader("Status", "status")}
             <span className="text-center">Action</span>
-            <span className="inline-flex items-center justify-end gap-1 text-right">
-          <span>Total Amount</span>
-          <SortIcon />
-        </span>
+            {renderSortableHeader("Total Amount", "totalAmount", "right")}
           </div>
           <div className={`mt-5 min-h-0 ${hasOrders ? "flex-1 overflow-y-auto overflow-x-auto pr-1" : ""}`}>
             {hasOrders ? (

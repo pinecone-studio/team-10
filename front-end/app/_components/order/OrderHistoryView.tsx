@@ -6,6 +6,14 @@ import { getOrderSummaryName } from "./orderPresentation";
 import { OrderHistoryTable } from "./OrderHistoryTable";
 import { OrderHistoryToolbar } from "./OrderHistoryToolbar";
 
+type OrderSortKey =
+  | "requestNumber"
+  | "orderName"
+  | "requester"
+  | "requestDate"
+  | "status"
+  | "totalAmount";
+
 export function OrderHistoryView(props: {
   allOrders: StoredOrder[];
   orders: StoredOrder[];
@@ -18,16 +26,20 @@ export function OrderHistoryView(props: {
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [sortKey, setSortKey] = useState<OrderSortKey>("requestDate");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const visibleOrders = useMemo(
     () =>
-      sortOrdersNewestFirst(
+      sortOrders(
         filterOrdersByDateRange(
           filterOrdersByQuery(props.orders, searchQuery),
           startDate,
           endDate,
         ),
+        sortKey,
+        sortDirection,
       ),
-    [endDate, props.orders, searchQuery, startDate],
+    [endDate, props.orders, searchQuery, sortDirection, sortKey, startDate],
   );
   const counts = useMemo(() => buildCounts(props.allOrders), [props.allOrders]);
 
@@ -52,6 +64,17 @@ export function OrderHistoryView(props: {
         <div className="mx-auto flex h-full w-full max-w-[1237px] min-h-0 flex-col px-[44px] pb-[80px]">
           <OrderHistoryTable
             orders={visibleOrders}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSortChange={(nextKey) => {
+              if (nextKey === sortKey) {
+                setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+                return;
+              }
+
+              setSortKey(nextKey);
+              setSortDirection(nextKey === "requestDate" ? "desc" : "asc");
+            }}
             onOpenDetail={props.onOpenDetail}
             onDeleteOrder={props.onDeleteOrder}
           />
@@ -94,7 +117,11 @@ function buildCounts(orders: StoredOrder[]) {
   };
 }
 
-function sortOrdersNewestFirst(orders: StoredOrder[]) {
+function sortOrders(
+  orders: StoredOrder[],
+  sortKey: OrderSortKey,
+  sortDirection: "asc" | "desc",
+) {
   function parseRequestNumber(order: StoredOrder) {
     const match = /^REQ-(\d{8})-(\d+)$/.exec(order.requestNumber.trim());
     if (!match) {
@@ -111,18 +138,43 @@ function sortOrdersNewestFirst(orders: StoredOrder[]) {
     return /^\d+$/.test(id.trim()) ? Number(id) : null;
   }
 
+  function getStatusLabel(status: StoredOrder["status"]) {
+    if (status === "pending_finance") return "Pending Finance";
+    if (status === "rejected_finance") return "Rejected";
+    if (status === "approved_finance") return "Approved";
+    if (status === "received_inventory") return "Received";
+    return "Assigned";
+  }
+
   return [...orders].sort((left, right) => {
-    const leftRequestNumber = parseRequestNumber(left);
-    const rightRequestNumber = parseRequestNumber(right);
+    let comparison = 0;
 
-    if (leftRequestNumber && rightRequestNumber) {
-      const requestDateCompare =
-        rightRequestNumber.dateNumber - leftRequestNumber.dateNumber;
-      if (requestDateCompare !== 0) return requestDateCompare;
+    if (sortKey === "requestNumber") {
+      const leftRequestNumber = parseRequestNumber(left);
+      const rightRequestNumber = parseRequestNumber(right);
+      if (leftRequestNumber && rightRequestNumber) {
+        comparison = leftRequestNumber.dateNumber - rightRequestNumber.dateNumber;
+        if (comparison === 0) {
+          comparison =
+            leftRequestNumber.sequenceNumber - rightRequestNumber.sequenceNumber;
+        }
+      } else {
+        comparison = left.requestNumber.localeCompare(right.requestNumber);
+      }
+    } else if (sortKey === "orderName") {
+      comparison = getOrderSummaryName(left).localeCompare(getOrderSummaryName(right));
+    } else if (sortKey === "requester") {
+      comparison = (left.requester || "").localeCompare(right.requester || "");
+    } else if (sortKey === "requestDate") {
+      comparison = left.requestDate.localeCompare(right.requestDate);
+    } else if (sortKey === "status") {
+      comparison = getStatusLabel(left.status).localeCompare(getStatusLabel(right.status));
+    } else if (sortKey === "totalAmount") {
+      comparison = left.totalAmount - right.totalAmount;
+    }
 
-      const requestSequenceCompare =
-        rightRequestNumber.sequenceNumber - leftRequestNumber.sequenceNumber;
-      if (requestSequenceCompare !== 0) return requestSequenceCompare;
+    if (comparison !== 0) {
+      return sortDirection === "asc" ? comparison : -comparison;
     }
 
     const updatedAtCompare = right.updatedAt.localeCompare(left.updatedAt);
