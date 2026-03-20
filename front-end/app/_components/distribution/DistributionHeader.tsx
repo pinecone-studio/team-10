@@ -5,6 +5,7 @@ export default function DistributionHeader(props: {
   inTransitCount: number;
   deliveredCount: number;
   signedCount: number;
+  onCreateDistribution?: () => void;
 }) {
   return (
     <section className="flex w-full flex-col gap-5">
@@ -14,7 +15,11 @@ export default function DistributionHeader(props: {
           <p className="font-[var(--font-inter)] text-[14px] font-normal leading-5 text-[#64748B]">Distribute items from storage to employees</p>
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" className="flex items-center justify-center gap-[6px] rounded-[6px] bg-[#0F172A] px-4 py-2 text-[15px] font-medium text-white">
+          <button
+            type="button"
+            onClick={props.onCreateDistribution}
+            className="flex items-center justify-center gap-[6px] rounded-[6px] bg-[#0F172A] px-4 py-2 text-[15px] font-medium text-white"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="15"
