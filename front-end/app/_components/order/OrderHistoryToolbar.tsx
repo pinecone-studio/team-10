@@ -72,15 +72,15 @@ export function OrderHistoryToolbar(props: {
           ))}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
-          <label className="flex h-10 w-full items-center gap-[6px] rounded-[10px] border border-[#e2efff] bg-[rgba(255,255,255,0.84)] px-3 shadow-[0_8px_18px_rgba(15,23,42,0.04)] sm:w-[207px]">
-            <span>
+          <label className="flex h-[46px] w-full items-center gap-3 rounded-[12px] border border-[#e2efff] bg-[rgba(255,255,255,0.84)] px-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] sm:w-[228px]">
+            <span className="shrink-0">
               <SearchIcon />
             </span>
             <input
               value={props.searchQuery}
               onChange={(event) => props.onSearchChange(event.target.value)}
               placeholder="Search orders..."
-              className="w-full bg-transparent text-[14px] text-black outline-none placeholder:text-[rgba(0,0,0,0.5)]"
+              className="w-full bg-transparent pl-1 text-[14px] text-black outline-none placeholder:text-[rgba(0,0,0,0.5)]"
             />
           </label>
           <OrderHistoryDateRangePicker

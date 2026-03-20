@@ -14,6 +14,11 @@ function getGraphqlUrl() {
     return "/api/graphql";
   }
 
+  const runtimePort = process.env.PORT?.trim();
+  if (runtimePort) {
+    return `http://localhost:${runtimePort}/api/graphql`;
+  }
+
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.APP_URL ??

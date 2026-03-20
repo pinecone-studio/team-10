@@ -95,6 +95,76 @@ button:hover:not(:disabled) svg {
   transform: translateX(1px);
 }
 
+.order-sort-trigger:hover:not(:disabled),
+.order-sort-trigger:active:not(:disabled) {
+  transform: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.order-sort-trigger:hover:not(:disabled)::before,
+.order-sort-trigger:focus-visible:not(:disabled)::before {
+  opacity: 0 !important;
+  transform: none !important;
+}
+
+.order-sort-trigger:hover:not(:disabled) svg {
+  transform: none !important;
+}
+
+@keyframes dashed-border-right {
+  from {
+    background-position: 0 0, 0 100%, 0 0, 100% 0;
+  }
+
+  to {
+    background-position: 14px 0, 14px 100%, 0 14px, 100% 14px;
+  }
+}
+
+.group\/upload:hover .group-hover\/upload\:animate-dashed-border {
+  animation: dashed-border-right 0.7s linear infinite;
+}
+
+.receive-search-field {
+  transition:
+    box-shadow 0.5s ease,
+    background-color 0.5s ease,
+    border-color 0.25s ease;
+}
+
+.receive-search-field:hover,
+.receive-search-field:focus-within {
+  border-color: #4a9dec !important;
+  box-shadow: 0 0 0 5px rgb(74 157 236 / 14%) !important;
+  background-color: #fff !important;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="color"]),
+textarea {
+  border: 2px solid transparent !important;
+  border-radius: 10px !important;
+  background-color: #f3f3f3 !important;
+  outline: none !important;
+  transition:
+    box-shadow 0.5s ease,
+    background-color 0.5s ease,
+    border-color 0.25s ease,
+    color 0.5s ease;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="color"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="color"]):hover,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="color"]):focus-visible,
+textarea:hover,
+textarea:focus,
+textarea:focus-visible {
+  border: 2px solid #4a9dec !important;
+  box-shadow: 0 0 0 5px rgb(74 157 236 / 14%) !important;
+  background-color: #fff !important;
+  outline: none !important;
+}
+
 html[data-backend-busy="true"],
 html[data-backend-busy="true"] body,
 html[data-backend-busy="true"] button,

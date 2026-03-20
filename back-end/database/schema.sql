@@ -5,7 +5,11 @@ DROP TABLE IF EXISTS asset_distributions;
 DROP TABLE IF EXISTS asset_assignment_acknowledgments;
 DROP TABLE IF EXISTS asset_assignment_requests;
 DROP TABLE IF EXISTS asset_attributes;
+DROP TABLE IF EXISTS asset_events;
 DROP TABLE IF EXISTS assets;
+DROP TABLE IF EXISTS assets__migration;
+DROP TABLE IF EXISTS census_tasks;
+DROP TABLE IF EXISTS census_sessions;
 DROP TABLE IF EXISTS storage;
 DROP TABLE IF EXISTS receive_items;
 DROP TABLE IF EXISTS receives;
@@ -717,6 +721,145 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   FOREIGN KEY (actor_user_id) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS asset_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  asset_id INTEGER NOT NULL,
+  actor_user_id INTEGER,
+  event_type TEXT NOT NULL CHECK (
+    event_type IN (
+      'created',
+      'updated',
+      'received',
+      'stored',
+      'assignmentRequested',
+      'assigned',
+      'returned',
+      'disposed',
+      'qrPrinted'
+    )
+  ),
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  location TEXT,
+  metadata_json TEXT,
+  happened_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+  FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS census_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  scope_type TEXT NOT NULL CHECK (
+    scope_type IN (
+      'company',
+      'department',
+      'category'
+    )
+  ),
+  scope_value TEXT,
+  created_by_user_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (
+    status IN (
+      'active',
+      'completed',
+      'overdue'
+    )
+  ),
+  due_at TEXT NOT NULL,
+  completed_at TEXT,
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS census_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  census_session_id INTEGER NOT NULL,
+  asset_id INTEGER NOT NULL,
+  distribution_id INTEGER,
+  employee_id INTEGER NOT NULL,
+  baseline_condition_status TEXT NOT NULL CHECK (
+    baseline_condition_status IN (
+      'good',
+      'fair',
+      'damaged',
+      'defective',
+      'missing',
+      'incomplete',
+      'used'
+    )
+  ),
+  baseline_asset_status TEXT NOT NULL CHECK (
+    baseline_asset_status IN (
+      'received',
+      'inStorage',
+      'available',
+      'pendingAssignment',
+      'assigned',
+      'pendingRetrieval',
+      'inRepair',
+      'pendingDisposal',
+      'sold',
+      'disposed',
+      'lost'
+    )
+  ),
+  baseline_location TEXT,
+  reported_condition_status TEXT CHECK (
+    reported_condition_status IS NULL OR reported_condition_status IN (
+      'good',
+      'fair',
+      'damaged',
+      'defective',
+      'missing',
+      'incomplete',
+      'used'
+    )
+  ),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (
+    status IN (
+      'pending',
+      'verified',
+      'discrepancy'
+    )
+  ),
+  verification_channel TEXT CHECK (
+    verification_channel IS NULL OR verification_channel IN (
+      'auditorQr',
+      'employeePortal',
+      'manual'
+    )
+  ),
+  verified_at TEXT,
+  verified_by_user_id INTEGER,
+  verified_by_name TEXT,
+  note TEXT,
+  discrepancy_reason TEXT,
+  portal_jwt_id TEXT UNIQUE,
+  portal_expires_at TEXT,
+  portal_consumed_at TEXT,
+  portal_email_status TEXT NOT NULL DEFAULT 'pending' CHECK (
+    portal_email_status IN (
+      'pending',
+      'sent',
+      'failed',
+      'skipped'
+    )
+  ),
+  portal_email_sent_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (census_session_id) REFERENCES census_sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+  FOREIGN KEY (distribution_id) REFERENCES asset_distributions(id) ON DELETE SET NULL,
+  FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (verified_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS notifications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
@@ -859,6 +1002,22 @@ CREATE INDEX IF NOT EXISTS idx_asset_disposals_status ON asset_disposals(status)
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_user_id ON audit_logs(actor_user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+
+CREATE INDEX IF NOT EXISTS idx_asset_events_asset_id ON asset_events(asset_id);
+CREATE INDEX IF NOT EXISTS idx_asset_events_actor_user_id ON asset_events(actor_user_id);
+CREATE INDEX IF NOT EXISTS idx_asset_events_event_type ON asset_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_asset_events_happened_at ON asset_events(happened_at);
+
+CREATE INDEX IF NOT EXISTS idx_census_sessions_scope ON census_sessions(scope_type, scope_value);
+CREATE INDEX IF NOT EXISTS idx_census_sessions_status ON census_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_census_sessions_due_at ON census_sessions(due_at);
+
+CREATE INDEX IF NOT EXISTS idx_census_tasks_session_id ON census_tasks(census_session_id);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_asset_id ON census_tasks(asset_id);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_distribution_id ON census_tasks(distribution_id);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_employee_id ON census_tasks(employee_id);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_status ON census_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_census_tasks_portal_jwt_id ON census_tasks(portal_jwt_id);
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);

@@ -11,14 +11,14 @@ export function ReceiveToolbar({
 }) {
   return (
     <div className="mt-[8px] flex items-center justify-between gap-[16px]">
-      <label className="flex h-[36px] w-full max-w-[232px] items-center overflow-hidden rounded-[8px] border border-[#d0d5dd] bg-white">
+      <label className="receive-search-field flex h-[40px] w-full max-w-[248px] items-center overflow-hidden rounded-[10px] border border-transparent bg-[#f3f3f3] px-0">
         <input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search..."
-          className="h-full flex-1 bg-transparent px-[12px] text-[14px] text-[#101828] outline-none placeholder:text-[#98a2b3]"
+          className="h-full flex-1 !border-0 !bg-transparent !shadow-none px-[14px] text-[14px] text-[#101828] outline-none placeholder:text-[#98a2b3]"
         />
-        <span className="flex h-full w-[36px] items-center justify-center border-l border-[#eaecf0] text-[#344054]">
+        <span className="flex h-full w-[40px] items-center justify-center border-l border-[#dbe4f0] text-[#344054]">
           ⌕
         </span>
       </label>

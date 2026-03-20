@@ -149,6 +149,42 @@ export const emailDeliveryStatusValues = [
   "skipped",
 ] as const;
 
+export const assetEventTypeValues = [
+  "created",
+  "updated",
+  "received",
+  "stored",
+  "assignmentRequested",
+  "assigned",
+  "returned",
+  "disposed",
+  "qrPrinted",
+] as const;
+
+export const censusScopeTypeValues = [
+  "company",
+  "department",
+  "category",
+] as const;
+
+export const censusSessionStatusValues = [
+  "active",
+  "completed",
+  "overdue",
+] as const;
+
+export const censusTaskStatusValues = [
+  "pending",
+  "verified",
+  "discrepancy",
+] as const;
+
+export const censusVerificationChannelValues = [
+  "auditorQr",
+  "employeePortal",
+  "manual",
+] as const;
+
 export const disposalStatusValues = [
   "pending",
   "financeApproved",
@@ -975,6 +1011,115 @@ export const auditLogs = sqliteTable(
   (table) => [
     index("idx_audit_logs_actor_user_id").on(table.actorUserId),
     index("idx_audit_logs_entity").on(table.entityType, table.entityId),
+  ],
+);
+
+export const assetEvents = sqliteTable(
+  "asset_events",
+  {
+    id: idColumn(),
+    assetId: integer("asset_id")
+      .notNull()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    actorUserId: integer("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    eventType: text("event_type", { enum: assetEventTypeValues }).notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    location: text("location"),
+    metadataJson: text("metadata_json"),
+    happenedAt: text("happened_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    ...timestamps(),
+  },
+  (table) => [
+    index("idx_asset_events_asset_id").on(table.assetId),
+    index("idx_asset_events_actor_user_id").on(table.actorUserId),
+    index("idx_asset_events_event_type").on(table.eventType),
+    index("idx_asset_events_happened_at").on(table.happenedAt),
+  ],
+);
+
+export const censusSessions = sqliteTable(
+  "census_sessions",
+  {
+    id: idColumn(),
+    title: text("title").notNull(),
+    scopeType: text("scope_type", { enum: censusScopeTypeValues }).notNull(),
+    scopeValue: text("scope_value"),
+    createdByUserId: integer("created_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    status: text("status", { enum: censusSessionStatusValues })
+      .notNull()
+      .default("active"),
+    dueAt: text("due_at").notNull(),
+    completedAt: text("completed_at"),
+    note: text("note"),
+    ...timestamps(),
+  },
+  (table) => [
+    index("idx_census_sessions_scope").on(table.scopeType, table.scopeValue),
+    index("idx_census_sessions_status").on(table.status),
+    index("idx_census_sessions_due_at").on(table.dueAt),
+  ],
+);
+
+export const censusTasks = sqliteTable(
+  "census_tasks",
+  {
+    id: idColumn(),
+    censusSessionId: integer("census_session_id")
+      .notNull()
+      .references(() => censusSessions.id, { onDelete: "cascade" }),
+    assetId: integer("asset_id")
+      .notNull()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    distributionId: integer("distribution_id").references(() => assetDistributions.id, {
+      onDelete: "set null",
+    }),
+    employeeId: integer("employee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    baselineConditionStatus: text("baseline_condition_status", {
+      enum: conditionStatusValues,
+    }).notNull(),
+    baselineAssetStatus: text("baseline_asset_status", {
+      enum: assetStatusValues,
+    }).notNull(),
+    baselineLocation: text("baseline_location"),
+    reportedConditionStatus: text("reported_condition_status", {
+      enum: conditionStatusValues,
+    }),
+    status: text("status", { enum: censusTaskStatusValues })
+      .notNull()
+      .default("pending"),
+    verificationChannel: text("verification_channel", {
+      enum: censusVerificationChannelValues,
+    }),
+    verifiedAt: text("verified_at"),
+    verifiedByUserId: integer("verified_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    verifiedByName: text("verified_by_name"),
+    note: text("note"),
+    discrepancyReason: text("discrepancy_reason"),
+    portalJwtId: text("portal_jwt_id").unique(),
+    portalExpiresAt: text("portal_expires_at"),
+    portalConsumedAt: text("portal_consumed_at"),
+    portalEmailStatus: text("portal_email_status", { enum: emailDeliveryStatusValues })
+      .notNull()
+      .default("pending"),
+    portalEmailSentAt: text("portal_email_sent_at"),
+    ...timestamps(),
+  },
+  (table) => [
+    index("idx_census_tasks_session_id").on(table.censusSessionId),
+    index("idx_census_tasks_asset_id").on(table.assetId),
+    index("idx_census_tasks_distribution_id").on(table.distributionId),
+    index("idx_census_tasks_employee_id").on(table.employeeId),
+    index("idx_census_tasks_status").on(table.status),
+    index("idx_census_tasks_portal_jwt_id").on(table.portalJwtId),
   ],
 );
 

@@ -27,7 +27,7 @@ export function ReceiveDetailPreviewCard(props: {
       <h2 className="mt-[10px] text-[16px] font-semibold text-[#101828]">
         {props.activeRow.assetName}
       </h2>
-      <div className="mt-[12px] min-h-0 flex-1 space-y-[12px] overflow-y-auto pr-1">
+      <div className="mt-[12px] min-h-0 flex-1 space-y-[12px] overflow-y-auto pb-3 pr-1">
         <div className="grid gap-[12px] sm:grid-cols-2">
           <Info label="Order ID" value={props.activeRow.requestNumber} />
           <Info label="Item code" value={props.activeRow.itemCode} />
@@ -68,8 +68,20 @@ export function ReceiveDetailPreviewCard(props: {
             </div>
           )}
         </div>
-        <label className="mt-[12px] flex cursor-pointer items-center justify-center rounded-[10px] border border-dashed border-[#93c5fd] bg-[#f8fbff] px-4 py-3 text-[13px] font-medium text-[#2563eb]">
-          Upload item image
+        <label className="group/upload relative mt-[12px] flex min-h-[64px] shrink-0 cursor-pointer items-center justify-center overflow-visible rounded-[14px] border border-dashed border-[#93c5fd] bg-[#f8fbff] px-4 py-4 text-[13px] font-medium text-[#2563eb] transition-colors duration-300 hover:bg-white hover:border-transparent">
+          <span
+            aria-hidden="true"
+            className="group-hover/upload:animate-dashed-border pointer-events-none absolute inset-0 rounded-[14px] opacity-0 transition-opacity duration-300 group-hover/upload:opacity-100"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg,#93c5fd 50%,transparent 50%),linear-gradient(90deg,#93c5fd 50%,transparent 50%),linear-gradient(0deg,#93c5fd 50%,transparent 50%),linear-gradient(0deg,#93c5fd 50%,transparent 50%)",
+              backgroundRepeat: "repeat-x, repeat-x, repeat-y, repeat-y",
+              backgroundSize: "14px 2px, 14px 2px, 2px 14px, 2px 14px",
+              backgroundPosition: "0 0, 0 100%, 0 0, 100% 0",
+            }}
+          />
+          <span className="pointer-events-none absolute inset-0 rounded-[14px] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.75)_0%,rgba(255,255,255,0)_70%)] opacity-0 transition-opacity duration-300 group-hover/upload:opacity-100" />
+          <span className="relative z-10">Upload item image</span>
           <input
             type="file"
             accept="image/*"
