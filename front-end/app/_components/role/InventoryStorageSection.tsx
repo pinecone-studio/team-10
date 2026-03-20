@@ -25,15 +25,6 @@ import {
 } from "./storagePresentation";
 
 const ACTIONS = ["Dispose", "Census", "Missing", "Audit"] as const;
-const CATEGORIES = [
-  "All Categories",
-  "IT Equipment",
-  "Office Equipment",
-  "Mobile Devices",
-  "Network Equipment",
-  "Furniture",
-  "Other Assets",
-] as const;
 const CONDITION_FILTERS = [
   "All Conditions",
   "Good",
@@ -81,8 +72,7 @@ export function InventoryStorageSection() {
   const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
   const [assets, setAssets] = useState<StorageAssetDto[]>([]);
   const [searchValue, setSearchValue] = useState("");
-  const [selectedCategory, setSelectedCategory] =
-    useState<(typeof CATEGORIES)[number]>("All Categories");
+  const [selectedCategory] = useState("All Categories");
   const [selectedType, setSelectedType] = useState("All Types");
   const [sortMode, setSortMode] = useState<
     "recent" | "oldest" | "name" | "cost_desc" | "cost_asc"
@@ -425,7 +415,6 @@ export function InventoryStorageSection() {
           availableLocations={Array.from(
             new Set(assets.map((asset) => asset.storageName)),
           )}
-          onBack={() => setView("assets")}
           onTitleChange={setCensusTitle}
           onLocationChange={setCensusLocation}
           onScopeChange={setCensusScope}
@@ -1187,7 +1176,6 @@ function StorageCensusWorkspace({
   censusNote,
   scopedAssetCount,
   availableLocations,
-  onBack,
   onTitleChange,
   onLocationChange,
   onScopeChange,
@@ -1204,7 +1192,6 @@ function StorageCensusWorkspace({
   censusNote: string;
   scopedAssetCount: number;
   availableLocations: string[];
-  onBack: () => void;
   onTitleChange: (value: string) => void;
   onLocationChange: (value: string) => void;
   onScopeChange: (value: "selected" | "location" | "full") => void;
