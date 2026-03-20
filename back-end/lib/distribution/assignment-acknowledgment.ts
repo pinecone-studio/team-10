@@ -79,6 +79,14 @@ export type AssignmentAcknowledgmentCustomAttributeRecord = {
   attributeValue: string;
 };
 
+export type ResendAssignmentAcknowledgmentEmailResult = {
+  resent: boolean;
+  emailStatus: AssignmentAckEmailStatus;
+  emailError: string | null;
+  acknowledgmentUrl: string | null;
+  expiresAt: string | null;
+};
+
 type PendingAcknowledgmentRow = {
   acknowledgmentId: number;
   assignmentRequestId: number;
@@ -899,6 +907,149 @@ export async function createAssignmentAcknowledgment(
         ? error.message
         : "Unknown assignment acknowledgment create error.";
     throw new Error(`Failed to create assignment acknowledgment: ${message}`);
+  }
+}
+
+export async function resendAssignmentAcknowledgmentEmail(
+  db: AppDb,
+  runtimeConfig: RuntimeConfig,
+  input: {
+    assignmentRequestId: number;
+  },
+): Promise<ResendAssignmentAcknowledgmentEmailResult> {
+  try {
+    const [acknowledgment] = await db
+      .select({
+        acknowledgmentId: assetAssignmentAcknowledgments.id,
+        assignmentRequestId: assetAssignmentAcknowledgments.assignmentRequestId,
+        assetId: assetAssignmentAcknowledgments.assetId,
+        employeeId: assetAssignmentAcknowledgments.employeeId,
+        recipientName: assetAssignmentAcknowledgments.recipientName,
+        recipientEmail: assetAssignmentAcknowledgments.recipientEmail,
+        recipientRole: assetAssignmentAcknowledgments.recipientRole,
+        status: assetAssignmentAcknowledgments.status,
+        tokenConsumedAt: assetAssignmentAcknowledgments.tokenConsumedAt,
+        signedAt: assetAssignmentAcknowledgments.signedAt,
+        fallbackEmployeeName: users.fullName,
+        fallbackEmployeeEmail: users.email,
+        assetName: assets.assetName,
+        assetCode: assets.assetCode,
+      })
+      .from(assetAssignmentAcknowledgments)
+      .innerJoin(
+        assets,
+        eq(assetAssignmentAcknowledgments.assetId, assets.id),
+      )
+      .leftJoin(
+        users,
+        eq(assetAssignmentAcknowledgments.employeeId, users.id),
+      )
+      .where(
+        eq(
+          assetAssignmentAcknowledgments.assignmentRequestId,
+          input.assignmentRequestId,
+        ),
+      )
+      .limit(1);
+
+    if (!acknowledgment) {
+      throw new Error(
+        `Pending acknowledgment was not found for assignment request ${input.assignmentRequestId}.`,
+      );
+    }
+
+    const normalizedStatus = (acknowledgment.status ?? "").trim().toLowerCase();
+    const isConfirmed =
+      normalizedStatus === "confirmed" ||
+      Boolean(acknowledgment.tokenConsumedAt) ||
+      Boolean(acknowledgment.signedAt);
+
+    if (isConfirmed) {
+      return {
+        resent: false,
+        emailStatus: "skipped",
+        emailError: "Acknowledgment is already signed.",
+        acknowledgmentUrl: null,
+        expiresAt: null,
+      };
+    }
+
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const expiresAt = new Date(
+      now.getTime() + 72 * 60 * 60 * 1000,
+    ).toISOString();
+    const jwtId = crypto.randomUUID();
+    const iat = Math.floor(now.getTime() / 1000);
+    const exp = Math.floor(new Date(expiresAt).getTime() / 1000);
+    const token = await createSignedJwt(
+      {
+        sub: "asset-assignment-ack",
+        jti: jwtId,
+        ackId: acknowledgment.acknowledgmentId,
+        assignmentRequestId: acknowledgment.assignmentRequestId,
+        employeeId: acknowledgment.employeeId,
+        iat,
+        exp,
+      } satisfies AssignmentAckJwtPayload,
+      runtimeConfig.assignmentJwtSecret,
+    );
+    const acknowledgmentUrl = buildAcknowledgmentLink(runtimeConfig, token);
+
+    const recipientName = resolveAcknowledgmentEmployeeName(
+      acknowledgment.recipientName,
+      acknowledgment.fallbackEmployeeName,
+    );
+    const recipientEmail = resolveAcknowledgmentEmployeeEmail(
+      acknowledgment.recipientEmail,
+      acknowledgment.fallbackEmployeeEmail,
+    );
+
+    const emailResult = await sendAssignmentAcknowledgmentEmail(runtimeConfig, {
+      recipientEmail,
+      recipientName,
+      assetName: acknowledgment.assetName,
+      assetCode: acknowledgment.assetCode,
+      acknowledgmentUrl,
+      expiresAt,
+    });
+
+    await db
+      .update(assetAssignmentAcknowledgments)
+      .set({
+        recipientName,
+        recipientEmail,
+        jwtId,
+        expiresAt,
+        status: "pending",
+        tokenConsumedAt: null,
+        signerName: null,
+        signerIpAddress: null,
+        signatureText: null,
+        signedAt: null,
+        pdfObjectKey: null,
+        pdfFileName: null,
+        pdfUploadedAt: null,
+        emailStatus: emailResult.status,
+        emailSentAt: emailResult.status === "sent" ? nowIso : null,
+        updatedAt: nowIso,
+      })
+      .where(eq(assetAssignmentAcknowledgments.id, acknowledgment.acknowledgmentId))
+      .run();
+
+    return {
+      resent: true,
+      emailStatus: emailResult.status,
+      emailError: emailResult.errorMessage,
+      acknowledgmentUrl,
+      expiresAt,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unknown assignment acknowledgment resend error.";
+    throw new Error(`Failed to resend assignment acknowledgment: ${message}`);
   }
 }
 

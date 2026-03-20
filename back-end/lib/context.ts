@@ -33,7 +33,10 @@ type GraphQLContextOptions = {
   db?: AppDb;
   currentUserId?: string | null;
   requestIpAddress?: string | null;
+  requestAppUrl?: string | null;
 };
+
+const LOCALHOST_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function uniqueNonEmptySecrets(values: Array<string | null | undefined>) {
   const normalized: string[] = [];
@@ -51,14 +54,84 @@ function uniqueNonEmptySecrets(values: Array<string | null | undefined>) {
   return normalized;
 }
 
+function normalizeConfiguredAppUrl(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function isLocalhostUrl(value: string | null) {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(value);
+    return LOCALHOST_HOSTNAMES.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function resolveRuntimeAppUrl(options: { requestAppUrl?: string | null }) {
+  const configuredAppUrl = normalizeConfiguredAppUrl(
+    process.env.FRONTEND_APP_URL?.trim() ||
+      process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+      process.env.APP_URL?.trim() ||
+      null,
+  );
+  const requestAppUrl = normalizeConfiguredAppUrl(options.requestAppUrl ?? null);
+
+  if (
+    configuredAppUrl &&
+    (process.env.NODE_ENV !== "production" || !isLocalhostUrl(configuredAppUrl))
+  ) {
+    return configuredAppUrl;
+  }
+
+  if (
+    requestAppUrl &&
+    (process.env.NODE_ENV !== "production" || !isLocalhostUrl(requestAppUrl))
+  ) {
+    return requestAppUrl;
+  }
+
+  return configuredAppUrl ?? requestAppUrl ?? "http://localhost:3000";
+}
+
+function resolveRequestAppUrl(request: Request) {
+  const explicitAppOrigin = request.headers.get("x-app-origin")?.trim() || null;
+  if (explicitAppOrigin) {
+    return explicitAppOrigin;
+  }
+
+  const requestOrigin = request.headers.get("origin")?.trim() || null;
+  if (requestOrigin) {
+    return requestOrigin;
+  }
+
+  const forwardedHost = request.headers.get("x-forwarded-host")?.trim() || null;
+  if (forwardedHost) {
+    const forwardedProto =
+      request.headers.get("x-forwarded-proto")?.trim() || "https";
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  return null;
+}
+
 export function createGraphQLContextValue(
   options: GraphQLContextOptions = {},
 ): GraphQLContext {
-  const appUrl =
-    process.env.FRONTEND_APP_URL?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    process.env.APP_URL?.trim() ||
-    "http://localhost:3000";
+  const appUrl = resolveRuntimeAppUrl({ requestAppUrl: options.requestAppUrl });
   const legacyAssignmentJwtSecrets = (
     process.env.ASSET_ASSIGNMENT_JWT_LEGACY_SECRETS ?? ""
   )
@@ -147,6 +220,7 @@ export async function createGraphQLContext(
   return createGraphQLContextValue({
     ...options,
     db: resolvedDb ?? getDatabase(),
+    requestAppUrl: options.requestAppUrl ?? resolveRequestAppUrl(request),
     currentUserId:
       options.currentUserId ?? request.headers.get("x-user-id"),
     requestIpAddress:

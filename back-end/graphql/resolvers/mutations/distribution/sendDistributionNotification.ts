@@ -3,5 +3,8 @@ import { sendDistributionNotification as sendDistributionNotificationRecord } fr
 export const sendDistributionNotification = async (
   _parent: unknown,
   args: { distributionId: string; message?: string | null },
-  context: { db: Parameters<typeof sendDistributionNotificationRecord>[0] },
-) => sendDistributionNotificationRecord(context.db, args);
+  context: {
+    db: Parameters<typeof sendDistributionNotificationRecord>[0];
+    runtimeConfig: Parameters<typeof sendDistributionNotificationRecord>[1];
+  },
+) => sendDistributionNotificationRecord(context.db, context.runtimeConfig, args);

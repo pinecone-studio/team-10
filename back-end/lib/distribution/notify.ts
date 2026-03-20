@@ -1,11 +1,14 @@
 import { eq } from "drizzle-orm";
 import { assetDistributions, assets } from "../../database/schema.ts";
+import type { RuntimeConfig } from "../context.ts";
 import type { AppDb } from "../db.ts";
 import { parseIntegerId } from "../reference-resolvers.ts";
+import { resendAssignmentAcknowledgmentEmail } from "./assignment-acknowledgment.ts";
 import { createDistributionNotification } from "./shared.ts";
 
 export async function sendDistributionNotification(
   db: AppDb,
+  runtimeConfig: RuntimeConfig,
   input: { distributionId: string; message?: string | null },
 ): Promise<boolean> {
   try {
@@ -15,6 +18,7 @@ export async function sendDistributionNotification(
         id: assetDistributions.id,
         employeeId: assetDistributions.employeeId,
         assetId: assetDistributions.assetId,
+        assignmentRequestId: assetDistributions.assignmentRequestId,
         status: assetDistributions.status,
       })
       .from(assetDistributions)
@@ -31,12 +35,38 @@ export async function sendDistributionNotification(
 
     if (!asset) throw new Error("Associated asset was not found.");
 
+    let deliveryNote = "";
+    if (
+      distribution.status === "pendingHandover" &&
+      Number.isInteger(distribution.assignmentRequestId)
+    ) {
+      const resendResult = await resendAssignmentAcknowledgmentEmail(
+        db,
+        runtimeConfig,
+        {
+          assignmentRequestId: distribution.assignmentRequestId!,
+        },
+      );
+
+      if (resendResult.resent && resendResult.emailStatus !== "sent") {
+        throw new Error(
+          `Acknowledgment email resend failed (${resendResult.emailStatus}). ${resendResult.emailError ?? ""}`.trim(),
+        );
+      }
+
+      if (resendResult.resent) {
+        deliveryNote = " A fresh acknowledgment email link has been sent.";
+      } else if (resendResult.emailError) {
+        deliveryNote = ` ${resendResult.emailError}`;
+      }
+    }
+
     await createDistributionNotification(
       db,
       distribution.employeeId,
       distribution.status === "active" ? "Distribution reminder" : "Distribution update",
       input.message?.trim() ||
-        `Reminder: ${asset.assetName} (${asset.assetCode}) is still assigned to you.`,
+        `Reminder: ${asset.assetName} (${asset.assetCode}) is still assigned to you.${deliveryNote}`,
       String(distribution.id),
     );
 
