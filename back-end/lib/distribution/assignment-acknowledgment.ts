@@ -188,6 +188,26 @@ function buildAcknowledgmentLink(runtimeConfig: RuntimeConfig, token: string) {
   return `${origin}/assignment-acknowledgment?token=${encodeURIComponent(token)}`;
 }
 
+function shouldFallbackAcknowledgmentDistributionJoin(error: unknown) {
+  const message =
+    error instanceof Error
+      ? [error.message, error.cause instanceof Error ? error.cause.message : ""]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+      : "";
+
+  if (!message) {
+    return false;
+  }
+
+  return (
+    message.includes("no such column") ||
+    message.includes("asset_distributions") ||
+    message.includes("assignment_request_id")
+  );
+}
+
 function assertR2Config(runtimeConfig: RuntimeConfig) {
   if (
     !runtimeConfig.r2AccountId ||
@@ -246,46 +266,105 @@ async function sendAssignmentAcknowledgmentEmail(
 }
 
 async function loadAcknowledgmentByJwtId(db: AppDb, jwtId: string) {
-  const [acknowledgment] = await db
-    .select({
-      acknowledgmentId: assetAssignmentAcknowledgments.id,
-      assignmentRequestId: assetAssignmentAcknowledgments.assignmentRequestId,
-      assetId: assets.id,
-      assetCode: assets.assetCode,
-      assetName: assets.assetName,
-      category: assets.category,
-      employeeId: assetAssignmentAcknowledgments.employeeId,
-      recipientName: assetAssignmentAcknowledgments.recipientName,
-      recipientEmail: assetAssignmentAcknowledgments.recipientEmail,
-      fallbackEmployeeName: users.fullName,
-      fallbackEmployeeEmail: users.email,
-      recipientRole: assetAssignmentAcknowledgments.recipientRole,
-      jwtId: assetAssignmentAcknowledgments.jwtId,
-      expiresAt: assetAssignmentAcknowledgments.expiresAt,
-      status: assetAssignmentAcknowledgments.status,
-      tokenConsumedAt: assetAssignmentAcknowledgments.tokenConsumedAt,
-      signedAt: assetAssignmentAcknowledgments.signedAt,
-      distributionId: assetDistributions.id,
-      distributionStatus: assetDistributions.status,
-    })
-    .from(assetAssignmentAcknowledgments)
-    .innerJoin(
-      assets,
-      eq(assetAssignmentAcknowledgments.assetId, assets.id),
-    )
-    .leftJoin(
-      users,
-      eq(assetAssignmentAcknowledgments.employeeId, users.id),
-    )
-    .leftJoin(
-      assetDistributions,
-      eq(
-        assetDistributions.assignmentRequestId,
-        assetAssignmentAcknowledgments.assignmentRequestId,
-      ),
-    )
-    .where(eq(assetAssignmentAcknowledgments.jwtId, jwtId))
-    .limit(1);
+  let acknowledgment:
+    | {
+        acknowledgmentId: number;
+        assignmentRequestId: number;
+        assetId: number;
+        assetCode: string;
+        assetName: string;
+        category: string;
+        employeeId: number;
+        recipientName: string;
+        recipientEmail: string;
+        fallbackEmployeeName: string | null;
+        fallbackEmployeeEmail: string | null;
+        recipientRole: string | null;
+        jwtId: string;
+        expiresAt: string;
+        status: string;
+        tokenConsumedAt: string | null;
+        signedAt: string | null;
+        distributionId: number | null;
+        distributionStatus: string | null;
+      }
+    | undefined;
+
+  const baseSelection = {
+    acknowledgmentId: assetAssignmentAcknowledgments.id,
+    assignmentRequestId: assetAssignmentAcknowledgments.assignmentRequestId,
+    assetId: assets.id,
+    assetCode: assets.assetCode,
+    assetName: assets.assetName,
+    category: assets.category,
+    employeeId: assetAssignmentAcknowledgments.employeeId,
+    recipientName: assetAssignmentAcknowledgments.recipientName,
+    recipientEmail: assetAssignmentAcknowledgments.recipientEmail,
+    fallbackEmployeeName: users.fullName,
+    fallbackEmployeeEmail: users.email,
+    recipientRole: assetAssignmentAcknowledgments.recipientRole,
+    jwtId: assetAssignmentAcknowledgments.jwtId,
+    expiresAt: assetAssignmentAcknowledgments.expiresAt,
+    status: assetAssignmentAcknowledgments.status,
+    tokenConsumedAt: assetAssignmentAcknowledgments.tokenConsumedAt,
+    signedAt: assetAssignmentAcknowledgments.signedAt,
+    distributionId: assetDistributions.id,
+    distributionStatus: assetDistributions.status,
+  } as const;
+
+  try {
+    [acknowledgment] = await db
+      .select(baseSelection)
+      .from(assetAssignmentAcknowledgments)
+      .innerJoin(
+        assets,
+        eq(assetAssignmentAcknowledgments.assetId, assets.id),
+      )
+      .leftJoin(
+        users,
+        eq(assetAssignmentAcknowledgments.employeeId, users.id),
+      )
+      .leftJoin(
+        assetDistributions,
+        eq(
+          assetDistributions.assignmentRequestId,
+          assetAssignmentAcknowledgments.assignmentRequestId,
+        ),
+      )
+      .where(eq(assetAssignmentAcknowledgments.jwtId, jwtId))
+      .limit(1);
+  } catch (error) {
+    if (!shouldFallbackAcknowledgmentDistributionJoin(error)) {
+      throw error;
+    }
+
+    // Fallback for stale schemas where assignment_request_id is missing from
+    // asset_distributions: match distribution by asset+employee instead.
+    [acknowledgment] = await db
+      .select(baseSelection)
+      .from(assetAssignmentAcknowledgments)
+      .innerJoin(
+        assets,
+        eq(assetAssignmentAcknowledgments.assetId, assets.id),
+      )
+      .leftJoin(
+        users,
+        eq(assetAssignmentAcknowledgments.employeeId, users.id),
+      )
+      .leftJoin(
+        assetDistributions,
+        and(
+          eq(assetDistributions.assetId, assetAssignmentAcknowledgments.assetId),
+          eq(
+            assetDistributions.employeeId,
+            assetAssignmentAcknowledgments.employeeId,
+          ),
+        ),
+      )
+      .where(eq(assetAssignmentAcknowledgments.jwtId, jwtId))
+      .orderBy(desc(assetDistributions.distributedAt), desc(assetDistributions.id))
+      .limit(1);
+  }
 
   if (!acknowledgment) {
     return undefined;

@@ -90,20 +90,17 @@ function resolveRuntimeAppUrl(options: { requestAppUrl?: string | null }) {
   );
   const requestAppUrl = normalizeConfiguredAppUrl(options.requestAppUrl ?? null);
 
-  if (
-    configuredAppUrl &&
-    (process.env.NODE_ENV !== "production" || !isLocalhostUrl(configuredAppUrl))
-  ) {
+  // Always trust an explicit non-localhost configured URL first.
+  if (configuredAppUrl && !isLocalhostUrl(configuredAppUrl)) {
     return configuredAppUrl;
   }
 
-  if (
-    requestAppUrl &&
-    (process.env.NODE_ENV !== "production" || !isLocalhostUrl(requestAppUrl))
-  ) {
+  // If the configured URL is localhost (or unset), prefer runtime request origin.
+  if (requestAppUrl && !isLocalhostUrl(requestAppUrl)) {
     return requestAppUrl;
   }
 
+  // Fall back to whichever value exists (including localhost in local/dev).
   return configuredAppUrl ?? requestAppUrl ?? "http://localhost:3000";
 }
 
