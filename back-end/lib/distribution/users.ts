@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { storage, users } from "../../database/schema.ts";
+import { departments, storage, users } from "../../database/schema.ts";
 import type { AppDb } from "../db.ts";
 import { withReferenceSchemaCompatibility } from "../reference-resolvers.ts";
 
@@ -9,6 +9,8 @@ export type EmployeeDirectoryRecord = {
   email: string;
   role: string;
   position: string;
+  departmentId: string | null;
+  departmentName: string | null;
   isActive: boolean;
 };
 
@@ -18,6 +20,8 @@ function mapEmployeeDirectoryRow(row: {
   email: string;
   role: string;
   position: string;
+  departmentId: number | null;
+  departmentName: string | null;
   isActive: boolean;
 }): EmployeeDirectoryRecord {
   return {
@@ -26,6 +30,8 @@ function mapEmployeeDirectoryRow(row: {
     email: row.email,
     role: row.role,
     position: row.position,
+    departmentId: row.departmentId === null ? null : String(row.departmentId),
+    departmentName: row.departmentName,
     isActive: row.isActive,
   };
 }
@@ -48,11 +54,14 @@ export async function listEmployeeDirectory(
       email: users.email,
       role: users.role,
       position: users.position,
+      departmentId: users.departmentId,
+      departmentName: departments.departmentName,
       isActive: users.isActive,
     })
     .from(users)
+    .leftJoin(departments, eq(users.departmentId, departments.id))
     .where(and(...filters))
-    .orderBy(asc(users.fullName), asc(users.id));
+    .orderBy(asc(departments.departmentName), asc(users.fullName), asc(users.id));
 
   return rows.map(mapEmployeeDirectoryRow);
 }

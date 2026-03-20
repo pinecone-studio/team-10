@@ -10,6 +10,8 @@ export const DistributionTypeDefs = `
     email: String!
     role: String!
     position: String!
+    departmentId: ID
+    departmentName: String
     isActive: Boolean!
   }
 
@@ -98,6 +100,7 @@ export const DistributionTypeDefs = `
   type Mutation {
     assignAssetDistribution(
       assetId: ID!
+      employeeId: ID
       employeeName: String!
       recipientRole: String
       note: String

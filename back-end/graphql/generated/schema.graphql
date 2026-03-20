@@ -144,6 +144,8 @@ type DistributionRecord {
 }
 
 type EmployeeDirectoryEntry {
+  departmentId: ID
+  departmentName: String
   email: String!
   fullName: String!
   id: ID!
@@ -153,7 +155,7 @@ type EmployeeDirectoryEntry {
 }
 
 type Mutation {
-  assignAssetDistribution(assetId: ID!, employeeName: String!, note: String, recipientRole: String): DistributionRecord!
+  assignAssetDistribution(assetId: ID!, employeeId: ID, employeeName: String!, note: String, recipientRole: String): DistributionRecord!
   createAssetAudit(assetIds: [ID!]!, assetStatus: String, conditionStatus: String, confirmedLocation: String, note: String): [AssetAuditEntry!]!
   createCatalogCategory(displayName: String!): CatalogCategory!
   createCatalogProduct(attributes: [CatalogAttributeInput!], categoryId: ID, defaultCurrencyCode: String, defaultUnitCost: Float, description: String, displayName: String!, images: [CatalogImageInput!], itemTypeId: ID, itemTypeName: String, productCode: String!, status: String, unit: String): CatalogProduct!

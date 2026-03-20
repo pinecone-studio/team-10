@@ -6,7 +6,6 @@ import {
   fetchAssetDistributionsRequest,
   fetchEmployeeDirectoryRequest,
   returnAssetDistributionRequest,
-  sendDistributionNotificationRequest,
   type DistributionRecordDto,
   type EmployeeDirectoryEntryDto,
 } from "@/app/(dashboard)/_graphql/distribution/distribution-api";
@@ -21,22 +20,23 @@ import DistributionFilterPanel, {
   type DistributionTab,
 } from "../distribution/DistributionFilterPanel";
 import DistributionHeader from "../distribution/DistributionHeader";
-import DistributionOrder from "../distribution/DistributionOrder";
 import {
   buildAssignedItems,
   buildAvailableItems,
   buildHistoryMap,
-  buildPendingAcknowledgmentItems,
   matchesAssetQuery,
   type DistributionItem,
+  type DistributionSession,
 } from "../distribution/hrDistributionHelpers";
 import { WorkspaceShell } from "../shared/WorkspacePrimitives";
+import { formatDisplayDate } from "@/app/_lib/order-format";
 
 const RECIPIENT_ROLE_OPTIONS = ["Employee", "Department Lead", "IT Admin"] as const;
 const DEFAULT_STORAGE_LOCATION = "Main warehouse / Intake";
 
 type RetrievalFormState = {
   storageLocation: string;
+  usageYears: string;
   returnCondition: string;
   returnPower: string;
   note: string;
@@ -44,6 +44,7 @@ type RetrievalFormState = {
 
 const DEFAULT_RETRIEVAL_FORM: RetrievalFormState = {
   storageLocation: DEFAULT_STORAGE_LOCATION,
+  usageYears: "",
   returnCondition: "Good",
   returnPower: "Working",
   note: "",
@@ -51,54 +52,6 @@ const DEFAULT_RETRIEVAL_FORM: RetrievalFormState = {
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
-}
-
-function matchesDistributionQuery(record: DistributionRecordDto, searchValue: string) {
-  const query = searchValue.trim().toLowerCase();
-  if (!query) {
-    return true;
-  }
-
-  return [
-    record.id,
-    record.assetCode,
-    record.assetName,
-    record.employeeName,
-    record.recipientRole,
-    record.currentStorageName ?? "",
-    record.assetStatus,
-    record.status,
-  ].some((value) => value.toLowerCase().includes(query));
-}
-
-function matchesDistributionStatus(
-  record: DistributionRecordDto,
-  selectedStatus: DistributionStatusFilter,
-) {
-  if (selectedStatus === "All status") {
-    return true;
-  }
-
-  const distributionStatus = normalize(record.status);
-  const assetStatus = normalize(record.assetStatus);
-
-  if (selectedStatus === "Pending signature") {
-    return distributionStatus === "pendinghandover" || assetStatus === "pendingassignment";
-  }
-
-  if (selectedStatus === "Signed") {
-    return distributionStatus === "active" && assetStatus === "assigned";
-  }
-
-  if (selectedStatus === "Returned") {
-    return (
-      distributionStatus === "returned" ||
-      Boolean(record.returnedAt) ||
-      ["instorage", "available", "received"].includes(assetStatus)
-    );
-  }
-
-  return assetStatus === "pendingretrieval";
 }
 
 function matchesItemStatus(
@@ -123,7 +76,7 @@ function matchesItemStatus(
     return ["instorage", "available", "received"].includes(assetStatus);
   }
 
-  return assetStatus === "pendingretrieval";
+  return assetStatus === "assigned" || assetStatus === "pendingretrieval";
 }
 
 function isAssignableAsset(item: DistributionItem) {
@@ -156,15 +109,19 @@ export function HRDistributionSection() {
   const [searchValue, setSearchValue] = useState("");
   const [selectedStatus, setSelectedStatus] =
     useState<DistributionStatusFilter>("All status");
+  const [selectedRole, setSelectedRole] = useState("All roles");
+  const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState("All employees");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All categories");
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState("All types");
   const [assignEmployeeId, setAssignEmployeeId] = useState("");
   const [assignRecipientRole, setAssignRecipientRole] =
     useState<(typeof RECIPIENT_ROLE_OPTIONS)[number]>("Employee");
   const [assignNote, setAssignNote] = useState("");
   const [assignTarget, setAssignTarget] = useState<DistributionItem | null>(null);
+  const [assignedDetailTarget, setAssignedDetailTarget] = useState<DistributionItem | null>(null);
   const [retrieveTarget, setRetrieveTarget] = useState<DistributionItem | null>(null);
   const [retrieveForm, setRetrieveForm] =
     useState<RetrievalFormState>(DEFAULT_RETRIEVAL_FORM);
-  const [detailRow, setDetailRow] = useState<DistributionRecordDto | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -241,6 +198,42 @@ export function HRDistributionSection() {
 
   const historyMap = useMemo(() => buildHistoryMap(records), [records]);
 
+  const roleOptions = useMemo(
+    () => [
+      "All roles",
+      ...Array.from(
+        new Set(
+          [
+            ...records.map((record) => record.recipientRole),
+            ...employees.map((employee) => employee.position),
+          ].filter(Boolean),
+        ),
+      ),
+    ],
+    [employees, records],
+  );
+
+  const employeeOptions = useMemo(
+    () => ["All employees", ...Array.from(new Set(employees.map((employee) => employee.fullName)))],
+    [employees],
+  );
+
+  const categoryOptions = useMemo(
+    () => [
+      "All categories",
+      ...Array.from(new Set([...storageAssets.map((item) => item.category), ...records.map((item) => item.category)].filter(Boolean))),
+    ],
+    [records, storageAssets],
+  );
+
+  const typeOptions = useMemo(
+    () => [
+      "All types",
+      ...Array.from(new Set([...storageAssets.map((item) => item.itemType), ...records.map((item) => item.itemType)].filter(Boolean))),
+    ],
+    [records, storageAssets],
+  );
+
   const availableBase = useMemo(
     () =>
       buildAvailableItems(storageAssets, historyMap).filter(
@@ -251,13 +244,8 @@ export function HRDistributionSection() {
 
   const assignedBase = useMemo(() => buildAssignedItems(records), [records]);
 
-  const pendingRequestBase = useMemo(
-    () => buildPendingAcknowledgmentItems(records),
-    [records],
-  );
-
   const pendingRetrievalBase = useMemo(
-    () => assignedBase.filter((item) => normalize(item.assetStatus) === "pendingretrieval"),
+    () => assignedBase,
     [assignedBase],
   );
 
@@ -265,37 +253,48 @@ export function HRDistributionSection() {
     () =>
       availableBase.filter(
         (item) =>
-          matchesAssetQuery(item, searchValue) && matchesItemStatus(item, selectedStatus),
+          matchesAssetQuery(item, searchValue) &&
+          matchesItemStatus(item, selectedStatus) &&
+          matchesAdvancedFilters(item, {
+            selectedRole,
+            selectedEmployee: selectedEmployeeFilter,
+            selectedCategory: selectedCategoryFilter,
+            selectedType: selectedTypeFilter,
+          }),
       ),
-    [availableBase, searchValue, selectedStatus],
+    [availableBase, searchValue, selectedStatus, selectedRole, selectedEmployeeFilter, selectedCategoryFilter, selectedTypeFilter],
   );
 
-  const pendingRequestItems = useMemo(
+  const assignedItems = useMemo(
     () =>
-      pendingRequestBase.filter(
+      assignedBase.filter(
         (item) =>
-          matchesAssetQuery(item, searchValue) && matchesItemStatus(item, selectedStatus),
+          matchesAssetQuery(item, searchValue) &&
+          matchesItemStatus(item, selectedStatus) &&
+          matchesAdvancedFilters(item, {
+            selectedRole,
+            selectedEmployee: selectedEmployeeFilter,
+            selectedCategory: selectedCategoryFilter,
+            selectedType: selectedTypeFilter,
+          }),
       ),
-    [pendingRequestBase, searchValue, selectedStatus],
+    [assignedBase, searchValue, selectedStatus, selectedRole, selectedEmployeeFilter, selectedCategoryFilter, selectedTypeFilter],
   );
 
   const pendingRetrievalItems = useMemo(
     () =>
       pendingRetrievalBase.filter(
         (item) =>
-          matchesAssetQuery(item, searchValue) && matchesItemStatus(item, selectedStatus),
+          matchesAssetQuery(item, searchValue) &&
+          matchesItemStatus(item, selectedStatus) &&
+          matchesAdvancedFilters(item, {
+            selectedRole,
+            selectedEmployee: selectedEmployeeFilter,
+            selectedCategory: selectedCategoryFilter,
+            selectedType: selectedTypeFilter,
+          }),
       ),
-    [pendingRetrievalBase, searchValue, selectedStatus],
-  );
-
-  const distributionRows = useMemo(
-    () =>
-      records.filter(
-        (record) =>
-          matchesDistributionQuery(record, searchValue) &&
-          matchesDistributionStatus(record, selectedStatus),
-      ),
-    [records, searchValue, selectedStatus],
+    [pendingRetrievalBase, searchValue, selectedStatus, selectedRole, selectedEmployeeFilter, selectedCategoryFilter, selectedTypeFilter],
   );
 
   const metricStats = useMemo(() => {
@@ -327,24 +326,23 @@ export function HRDistributionSection() {
   }, [records]);
 
   const counts: Record<DistributionTab, number> = {
-    distributions: distributionRows.length,
     "available-assets": availableItems.length,
-    "employee-requests": pendingRequestItems.length,
+    "assigned-assets": assignedItems.length,
     "pending-retrieval": pendingRetrievalItems.length,
   };
 
   const visibleGridItems =
     activeTab === "available-assets"
       ? availableItems
-      : activeTab === "employee-requests"
-        ? pendingRequestItems
+      : activeTab === "assigned-assets"
+        ? assignedItems
         : pendingRetrievalItems;
 
   const gridActionLabel =
     activeTab === "available-assets"
       ? "Assign"
-      : activeTab === "employee-requests"
-        ? "Notify"
+      : activeTab === "assigned-assets"
+        ? "History"
         : "Retrieve";
 
   async function handleAssignConfirm() {
@@ -362,17 +360,16 @@ export function HRDistributionSection() {
       setErrorMessage(null);
       await assignAssetDistributionRequest({
         assetId: assignTarget.id,
+        employeeId: selectedEmployee.id,
         employeeName: selectedEmployee.fullName,
         recipientRole: assignRecipientRole,
         note: assignNote.trim() || null,
       });
-      setNotice(
-        `Assignment started for ${selectedEmployee.fullName}. Acknowledgment email should be sent if SMTP is configured.`,
-      );
+      setNotice(`Assigned ${assignTarget.assetCode} to ${selectedEmployee.fullName}.`);
       setAssignTarget(null);
       setAssignNote("");
       await reload();
-      setActiveTab("employee-requests");
+      setActiveTab("assigned-assets");
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -381,24 +378,6 @@ export function HRDistributionSection() {
       );
     } finally {
       setIsAssigning(false);
-    }
-  }
-
-  async function handleReminder(item: DistributionItem) {
-    if (!item.distributionId) {
-      return;
-    }
-
-    try {
-      setErrorMessage(null);
-      await sendDistributionNotificationRequest(item.distributionId);
-      setNotice(`Reminder sent for ${item.assetCode}.`);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Failed to send reminder.",
-      );
     }
   }
 
@@ -413,6 +392,7 @@ export function HRDistributionSection() {
       await returnAssetDistributionRequest({
         distributionId: retrieveTarget.distributionId,
         storageLocation: retrieveForm.storageLocation,
+        usageYears: retrieveForm.usageYears.trim() || null,
         returnCondition: retrieveForm.returnCondition,
         returnPower: retrieveForm.returnPower,
         note: retrieveForm.note.trim() || null,
@@ -439,16 +419,23 @@ export function HRDistributionSection() {
       return;
     }
 
-    if (activeTab === "employee-requests") {
-      void handleReminder(item);
+    if (activeTab === "assigned-assets") {
+      setAssignedDetailTarget(item);
       return;
     }
 
     setRetrieveTarget(item);
-    setRetrieveForm((current) => ({
-      ...current,
-      storageLocation: current.storageLocation || DEFAULT_STORAGE_LOCATION,
-    }));
+    const currentSession = item.sessions.find((session) => session.returnedAt === "-");
+    setRetrieveForm({
+      storageLocation: DEFAULT_STORAGE_LOCATION,
+      usageYears:
+        currentSession?.assignedAt
+          ? calculateUsageYearsDisplay(currentSession.assignedAt)
+          : "",
+      returnCondition: "Good",
+      returnPower: "Working",
+      note: "",
+    });
   };
 
   return (
@@ -476,6 +463,18 @@ export function HRDistributionSection() {
         onTabChange={setActiveTab}
         selectedStatus={selectedStatus}
         onStatusChange={setSelectedStatus}
+        selectedRole={selectedRole}
+        onRoleChange={setSelectedRole}
+        selectedEmployee={selectedEmployeeFilter}
+        onEmployeeChange={setSelectedEmployeeFilter}
+        selectedCategory={selectedCategoryFilter}
+        onCategoryChange={setSelectedCategoryFilter}
+        selectedType={selectedTypeFilter}
+        onTypeChange={setSelectedTypeFilter}
+        roleOptions={roleOptions}
+        employeeOptions={employeeOptions}
+        categoryOptions={categoryOptions}
+        typeOptions={typeOptions}
         counts={counts}
       />
 
@@ -493,15 +492,19 @@ export function HRDistributionSection() {
 
       <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="distribution-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
-          {activeTab === "distributions" ? (
-            <DistributionOrder rows={distributionRows} onViewRow={setDetailRow} />
-          ) : (
-            <DistributionAssetGrid
-              items={visibleGridItems}
-              actionLabel={gridActionLabel}
-              onAction={handleGridAction}
-            />
-          )}
+          <DistributionAssetGrid
+            items={visibleGridItems}
+            actionLabel={gridActionLabel}
+            actionVariant={activeTab === "pending-retrieval" ? "danger" : "primary"}
+            onAction={handleGridAction}
+            secondaryActionLabel={activeTab === "available-assets" ? "History" : undefined}
+            onSecondaryAction={
+              activeTab === "available-assets"
+                ? (item) => setAssignedDetailTarget(item)
+                : undefined
+            }
+            showHistorySummary={activeTab !== "assigned-assets"}
+          />
         </div>
       </div>
 
@@ -511,21 +514,6 @@ export function HRDistributionSection() {
             <p className="text-[13px] text-[#334155]">
               {assignTarget.assetName} ({assignTarget.assetCode})
             </p>
-
-            <label className="block text-[12px] text-[#475569]">
-              Employee
-              <select
-                value={assignEmployeeId}
-                onChange={(event) => setAssignEmployeeId(event.target.value)}
-                className="mt-1 h-10 w-full rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none"
-              >
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.fullName}
-                  </option>
-                ))}
-              </select>
-            </label>
 
             <label className="block text-[12px] text-[#475569]">
               Recipient role
@@ -541,6 +529,21 @@ export function HRDistributionSection() {
                 {RECIPIENT_ROLE_OPTIONS.map((role) => (
                   <option key={role} value={role}>
                     {role}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-[12px] text-[#475569]">
+              Employee
+              <select
+                value={assignEmployeeId}
+                onChange={(event) => setAssignEmployeeId(event.target.value)}
+                className="mt-1 h-10 w-full rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none"
+              >
+                {employees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.fullName}
                   </option>
                 ))}
               </select>
@@ -578,6 +581,58 @@ export function HRDistributionSection() {
         </ModalFrame>
       ) : null}
 
+      {assignedDetailTarget ? (
+        <ModalFrame
+          title="Assigned Asset History"
+          onClose={() => setAssignedDetailTarget(null)}
+        >
+          <div className="max-h-[75vh] space-y-4 overflow-y-auto pr-1">
+            <div className="rounded-[12px] border border-[#e2e8f0] bg-[#f8fafc] p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Info
+                  label="Asset"
+                  value={`${assignedDetailTarget.assetName} (${assignedDetailTarget.assetCode})`}
+                />
+                <Info
+                  label="Current holder"
+                  value={
+                    assignedDetailTarget.holder
+                      ? `${assignedDetailTarget.holder}${assignedDetailTarget.role ? ` • ${assignedDetailTarget.role}` : ""}`
+                      : "Unassigned"
+                  }
+                />
+                <Info
+                  label="Previous holder"
+                  value={formatPreviousHolders(assignedDetailTarget)}
+                />
+                <Info label="Storage" value={assignedDetailTarget.storageName} />
+                <Info
+                  label="Status"
+                  value={`${assignedDetailTarget.assetStatus} • ${assignedDetailTarget.conditionStatus}`}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-[14px] font-semibold text-[#0f172a]">Assignment history</p>
+              {getVisibleSessions(assignedDetailTarget).length > 0 ? (
+                getVisibleSessions(assignedDetailTarget).map((session, index) => (
+                  <HistoryCard
+                    key={`${assignedDetailTarget.id}-history-${index}`}
+                    session={session}
+                    index={index}
+                  />
+                ))
+              ) : (
+                <div className="rounded-[12px] border border-dashed border-[#dbe4ee] bg-[#f8fbff] px-4 py-5 text-[12px] text-[#64748b]">
+                  No history yet. This asset has not been retrieved before.
+                </div>
+              )}
+            </div>
+          </div>
+        </ModalFrame>
+      ) : null}
+
       {retrieveTarget ? (
         <ModalFrame title="Retrieve Asset" onClose={() => setRetrieveTarget(null)}>
           <div className="space-y-3">
@@ -607,6 +662,13 @@ export function HRDistributionSection() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-[12px] text-[#475569]">
+                Used duration
+                <div className="mt-1 flex h-10 w-full items-center rounded-[10px] border border-[#dbe4ee] bg-[#f8fafc] px-3 text-[14px] text-[#0f172a]">
+                  {retrieveForm.usageYears || "-"}
+                </div>
+              </label>
+
+              <label className="block text-[12px] text-[#475569]">
                 Condition
                 <select
                   value={retrieveForm.returnCondition}
@@ -620,29 +682,28 @@ export function HRDistributionSection() {
                 >
                   <option>Good</option>
                   <option>Damaged</option>
-                  <option>Defective</option>
-                  <option>Missing</option>
-                </select>
-              </label>
-
-              <label className="block text-[12px] text-[#475569]">
-                Power
-                <select
-                  value={retrieveForm.returnPower}
-                  onChange={(event) =>
-                    setRetrieveForm((current) => ({
-                      ...current,
-                      returnPower: event.target.value,
-                    }))
-                  }
-                  className="mt-1 h-10 w-full rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none"
-                >
-                  <option>Working</option>
-                  <option>Turns on/off</option>
-                  <option>Not working</option>
+                  <option>Torn</option>
+                  <option>Worn</option>
                 </select>
               </label>
             </div>
+
+            <label className="block text-[12px] text-[#475569]">
+              Working status
+              <select
+                value={retrieveForm.returnPower}
+                onChange={(event) =>
+                  setRetrieveForm((current) => ({
+                    ...current,
+                    returnPower: event.target.value,
+                  }))
+                }
+                className="mt-1 h-10 w-full rounded-[10px] border border-[#dbe4ee] bg-white px-3 text-[14px] text-[#0f172a] outline-none"
+              >
+                <option>Working</option>
+                <option>Not working</option>
+              </select>
+            </label>
 
             <label className="block text-[12px] text-[#475569]">
               Note
@@ -681,24 +742,72 @@ export function HRDistributionSection() {
         </ModalFrame>
       ) : null}
 
-      {detailRow ? (
-        <ModalFrame title="Distribution Detail" onClose={() => setDetailRow(null)}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Info label="Distribution" value={`DIST-${detailRow.id.slice(-4).toUpperCase()}`} />
-            <Info label="Asset" value={`${detailRow.assetName} (${detailRow.assetCode})`} />
-            <Info label="Employee" value={detailRow.employeeName} />
-            <Info label="Role" value={detailRow.recipientRole || "Employee"} />
-            <Info label="Status" value={detailRow.status} />
-            <Info label="Asset status" value={detailRow.assetStatus} />
-            <Info label="Distributed at" value={detailRow.distributedAt} />
-            <Info label="Returned at" value={detailRow.returnedAt || "-"} />
-            <Info label="Storage" value={detailRow.currentStorageName || "-"} />
-            <Info label="Note" value={detailRow.note || "-"} />
-          </div>
-        </ModalFrame>
-      ) : null}
     </WorkspaceShell>
   );
+}
+
+function calculateUsageYearsDisplay(distributedAt?: string | null) {
+  if (!distributedAt) {
+    return "";
+  }
+
+  const start = new Date(distributedAt);
+  const end = new Date();
+  if (Number.isNaN(start.getTime()) || end <= start) {
+    return "";
+  }
+
+  const totalDays = Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86_400_000));
+  if (totalDays < 30) return `${totalDays} day`;
+  if (totalDays < 365) return `${Math.floor(totalDays / 30)} mo`;
+  return `${(totalDays / 365).toFixed(1).replace(/\\.0$/, "")} yr`;
+}
+
+function matchesAdvancedFilters(
+  item: DistributionItem,
+  filters: {
+    selectedRole: string;
+    selectedEmployee: string;
+    selectedCategory: string;
+    selectedType: string;
+  },
+) {
+  const matchesRole =
+    filters.selectedRole === "All roles" ||
+    item.role === filters.selectedRole ||
+    item.sessions.some((session) => session.role === filters.selectedRole);
+  const matchesEmployee =
+    filters.selectedEmployee === "All employees" ||
+    item.holder === filters.selectedEmployee ||
+    item.sessions.some((session) => session.holder === filters.selectedEmployee);
+  const matchesCategory =
+    filters.selectedCategory === "All categories" ||
+    item.category === filters.selectedCategory;
+  const matchesType =
+    filters.selectedType === "All types" ||
+    item.itemType === filters.selectedType;
+
+  return matchesRole && matchesEmployee && matchesCategory && matchesType;
+}
+
+function getVisibleSessions(item: DistributionItem) {
+  return item.holder
+    ? item.sessions
+    : item.sessions.filter((session) => session.returnedAt !== "-");
+}
+
+function formatPreviousHolders(item: DistributionItem) {
+  const previousSessions = getVisibleSessions(item);
+  if (previousSessions.length === 0) {
+    return "No previous holder";
+  }
+
+  return previousSessions
+    .map(
+      (session, index) =>
+        `${index + 1}. ${session.holder}${session.role ? ` | ${session.role}` : ""}`,
+    )
+    .join("\n");
 }
 
 function ModalFrame(props: {
@@ -729,7 +838,42 @@ function Info(props: { label: string; value: string }) {
   return (
     <div className="rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
       <p className="text-[11px] uppercase tracking-[0.1em] text-[#64748b]">{props.label}</p>
-      <p className="mt-1 text-[13px] text-[#0f172a]">{props.value}</p>
+      <p className="mt-1 whitespace-pre-line text-[13px] text-[#0f172a]">{props.value}</p>
+    </div>
+  );
+}
+
+function HistoryCard(props: { session: DistributionSession; index: number }) {
+  const isReturned = props.session.returnedAt !== "-";
+
+  return (
+    <div className="rounded-[12px] border border-[#e2e8f0] bg-[#fbfdff] p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[14px] font-semibold text-[#0f172a]">
+            {props.index + 1}. {props.session.holder}
+          </p>
+          <p className="text-[12px] text-[#64748b]">{props.session.role}</p>
+        </div>
+        <span
+          className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+            isReturned ? "bg-[#eef2ff] text-[#475569]" : "bg-[#dcfce7] text-[#166534]"
+          }`}
+        >
+          {isReturned ? "Returned" : "Currently assigned"}
+        </span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Info label="Assigned at" value={formatDisplayDate(props.session.assignedAt)} />
+        <Info
+          label="Returned at"
+          value={props.session.returnedAt === "-" ? "Not returned yet" : formatDisplayDate(props.session.returnedAt)}
+        />
+        <Info label="Used duration" value={props.session.years} />
+        <Info label="Condition" value={props.session.condition} />
+        <Info label="Working status" value={props.session.power} />
+        <Info label="Note" value={props.session.notes} />
+      </div>
     </div>
   );
 }

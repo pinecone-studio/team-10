@@ -5,6 +5,7 @@ export const assignAssetDistribution = async (
   _parent: unknown,
   args: {
     assetId: string;
+    employeeId?: string | null;
     employeeName: string;
     recipientRole?: string | null;
     note?: string | null;
