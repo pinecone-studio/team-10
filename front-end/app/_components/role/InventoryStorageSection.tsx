@@ -40,14 +40,14 @@ const CONDITION_FILTERS = [
   "Damaged",
   "Defective",
   "Missing",
+  "Incomplete",
 ] as const;
 const STATUS_FILTERS = [
   "All Statuses",
   "Available",
   "Assigned",
   "In Repair",
-  "Pending Disposal",
-  "Pending Retrieval",
+  "Pending",
 ] as const;
 
 type StorageWorkspaceView = "assets" | "census";
@@ -620,7 +620,7 @@ export function InventoryStorageSection() {
                   </p>
                 </div>
               ) : (
-                <div className="h-[440px] overflow-y-auto pr-1">
+                <div className="storage-scrollbar h-[440px] overflow-y-auto pr-1">
                   <table className="w-full table-fixed border-separate border-spacing-y-0 text-[11px] text-[#334155]">
                     <thead className="sticky top-0 z-10 bg-white">
                       <tr className="bg-[#edf5ff] text-[12px] font-semibold text-[#334155]">
@@ -1143,6 +1143,7 @@ function humanizeConditionValue(value: string) {
   if (value === "damaged") return "Damaged";
   if (value === "defective") return "Defective";
   if (value === "missing") return "Missing";
+  if (value === "incomplete") return "Incomplete";
 
   return value;
 }
@@ -1151,8 +1152,8 @@ function humanizeStatusValue(value: string) {
   if (value === "available") return "Available";
   if (value === "assigned") return "Assigned";
   if (value === "inRepair") return "In Repair";
-  if (value === "pendingDisposal") return "Pending Disposal";
-  if (value === "pendingRetrieval") return "Pending Retrieval";
+  if (value === "pendingDisposal") return "Pending";
+  if (value === "pendingRetrieval") return "Pending";
 
   return value;
 }
@@ -1162,6 +1163,7 @@ function conditionFilterToValue(value: (typeof CONDITION_FILTERS)[number]) {
   if (value === "Damaged") return "damaged";
   if (value === "Defective") return "defective";
   if (value === "Missing") return "missing";
+  if (value === "Incomplete") return "incomplete";
 
   return "good";
 }
@@ -1170,8 +1172,7 @@ function statusFilterToValue(value: (typeof STATUS_FILTERS)[number]) {
   if (value === "Available") return "available";
   if (value === "Assigned") return "assigned";
   if (value === "In Repair") return "inRepair";
-  if (value === "Pending Disposal") return "pendingDisposal";
-  if (value === "Pending Retrieval") return "pendingRetrieval";
+  if (value === "Pending") return "pendingDisposal";
 
   return "available";
 }
@@ -1226,7 +1227,7 @@ function StorageCensusWorkspace({
             launch the live session from one place.
           </p>
 
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="storage-scrollbar mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
             <div className="grid gap-3">
               <FieldBlock label="Session title">
                 <input
@@ -1360,7 +1361,7 @@ function StorageCensusWorkspace({
           {currentSession ? (
             <div className="mt-3 flex min-h-0 flex-1 flex-col">
               <div className="flex min-h-0 flex-1 flex-col rounded-[18px] border border-[#d8e6f4] bg-[linear-gradient(180deg,#eef6ff_0%,#fbfdff_100%)] p-5">
-                <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                <div className="storage-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <h3 className="text-[22px] font-semibold text-[#0f172a]">
