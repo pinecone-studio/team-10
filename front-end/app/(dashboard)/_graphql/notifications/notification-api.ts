@@ -17,6 +17,26 @@ export type NotificationDto = {
   entityId: string | null;
 };
 
+function isAuthenticationGraphQLError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  if (error.message.includes("Authentication error")) {
+    return true;
+  }
+
+  const maybeGraphQlError = error as {
+    graphQLErrors?: Array<{ message?: string }>;
+  };
+
+  return (
+    maybeGraphQlError.graphQLErrors?.some((graphQLError) =>
+      (graphQLError.message ?? "").includes("Authentication error"),
+    ) ?? false
+  );
+}
+
 const notificationFieldsFragment = gql`
   fragment NotificationFields on Notification {
     id
@@ -60,15 +80,25 @@ const markAllNotificationsAsReadMutation = gql`
 `;
 
 export async function fetchNotificationsRequest(userId?: string | null) {
-  const { data } = await apolloClient.query<{
-    notifications: NotificationDto[];
-  }>({
-    query: notificationsQuery,
-    variables: { userId: userId ?? null },
-    fetchPolicy: "no-cache",
-  });
+  try {
+    const { data } = await apolloClient.query<{
+      notifications: NotificationDto[];
+    }>({
+      query: notificationsQuery,
+      variables: { userId: userId ?? null },
+      fetchPolicy: "no-cache",
+    });
 
-  return data?.notifications ?? [];
+    return data?.notifications ?? [];
+  } catch (error) {
+    if (isAuthenticationGraphQLError(error)) {
+      console.warn(
+        "Notifications query is unauthorized on this deployment. Returning an empty list.",
+      );
+      return [];
+    }
+    throw error;
+  }
 }
 
 export async function markNotificationAsReadRequest(

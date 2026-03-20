@@ -1,22 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const DEFAULT_BACKEND_GRAPHQL_URL = "http://localhost:3001/api/graphql";
+const PRODUCTION_LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
-function normalizeGraphqlUrl(value: string) {
-  if (value.endsWith("/api/graphql")) {
-    return value;
+function normalizeGraphqlUrl(value: string, request: NextRequest) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error("GraphQL URL cannot be empty.");
   }
 
-  return new URL("/api/graphql", value).toString();
+  if (trimmed.startsWith("/")) {
+    return new URL(trimmed, request.url).toString();
+  }
+
+  if (trimmed.endsWith("/api/graphql")) {
+    return trimmed;
+  }
+
+  return new URL("/api/graphql", trimmed).toString();
 }
 
-function buildCandidateUrls() {
+function buildCandidateUrls(request: NextRequest) {
   const explicitUrls = [
     process.env.BACKEND_GRAPHQL_URL,
     process.env.NEXT_PUBLIC_GRAPHQL_URL,
+    process.env.BACKEND_URL,
+    process.env.NEXT_PUBLIC_BACKEND_URL,
+    process.env.GRAPHQL_PROXY_BACKEND_URL,
   ]
     .filter((value): value is string => Boolean(value?.trim()))
-    .map((value) => normalizeGraphqlUrl(value.trim()));
+    .map((value) => normalizeGraphqlUrl(value, request));
 
   if (explicitUrls.length > 0) {
     return [...new Set(explicitUrls)];
@@ -46,9 +59,51 @@ function isSelfProxyTarget(request: NextRequest, candidateUrl: string) {
   }
 }
 
+function isLocalhostTargetInProduction(candidateUrl: string) {
+  if (process.env.NODE_ENV !== "production") {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(candidateUrl);
+    return PRODUCTION_LOCALHOST_HOSTS.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function buildForwardHeaders(request: NextRequest) {
+  const headers = new Headers();
+
+  headers.set(
+    "content-type",
+    request.headers.get("content-type") ?? "application/json",
+  );
+
+  const forwardHeaderNames = [
+    "authorization",
+    "cookie",
+    "x-user-id",
+    "apollo-require-preflight",
+    "x-forwarded-for",
+    "x-forwarded-proto",
+    "x-forwarded-host",
+    "cf-connecting-ip",
+  ] as const;
+
+  for (const headerName of forwardHeaderNames) {
+    const headerValue = request.headers.get(headerName);
+    if (headerValue) {
+      headers.set(headerName, headerValue);
+    }
+  }
+
+  return headers;
+}
+
 export async function POST(request: NextRequest) {
   const requestBody = await request.text();
-  const candidateUrls = buildCandidateUrls();
+  const candidateUrls = buildCandidateUrls(request);
   const failures: string[] = [];
 
   for (const candidateUrl of candidateUrls) {
@@ -57,12 +112,15 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
+    if (isLocalhostTargetInProduction(candidateUrl)) {
+      failures.push(`${candidateUrl} (skipped localhost target in production)`);
+      continue;
+    }
+
     try {
       const response = await fetch(candidateUrl, {
         method: "POST",
-        headers: {
-          "content-type": request.headers.get("content-type") ?? "application/json",
-        },
+        headers: buildForwardHeaders(request),
         body: requestBody,
         cache: "no-store",
       });
@@ -77,6 +135,8 @@ export async function POST(request: NextRequest) {
         headers: {
           "content-type":
             response.headers.get("content-type") ?? "application/json",
+          "cache-control":
+            response.headers.get("cache-control") ?? "no-store",
         },
       });
     } catch (error) {
@@ -96,6 +156,8 @@ export async function POST(request: NextRequest) {
             code: "BACKEND_UNAVAILABLE",
             attemptedUrls: candidateUrls,
             failures,
+            guidance:
+              "Set BACKEND_GRAPHQL_URL in Vercel to your backend GraphQL endpoint.",
           },
         },
       ],

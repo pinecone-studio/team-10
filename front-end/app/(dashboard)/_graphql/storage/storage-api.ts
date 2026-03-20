@@ -236,6 +236,14 @@ const storageLocationsQuery = gql`
   }
 `;
 
+const storageLocationsFallbackQuery = gql`
+  query StorageLocationsFallback {
+    storageAssets {
+      storageName
+    }
+  }
+`;
+
 const assetDetailQuery = gql`
   ${storageAssetDetailFields}
 
@@ -291,8 +299,31 @@ export async function fetchStorageLocationsRequest() {
 
     return data?.storageLocations ?? [];
   } catch (error) {
-    console.warn("Storage location list request failed. Using empty location list.", error);
-    return [];
+    console.warn("Storage location list request failed. Trying storageAssets fallback.", error);
+    try {
+      const { data } = await apolloClient.query<{
+        storageAssets: Array<{ storageName: string | null }>;
+      }>({
+        query: storageLocationsFallbackQuery,
+        fetchPolicy: "no-cache",
+      });
+
+      const locations = new Set<string>();
+      for (const asset of data?.storageAssets ?? []) {
+        const storageName = asset.storageName?.trim();
+        if (storageName) {
+          locations.add(storageName);
+        }
+      }
+
+      return [...locations];
+    } catch (fallbackError) {
+      console.warn(
+        "Storage location fallback request failed. Using empty location list.",
+        fallbackError,
+      );
+      return [];
+    }
   }
 }
 

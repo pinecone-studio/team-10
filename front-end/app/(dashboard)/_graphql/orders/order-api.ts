@@ -63,6 +63,26 @@ type OrderDto = {
   totalCost: number | null;
 };
 
+function isAuthenticationGraphQLError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  if (error.message.includes("Authentication error")) {
+    return true;
+  }
+
+  const maybeGraphQlError = error as {
+    graphQLErrors?: Array<{ message?: string }>;
+  };
+
+  return (
+    maybeGraphQlError.graphQLErrors?.some((graphQLError) =>
+      (graphQLError.message ?? "").includes("Authentication error"),
+    ) ?? false
+  );
+}
+
 export type CreateOrderRequestInput = CreateOrderInput;
 
 export type UpdateOrderRequestInput = {
@@ -385,12 +405,22 @@ function mapOrderItemInput(item: OrderItem) {
 }
 
 export async function fetchOrdersRequest() {
-  const { data } = await apolloClient.query<{ orders: OrderDto[] }>({
-    query: ordersQuery,
-    fetchPolicy: "no-cache",
-  });
+  try {
+    const { data } = await apolloClient.query<{ orders: OrderDto[] }>({
+      query: ordersQuery,
+      fetchPolicy: "no-cache",
+    });
 
-  return (data?.orders ?? []).map(mapOrder);
+    return (data?.orders ?? []).map(mapOrder);
+  } catch (error) {
+    if (isAuthenticationGraphQLError(error)) {
+      console.warn(
+        "Orders query is unauthorized on this deployment. Returning an empty order list.",
+      );
+      return [];
+    }
+    throw error;
+  }
 }
 
 export async function createOrderRequest(input: CreateOrderRequestInput) {

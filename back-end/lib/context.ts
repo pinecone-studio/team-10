@@ -112,16 +112,7 @@ export async function createGraphQLContext(
 ): Promise<GraphQLContext> {
   let resolvedDb = options.db;
 
-  // Prefer explicit .env-backed runtime D1 so local/dev and remote data stay consistent.
-  if (!resolvedDb) {
-    try {
-      resolvedDb = getDatabase();
-    } catch {
-      resolvedDb = undefined;
-    }
-  }
-
-  // Fall back to Cloudflare binding only when runtime HTTP D1 config is unavailable.
+  // In Cloudflare Workers, prefer bound D1 first to avoid API-token auth failures.
   if (!resolvedDb) {
     try {
       const cloudflareContext = await getCloudflareContext({ async: true });
@@ -139,6 +130,15 @@ export async function createGraphQLContext(
       ) {
         resolvedDb = createDatabase(bindingDatabase as D1DatabaseLike);
       }
+    } catch {
+      resolvedDb = undefined;
+    }
+  }
+
+  // Fall back to HTTP D1 runtime config for local/dev and non-worker environments.
+  if (!resolvedDb) {
+    try {
+      resolvedDb = getDatabase();
     } catch {
       resolvedDb = undefined;
     }

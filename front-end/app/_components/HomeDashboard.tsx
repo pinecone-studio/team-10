@@ -374,14 +374,19 @@ function formatValue(value: number) {
 
 export function HomeDashboard() {
   const [tab, setTab] = useState<"all" | "pending" | "completed">("all");
-  const [now, setNow] = useState(() => formatClockParts(new Date()));
+  const [now, setNow] = useState<ReturnType<typeof formatClockParts> | null>(null);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
+    const updateNow = () => {
       setNow(formatClockParts(new Date()));
-    }, 1000);
+    };
+    const initialTimer = window.setTimeout(updateNow, 0);
+    const timer = window.setInterval(updateNow, 1000);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(timer);
+    };
   }, []);
 
   const visibleActivity = useMemo(() => {
@@ -400,9 +405,13 @@ export function HomeDashboard() {
                   Good afternoon, Batbayar!
                 </h1>
                 <div className="flex flex-wrap items-center gap-3 text-slate-600">
-                  <span className="text-lg">{now.time}</span>
+                  <span className="text-lg" suppressHydrationWarning>
+                    {now?.time ?? "--:--:--"}
+                  </span>
                   <span className="text-slate-400">|</span>
-                  <span className="text-sm">{now.date}</span>
+                  <span className="text-sm" suppressHydrationWarning>
+                    {now?.date ?? "Loading date..."}
+                  </span>
                 </div>
               </div>
 

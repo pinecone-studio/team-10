@@ -160,15 +160,22 @@ function formatNow(date: Date) {
 }
 
 export function HomeDashboard() {
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
+    const updateNow = () => {
+      setNow(new Date());
+    };
+    const initialTimer = window.setTimeout(updateNow, 0);
+    const timer = window.setInterval(updateNow, 1000);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(timer);
+    };
   }, []);
 
-  const formattedNow = useMemo(() => formatNow(now), [now]);
+  const formattedNow = useMemo(() => (now ? formatNow(now) : null), [now]);
 
   const filteredActivity = useMemo(() => {
     if (activityFilter === "all") {
@@ -188,9 +195,11 @@ export function HomeDashboard() {
                 Good afternoon, Batbayar!
               </h1>
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                <span>{formattedNow.time}</span>
+                <span suppressHydrationWarning>{formattedNow?.time ?? "--:--:--"}</span>
                 <span className="text-slate-400">|</span>
-                <span>{formattedNow.fullDate}</span>
+                <span suppressHydrationWarning>
+                  {formattedNow?.fullDate ?? "Loading date..."}
+                </span>
               </div>
             </div>
 
