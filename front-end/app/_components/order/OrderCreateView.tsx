@@ -19,9 +19,9 @@ export function OrderCreateView(props: OrderCreateViewProps) {
             <button
               type="button"
               onClick={() => void props.onFillDemo()}
-              className="inline-flex h-[40px] w-[140px] cursor-pointer items-center justify-center rounded-[6px] bg-[#0f172a] px-4 text-[14px] font-medium text-white transition duration-150 hover:bg-[#1f2937] active:scale-[0.98] active:bg-[#0f172a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
+              className="inline-flex min-h-12 min-w-[156px] cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-[rgba(15,23,42,0.08)] bg-[#0f172a] px-5 py-3 text-[14px] font-semibold leading-5 text-white shadow-[rgba(15,23,42,0.18)_0_1px_3px_0] transition-all duration-200 hover:-translate-y-[1px] hover:bg-[#1f2937] hover:shadow-[rgba(15,23,42,0.28)_0_4px_12px] active:translate-y-0 active:bg-[#111827] active:shadow-[rgba(15,23,42,0.18)_0_2px_4px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
             >
-              <span className="inline-flex items-center gap-[6px]">
+              <span className="inline-flex items-center gap-2 whitespace-nowrap">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="18"
@@ -36,7 +36,7 @@ export function OrderCreateView(props: OrderCreateViewProps) {
                   <path d="M12 3v18" />
                   <path d="M3 12h18" />
                 </svg>
-                <span>Demo Button</span>
+                <span className="whitespace-nowrap">Demo Button</span>
               </span>
             </button>
             <OrderNotificationButton onOpenDetail={props.onOpenDetail} />

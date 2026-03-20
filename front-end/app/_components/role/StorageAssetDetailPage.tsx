@@ -1450,6 +1450,7 @@ function humanizeConditionLabel(value: string) {
   if (value === "damaged") return "Damaged";
   if (value === "defective") return "Defective";
   if (value === "missing") return "Missing";
+  if (value === "incomplete") return "Incomplete";
   return value;
 }
 
@@ -1457,8 +1458,8 @@ function humanizeStatusLabel(value: string) {
   if (value === "available") return "Available";
   if (value === "assigned") return "Assigned";
   if (value === "inRepair") return "In Repair";
-  if (value === "pendingDisposal") return "Pending Disposal";
-  if (value === "pendingRetrieval") return "Pending Retrieval";
+  if (value === "pendingDisposal") return "Pending";
+  if (value === "pendingRetrieval") return "Pending";
   return value;
 }
 

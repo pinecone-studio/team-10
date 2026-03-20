@@ -492,7 +492,7 @@ export function HRDistributionSection() {
       ) : null}
 
       <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="distribution-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
           {activeTab === "distributions" ? (
             <DistributionOrder rows={distributionRows} onViewRow={setDetailRow} />
           ) : (

@@ -75,7 +75,7 @@ function StatusBadge({ status }: { status: StoredOrder["status"] }) {
 
   return (
     <span
-      className={`inline-flex rounded-full border px-[10px] py-[2px] text-[12px] font-normal leading-normal ${presentation.tone}`}
+      className={`inline-flex h-7 w-[98px] items-center justify-center rounded-full border px-3 text-[12px] font-medium leading-none ${presentation.tone}`}
     >
       {presentation.label}
     </span>

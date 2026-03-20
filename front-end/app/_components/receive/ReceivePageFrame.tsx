@@ -21,7 +21,7 @@ export function ReceivePageFrame(props: {
             <button
               type="button"
               onClick={props.onBack}
-              className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-[8px] py-2 text-[14px] font-medium text-[#1e293b] transition duration-150 hover:bg-[#f8fbff] hover:px-2 active:scale-[0.98] active:bg-[#eef5fd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] border border-[rgba(15,23,42,0.08)] bg-white px-4 py-3 text-[14px] font-semibold leading-5 text-[#0f172a] shadow-[rgba(15,23,42,0.04)_0_1px_3px_0] transition-all duration-200 hover:-translate-y-[1px] hover:border-[rgba(15,23,42,0.14)] hover:text-[#334155] hover:shadow-[rgba(15,23,42,0.10)_0_4px_12px] active:translate-y-0 active:bg-[#f0f4f8] active:text-[#475569] active:shadow-[rgba(15,23,42,0.06)_0_2px_4px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
             >
               <span aria-hidden="true">{"<-"}</span>
               <span>{props.backLabel}</span>

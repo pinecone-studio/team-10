@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 type StorageOption = {
   value: string;
   label: string;
+  shortLabel?: string;
   toneClassName: string;
   menuIconClassName: string;
   icon: React.ReactNode;
@@ -35,6 +36,7 @@ export const STORAGE_STATUS_OPTIONS: StorageOption[] = [
   {
     value: "pendingDisposal",
     label: "Pending Disposal",
+    shortLabel: "Pending",
     toneClassName: "border-[#ffc9ce] bg-[#fff0f1] text-[#d61f26]",
     menuIconClassName: "text-[#dc2626]",
     icon: <TrashIcon />,
@@ -42,6 +44,7 @@ export const STORAGE_STATUS_OPTIONS: StorageOption[] = [
   {
     value: "pendingRetrieval",
     label: "Pending Retrieval",
+    shortLabel: "Pending",
     toneClassName: "border-[#d7e3f4] bg-[#f6f9fd] text-[#52637a]",
     menuIconClassName: "text-[#64748b]",
     icon: <ReturnIcon />,
@@ -73,6 +76,13 @@ export const STORAGE_CONDITION_OPTIONS: StorageOption[] = [
   {
     value: "missing",
     label: "Missing",
+    toneClassName: "border-[#e5e7eb] bg-white text-[#4b5563]",
+    menuIconClassName: "text-[#64748b]",
+    icon: <MissingIcon />,
+  },
+  {
+    value: "incomplete",
+    label: "Incomplete",
     toneClassName: "border-[#e5e7eb] bg-white text-[#4b5563]",
     menuIconClassName: "text-[#64748b]",
     icon: <MissingIcon />,
@@ -302,27 +312,33 @@ function StorageBadge({
   compact?: boolean;
   iconOnly?: boolean;
 }) {
+  const badgeLabel = option.shortLabel ?? option.label;
+
   return (
     <span
-      className={`inline-flex max-w-full items-center rounded-full border font-medium leading-none ${
+      className={`inline-flex items-center justify-center rounded-full border font-medium ${
         iconOnly
           ? "h-7 w-7 justify-center px-0 text-[12px]"
           : compact
-            ? "h-7 gap-1 px-2 text-[12px]"
-            : "h-8 gap-[6px] px-3 text-[12px]"
+            ? "h-8 w-[104px] gap-1 px-2 text-[11px]"
+            : "h-8 w-[116px] gap-[6px] px-3 text-[12px]"
       } ${
         kind === "condition"
-          ? `${iconOnly ? "justify-center" : "justify-start"} text-[#6b7280] ${option.toneClassName}`
+          ? "text-[#6b7280] " + option.toneClassName
           : option.toneClassName
       }`}
     >
       <span
-        className={`${kind === "condition" ? option.menuIconClassName : ""} flex shrink-0`}
+        className={`${kind === "condition" ? option.menuIconClassName : ""} flex h-4 w-4 shrink-0 items-center justify-center`}
         aria-hidden="true"
       >
         {option.icon}
       </span>
-      {iconOnly ? null : <span className="whitespace-nowrap">{option.label}</span>}
+      {iconOnly ? null : (
+        <span className="truncate text-center leading-none">
+          {badgeLabel}
+        </span>
+      )}
     </span>
   );
 }
