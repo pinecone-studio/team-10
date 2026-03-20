@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import {
+  assetAttributes,
   assetAssignmentAcknowledgments,
   assetAssignmentRequests,
   assetDistributions,
@@ -42,6 +43,7 @@ type StorageAssetRow = {
   requestDate: string | null;
   requesterName: string | null;
   departmentName: string | null;
+  assetAttributesJson: string | null;
   unitCost: number | null;
   currencyCode: string | null;
   createdAt: string;
@@ -70,6 +72,10 @@ export type StorageAssetRecord = {
   requestDate: string;
   requester: string;
   department: string;
+  assetAttributes: Array<{
+    attributeName: string;
+    attributeValue: string;
+  }>;
   unitCost: number | null;
   currencyCode: string;
   createdAt: string;
@@ -115,6 +121,16 @@ const storageAssetSelection = {
   requestDate: sql<string | null>`${orders.requestDate}`.as("requestDate"),
   requesterName: sql<string | null>`${orders.requesterName}`.as("requesterName"),
   departmentName: sql<string | null>`${departments.departmentName}`.as("departmentName"),
+  assetAttributesJson: sql<string | null>`(
+    SELECT json_group_array(
+      json_object(
+        'attributeName', aa.attribute_name,
+        'attributeValue', aa.attribute_value
+      )
+    )
+    FROM asset_attributes aa
+    WHERE aa.asset_id = ${assets.id}
+  )`.as("assetAttributesJson"),
   unitCost: sql<number | null>`${orderItems.unitCost}`.as("unitCost"),
   currencyCode: sql<string | null>`${orderItems.currencyCode}`.as("currencyCode"),
   createdAt: sql<string>`${assets.createdAt}`.as("createdAt"),
@@ -179,11 +195,38 @@ async function mapStorageAsset(
     requestDate: fallbackRequestDate,
     requester: row.requesterName ?? "",
     department: row.departmentName ?? "IT Office",
+    assetAttributes: parseAssetAttributes(row.assetAttributesJson),
     unitCost: row.unitCost,
     currencyCode: row.currencyCode ?? "MNT",
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+function parseAssetAttributes(value: string | null) {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .filter(
+        (entry): entry is { attributeName?: string; attributeValue?: string } =>
+          typeof entry === "object" && entry !== null,
+      )
+      .map((entry) => ({
+        attributeName: entry.attributeName?.trim() ?? "",
+        attributeValue: entry.attributeValue?.trim() ?? "",
+      }))
+      .filter((entry) => entry.attributeName && entry.attributeValue);
+  } catch {
+    return [];
+  }
 }
 
 function buildStorageAssetsBaseQuery(db: AppDb) {

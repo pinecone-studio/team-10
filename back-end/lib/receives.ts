@@ -1,7 +1,9 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import {
+  assetAttributes,
   assets,
   conditionStatusValues,
+  orderItemAttributes,
   orderItems,
   orders,
   receivedConditionValues,
@@ -912,6 +914,40 @@ export async function receiveOrderItem(
 
     if (assetValues.length > 0 && createdAssetIds.length === 0) {
       throw new Error("Receive completed without creating asset records.");
+    }
+
+    if (createdAssetIds.length > 0) {
+      const sourceAttributes = await db
+        .select({
+          catalogAttributeDefinitionId:
+            orderItemAttributes.catalogAttributeDefinitionId,
+          attributeName: orderItemAttributes.attributeName,
+          attributeValue: orderItemAttributes.attributeValue,
+        })
+        .from(orderItemAttributes)
+        .where(eq(orderItemAttributes.orderItemId, orderItem.id))
+        .orderBy(asc(orderItemAttributes.id));
+
+      if (sourceAttributes.length > 0) {
+        const now = new Date().toISOString();
+        const attributeValues = createdAssetIds.flatMap((assetId) =>
+          sourceAttributes.map((attribute) => ({
+            assetId,
+            catalogAttributeDefinitionId: attribute.catalogAttributeDefinitionId,
+            attributeName: attribute.attributeName,
+            attributeValue: attribute.attributeValue,
+            createdAt: now,
+            updatedAt: now,
+          })),
+        );
+
+        for (const attributeBatch of chunkValues(
+          attributeValues,
+          ASSET_INSERT_BATCH_SIZE,
+        )) {
+          await db.insert(assetAttributes).values(attributeBatch).run();
+        }
+      }
     }
 
     const { remainingQuantity, remainingTotalCost } = await computeRemainingOrderState(

@@ -329,6 +329,7 @@ type StorageAsset {
   assetName: String!
   assetStatus: String!
   assignedEmployeeName: String
+  assetAttributes: [StorageAssetAttribute!]!
   category: String!
   conditionStatus: String!
   createdAt: String!
@@ -349,6 +350,11 @@ type StorageAsset {
   storageType: String
   unitCost: Float
   updatedAt: String!
+}
+
+type StorageAssetAttribute {
+  attributeName: String!
+  attributeValue: String!
 }
 
 type TerminationResult {

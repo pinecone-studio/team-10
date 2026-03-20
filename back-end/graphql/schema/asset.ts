@@ -1,4 +1,9 @@
 export const AssetTypeDefs = `
+  type StorageAssetAttribute {
+    attributeName: String!
+    attributeValue: String!
+  }
+
   type AssetLabelPdf {
     fileName: String!
     contentType: String!
@@ -28,6 +33,7 @@ export const AssetTypeDefs = `
     requestDate: String!
     requester: String!
     department: String!
+    assetAttributes: [StorageAssetAttribute!]!
     unitCost: Float
     currencyCode: String!
     createdAt: String!
