@@ -1,6 +1,6 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import PDFDocument from "pdfkit/js/pdfkit.standalone.js";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   assetAssignmentAcknowledgments,
   assetAssignmentRequests,
@@ -914,47 +914,85 @@ export async function resendAssignmentAcknowledgmentEmail(
   db: AppDb,
   runtimeConfig: RuntimeConfig,
   input: {
-    assignmentRequestId: number;
+    assignmentRequestId?: number | null;
+    assetId?: number | null;
+    employeeId?: number | null;
   },
 ): Promise<ResendAssignmentAcknowledgmentEmailResult> {
   try {
-    const [acknowledgment] = await db
-      .select({
-        acknowledgmentId: assetAssignmentAcknowledgments.id,
-        assignmentRequestId: assetAssignmentAcknowledgments.assignmentRequestId,
-        assetId: assetAssignmentAcknowledgments.assetId,
-        employeeId: assetAssignmentAcknowledgments.employeeId,
-        recipientName: assetAssignmentAcknowledgments.recipientName,
-        recipientEmail: assetAssignmentAcknowledgments.recipientEmail,
-        recipientRole: assetAssignmentAcknowledgments.recipientRole,
-        status: assetAssignmentAcknowledgments.status,
-        tokenConsumedAt: assetAssignmentAcknowledgments.tokenConsumedAt,
-        signedAt: assetAssignmentAcknowledgments.signedAt,
-        fallbackEmployeeName: users.fullName,
-        fallbackEmployeeEmail: users.email,
-        assetName: assets.assetName,
-        assetCode: assets.assetCode,
-      })
-      .from(assetAssignmentAcknowledgments)
-      .innerJoin(
-        assets,
-        eq(assetAssignmentAcknowledgments.assetId, assets.id),
-      )
-      .leftJoin(
-        users,
-        eq(assetAssignmentAcknowledgments.employeeId, users.id),
-      )
-      .where(
-        eq(
-          assetAssignmentAcknowledgments.assignmentRequestId,
-          input.assignmentRequestId,
-        ),
-      )
-      .limit(1);
+    const selection = {
+      acknowledgmentId: assetAssignmentAcknowledgments.id,
+      assignmentRequestId: assetAssignmentAcknowledgments.assignmentRequestId,
+      assetId: assetAssignmentAcknowledgments.assetId,
+      employeeId: assetAssignmentAcknowledgments.employeeId,
+      recipientName: assetAssignmentAcknowledgments.recipientName,
+      recipientEmail: assetAssignmentAcknowledgments.recipientEmail,
+      recipientRole: assetAssignmentAcknowledgments.recipientRole,
+      status: assetAssignmentAcknowledgments.status,
+      tokenConsumedAt: assetAssignmentAcknowledgments.tokenConsumedAt,
+      signedAt: assetAssignmentAcknowledgments.signedAt,
+      fallbackEmployeeName: users.fullName,
+      fallbackEmployeeEmail: users.email,
+      assetName: assets.assetName,
+      assetCode: assets.assetCode,
+    } as const;
+
+    const byAssignmentRequestId = Number.isInteger(input.assignmentRequestId)
+      ? await db
+          .select(selection)
+          .from(assetAssignmentAcknowledgments)
+          .innerJoin(
+            assets,
+            eq(assetAssignmentAcknowledgments.assetId, assets.id),
+          )
+          .leftJoin(
+            users,
+            eq(assetAssignmentAcknowledgments.employeeId, users.id),
+          )
+          .where(
+            eq(
+              assetAssignmentAcknowledgments.assignmentRequestId,
+              input.assignmentRequestId!,
+            ),
+          )
+          .limit(1)
+      : [];
+
+    const [acknowledgmentFromRequest] = byAssignmentRequestId;
+
+    const [acknowledgmentFromFallback] =
+      !acknowledgmentFromRequest &&
+      Number.isInteger(input.assetId) &&
+      Number.isInteger(input.employeeId)
+        ? await db
+            .select(selection)
+            .from(assetAssignmentAcknowledgments)
+            .innerJoin(
+              assets,
+              eq(assetAssignmentAcknowledgments.assetId, assets.id),
+            )
+            .leftJoin(
+              users,
+              eq(assetAssignmentAcknowledgments.employeeId, users.id),
+            )
+            .where(
+              and(
+                eq(assetAssignmentAcknowledgments.assetId, input.assetId!),
+                eq(assetAssignmentAcknowledgments.employeeId, input.employeeId!),
+                eq(assetAssignmentAcknowledgments.status, "pending"),
+                sql`${assetAssignmentAcknowledgments.tokenConsumedAt} IS NULL`,
+              ),
+            )
+            .orderBy(desc(assetAssignmentAcknowledgments.id))
+            .limit(1)
+        : [];
+
+    const acknowledgment =
+      acknowledgmentFromRequest ?? acknowledgmentFromFallback;
 
     if (!acknowledgment) {
       throw new Error(
-        `Pending acknowledgment was not found for assignment request ${input.assignmentRequestId}.`,
+        "Pending acknowledgment record was not found.",
       );
     }
 

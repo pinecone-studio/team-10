@@ -38,27 +38,27 @@ export async function sendDistributionNotification(
     let deliveryNote = "";
     if (
       distribution.status === "pendingHandover" &&
-      Number.isInteger(distribution.assignmentRequestId)
+      (Number.isInteger(distribution.assignmentRequestId) ||
+        (Number.isInteger(distribution.assetId) &&
+          Number.isInteger(distribution.employeeId)))
     ) {
       const resendResult = await resendAssignmentAcknowledgmentEmail(
         db,
         runtimeConfig,
         {
-          assignmentRequestId: distribution.assignmentRequestId!,
+          assignmentRequestId: distribution.assignmentRequestId,
+          assetId: distribution.assetId,
+          employeeId: distribution.employeeId,
         },
       );
 
-      if (resendResult.resent && resendResult.emailStatus !== "sent") {
+      if (!resendResult.resent || resendResult.emailStatus !== "sent") {
         throw new Error(
-          `Acknowledgment email resend failed (${resendResult.emailStatus}). ${resendResult.emailError ?? ""}`.trim(),
+          `Acknowledgment email resend failed (${resendResult.emailStatus}). ${resendResult.emailError ?? "No pending acknowledgment is available for resend."}`.trim(),
         );
       }
 
-      if (resendResult.resent) {
-        deliveryNote = " A fresh acknowledgment email link has been sent.";
-      } else if (resendResult.emailError) {
-        deliveryNote = ` ${resendResult.emailError}`;
-      }
+      deliveryNote = " A fresh acknowledgment email link has been sent.";
     }
 
     await createDistributionNotification(
