@@ -16,3 +16,7 @@ database_id = "791d560f-40ef-4d79-b69e-9d2a9e09d866"
 # Non-secret runtime values. Keep API tokens in Wrangler secrets.
 CLOUDFLARE_ACCOUNT_ID = "e2890305843a35feb5b1c3636a515f60"
 CLOUDFLARE_D1_DATABASE_ID = "791d560f-40ef-4d79-b69e-9d2a9e09d866"
+FRONTEND_APP_URL = "https://asset-management-taupe.vercel.app"
+SMTP_SERVICE = "gmail"
+EMAIL_FROM = "safekid.noreply@gmail.com"
+EMAIL_FROM_NAME = "Asset Management System"
