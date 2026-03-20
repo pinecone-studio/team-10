@@ -3,6 +3,12 @@
 import { useState } from "react";
 
 export type DistributionTab = "distributions" | "available-assets" | "employee-requests" | "pending-retrieval";
+export type DistributionStatusFilter =
+  | "All status"
+  | "Pending signature"
+  | "Signed"
+  | "Returned"
+  | "Pending Retrieval";
 
 const tabs = [
   ["distributions", "Distributions", 4, "min-w-[150px]"],
@@ -11,16 +17,23 @@ const tabs = [
   ["pending-retrieval", "Pending retrieval", 3, "min-w-[170px]"],
 ] as const satisfies ReadonlyArray<readonly [DistributionTab, string, number, string]>;
 
-const statuses = ["All status", "Pending signature", "Signed", "Expired", "Returned"] as const;
+const statuses: DistributionStatusFilter[] = [
+  "All status",
+  "Pending signature",
+  "Signed",
+  "Returned",
+  "Pending Retrieval",
+];
 
 export default function DistributionFilterPanel(props: {
   activeTab: DistributionTab;
   searchValue: string;
   onSearchChange: (value: string) => void;
   onTabChange: (value: DistributionTab) => void;
+  selectedStatus: DistributionStatusFilter;
+  onStatusChange: (value: DistributionStatusFilter) => void;
   counts: Record<DistributionTab, number>;
 }) {
-  const [selectedStatus, setSelectedStatus] = useState<(typeof statuses)[number]>("All status");
   const [open, setOpen] = useState(false);
 
   return (
@@ -45,7 +58,7 @@ export default function DistributionFilterPanel(props: {
               <span className="flex w-full items-center justify-between text-[14px] text-[#111827]">
                 <span className="flex items-center gap-3">
                   <FilterIcon />
-                  <span>{selectedStatus}</span>
+                  <span>{props.selectedStatus}</span>
                 </span>
                 <ChevronDown />
               </span>
@@ -58,13 +71,13 @@ export default function DistributionFilterPanel(props: {
                       key={status}
                       type="button"
                       onClick={() => {
-                        setSelectedStatus(status);
+                        props.onStatusChange(status);
                         setOpen(false);
                       }}
-                      className={`flex h-[44px] items-center justify-between rounded-[8px] px-4 text-left text-[14px] text-[#111827] ${selectedStatus === status ? "bg-[#edf3fb]" : "bg-transparent"}`}
+                      className={`flex h-[44px] items-center justify-between rounded-[8px] px-4 text-left text-[14px] text-[#111827] ${props.selectedStatus === status ? "bg-[#edf3fb]" : "bg-transparent"}`}
                     >
                       <span>{status}</span>
-                      {selectedStatus === status ? <CheckIcon /> : <span className="h-5 w-5" />}
+                      {props.selectedStatus === status ? <CheckIcon /> : <span className="h-5 w-5" />}
                     </button>
                   ))}
                 </div>

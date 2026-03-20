@@ -39,7 +39,10 @@ function Badge(props: { children: React.ReactNode; tone: string; icon: React.Rea
   );
 }
 
-export default function DistributionOrder(props: { rows: DistributionRecordDto[] }) {
+export default function DistributionOrder(props: {
+  rows: DistributionRecordDto[];
+  onViewRow?: (row: DistributionRecordDto) => void;
+}) {
   return (
     <section className="w-full rounded-[24px] border border-[#D8E8FF] bg-[rgba(255,255,255,0.7)] p-[12px]">
       <div className="overflow-hidden rounded-[20px] border border-[#D8E8FF] bg-white px-2">
@@ -79,7 +82,11 @@ export default function DistributionOrder(props: { rows: DistributionRecordDto[]
                 </Cell>
                 <Cell><StatusBadge status={statusLabel(row)} /></Cell>
                 <Cell className="pr-0 text-right">
-                  <button type="button" className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-[#0A0A0A] transition hover:border-[#E2E8F0] hover:bg-[#F8FAFC]">
+                  <button
+                    type="button"
+                    onClick={() => props.onViewRow?.(row)}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-[#0A0A0A] transition hover:border-[#E2E8F0] hover:bg-[#F8FAFC]"
+                  >
                     <EyeIcon />
                   </button>
                 </Cell>
@@ -105,9 +112,14 @@ function initialsOf(value: string) {
 }
 
 function statusLabel(record: DistributionRecordDto) {
-  const value = `${record.status} ${record.assetStatus}`.toLowerCase();
-  if (value.includes("deliver") || record.returnedAt) return "Delivered";
-  if (value.includes("sign")) return "Signed";
-  if (value.includes("transit") || value.includes("active")) return "In Transit";
+  const distributionStatus = record.status.toLowerCase();
+  const assetStatus = record.assetStatus.toLowerCase();
+
+  if (distributionStatus === "returned" || record.returnedAt) return "Delivered";
+  if (distributionStatus === "pendinghandover" || assetStatus === "pendingassignment") {
+    return "Pending";
+  }
+  if (distributionStatus === "active" && assetStatus === "assigned") return "Signed";
+  if (distributionStatus === "active") return "In Transit";
   return "Pending";
 }
