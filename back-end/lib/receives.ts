@@ -11,6 +11,7 @@ import {
   storage,
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
+import type { D1DatabaseLike } from "./d1.ts";
 import { buildAssetCode } from "./asset-codes.ts";
 import { deleteAssetImageFromR2, uploadAssetImageToR2 } from "./asset-images.ts";
 import type { RuntimeConfig } from "./context.ts";
@@ -19,6 +20,7 @@ import {
   resolveOfficeId,
   resolveOrderId,
   resolveUserId,
+  withReferenceSchemaCompatibility,
 } from "./reference-resolvers.ts";
 import { getOrderById, type OrderRecord } from "./orders.ts";
 
@@ -191,6 +193,91 @@ function buildQrCode(assetCode: string, serialNumber: string) {
   return `QR-${assetCode}-${serialNumber}`;
 }
 
+function isD1DatabaseLike(value: unknown): value is D1DatabaseLike {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "prepare" in value &&
+    typeof (value as { prepare?: unknown }).prepare === "function" &&
+    "batch" in value &&
+    typeof (value as { batch?: unknown }).batch === "function"
+  );
+}
+
+function getRawD1Client(db: AppDb): D1DatabaseLike | null {
+  const client = (db as unknown as { $client?: unknown }).$client;
+  return isD1DatabaseLike(client) ? client : null;
+}
+
+async function insertAssetsFallback(
+  db: AppDb,
+  assetValues: Array<{
+    receiveItemId: number;
+    assetCode: string;
+    qrCode: string;
+    assetName: string;
+    category: string;
+    itemType: string;
+    catalogItemTypeId: number | null;
+    catalogProductId: number | null;
+    serialNumber: string;
+    assetImageObjectKey: string | null;
+    assetImageFileName: string | null;
+    assetImageContentType: string | null;
+    conditionStatus: ConditionStatus;
+    assetStatus: "received";
+    currentStorageId: number | null;
+  }>,
+) {
+  const client = getRawD1Client(db);
+  if (!client || assetValues.length === 0) {
+    return false;
+  }
+
+  for (const assetValue of assetValues) {
+    await client
+      .prepare(
+        `INSERT INTO assets (
+          receive_item_id,
+          asset_code,
+          qr_code,
+          asset_name,
+          category,
+          item_type,
+          catalog_item_type_id,
+          catalog_product_id,
+          serial_number,
+          asset_image_object_key,
+          asset_image_file_name,
+          asset_image_content_type,
+          condition_status,
+          asset_status,
+          current_storage_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        assetValue.receiveItemId,
+        assetValue.assetCode,
+        assetValue.qrCode,
+        assetValue.assetName,
+        assetValue.category,
+        assetValue.itemType,
+        assetValue.catalogItemTypeId,
+        assetValue.catalogProductId,
+        assetValue.serialNumber,
+        assetValue.assetImageObjectKey,
+        assetValue.assetImageFileName,
+        assetValue.assetImageContentType,
+        assetValue.conditionStatus,
+        assetValue.assetStatus,
+        assetValue.currentStorageId,
+      )
+      .run();
+  }
+
+  return true;
+}
+
 async function getNextAssetCodeSequence(
   db: AppDb,
   assetName: string,
@@ -281,28 +368,31 @@ async function resolveStorageId(
   db: AppDb,
   storageLocation?: string | null,
 ) {
-  const normalizedStorageName = storageLocation?.trim() || "Main warehouse / Intake";
+  return withReferenceSchemaCompatibility(db, "resolveStorageId", async () => {
+    const normalizedStorageName =
+      storageLocation?.trim() || "Main warehouse / Intake";
 
-  const [existingStorage] = await db
-    .select({ id: storage.id })
-    .from(storage)
-    .where(eq(storage.storageName, normalizedStorageName))
-    .limit(1);
+    const [existingStorage] = await db
+      .select({ id: storage.id })
+      .from(storage)
+      .where(eq(storage.storageName, normalizedStorageName))
+      .limit(1);
 
-  if (existingStorage) {
-    return existingStorage.id;
-  }
+    if (existingStorage) {
+      return existingStorage.id;
+    }
 
-  const [createdStorage] = await db
-    .insert(storage)
-    .values({
-      storageName: normalizedStorageName,
-      storageType: "warehouse",
-      description: "Auto-created during receive intake flow",
-    })
-    .returning({ id: storage.id });
+    const [createdStorage] = await db
+      .insert(storage)
+      .values({
+        storageName: normalizedStorageName,
+        storageType: "warehouse",
+        description: "Auto-created during receive intake flow",
+      })
+      .returning({ id: storage.id });
 
-  return createdStorage.id;
+    return createdStorage.id;
+  });
 }
 
 async function moveReceivedAssetsToStorage(
@@ -796,7 +886,7 @@ export async function receiveOrderItem(
       }
     }
 
-    const createdAssetIds =
+    let createdAssetIds =
       assetValues.length > 0
         ? (
             await db
@@ -806,6 +896,23 @@ export async function receiveOrderItem(
               .orderBy(asc(assets.id))
           ).map((asset) => asset.id)
         : [];
+
+    if (assetValues.length > 0 && createdAssetIds.length === 0) {
+      const insertedViaFallback = await insertAssetsFallback(db, assetValues);
+      if (insertedViaFallback) {
+        createdAssetIds = (
+          await db
+            .select({ id: assets.id })
+            .from(assets)
+            .where(eq(assets.receiveItemId, receiveItem.id))
+            .orderBy(asc(assets.id))
+        ).map((asset) => asset.id);
+      }
+    }
+
+    if (assetValues.length > 0 && createdAssetIds.length === 0) {
+      throw new Error("Receive completed without creating asset records.");
+    }
 
     const { remainingQuantity, remainingTotalCost } = await computeRemainingOrderState(
       db,

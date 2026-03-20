@@ -14,7 +14,7 @@ import {
   storage,
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
-import { parseIntegerId } from "./reference-resolvers.ts";
+import { parseIntegerId, withReferenceSchemaCompatibility } from "./reference-resolvers.ts";
 import { loadAssetImageDataUrlFromR2 } from "./asset-images.ts";
 import type { RuntimeConfig } from "./context.ts";
 
@@ -203,8 +203,13 @@ export async function listStorageAssets(
   runtimeConfig?: RuntimeConfig,
 ): Promise<StorageAssetRecord[]> {
   try {
-    const rows = await buildStorageAssetsBaseQuery(db)
-      .orderBy(asc(storage.storageName), asc(assets.assetName), asc(assets.id));
+    const rows = await withReferenceSchemaCompatibility(
+      db,
+      "listStorageAssets",
+      () =>
+        buildStorageAssetsBaseQuery(db)
+          .orderBy(asc(storage.storageName), asc(assets.assetName), asc(assets.id)),
+    );
 
     return Promise.all(rows.map((row) => mapStorageAsset(row, runtimeConfig)));
   } catch (error) {
@@ -215,12 +220,17 @@ export async function listStorageAssets(
 
 export async function listStorageLocationNames(db: AppDb): Promise<string[]> {
   try {
-    const rows = await db
-      .select({
-        storageName: storage.storageName,
-      })
-      .from(storage)
-      .orderBy(asc(storage.storageName), asc(storage.id));
+    const rows = await withReferenceSchemaCompatibility(
+      db,
+      "listStorageLocationNames",
+      () =>
+        db
+          .select({
+            storageName: storage.storageName,
+          })
+          .from(storage)
+          .orderBy(asc(storage.storageName), asc(storage.id)),
+    );
 
     return rows
       .map((row) => row.storageName.trim())
@@ -256,9 +266,14 @@ export async function getStorageAssetDetail(
       filters.push(eq(assets.qrCode, normalizedQrCode));
     }
 
-    const [row] = await buildStorageAssetsBaseQuery(db)
-      .where(or(...filters))
-      .limit(1);
+    const [row] = await withReferenceSchemaCompatibility(
+      db,
+      "getStorageAssetDetail",
+      () =>
+        buildStorageAssetsBaseQuery(db)
+          .where(or(...filters))
+          .limit(1),
+    );
 
     return row ? mapStorageAsset(row, runtimeConfig) : null;
   } catch (error) {
