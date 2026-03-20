@@ -57,7 +57,7 @@ export function FinanceApprovalSection() {
       title="Finance Approval"
       subtitle="Review new order requests before they move to receiving."
       backgroundClassName="bg-[radial-gradient(circle_at_top_left,#d8ebff_0%,#eef6ff_34%,#ffffff_72%)]"
-      contentAlignment="left"
+      contentAlignment="center"
       contentWidthClassName="max-w-[1240px]"
       outerClassName="pl-[44px] pr-[60px] pt-[60px] pb-[24px]"
     >
