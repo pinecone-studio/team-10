@@ -46,13 +46,11 @@ function getMatchingDistributionRecords(
   records: DistributionRecordDto[],
 ) {
   if (!asset) return null;
+  const normalizedAssetId = asset.id.trim();
+  if (!normalizedAssetId) return [];
+
   return records
-    .filter(
-      (record) =>
-        record.assetId === asset.id ||
-        record.assetCode === asset.assetCode ||
-        (!!asset.serialNumber && record.serialNumber === asset.serialNumber),
-    )
+    .filter((record) => record.assetId === normalizedAssetId)
     .sort(
       (left, right) =>
         new Date(right.distributedAt || right.createdAt).getTime() -
