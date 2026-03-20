@@ -18,8 +18,8 @@ export function OrderWorkspaceRoot({ role, roleLabel }: Props) {
       title="Inventory order"
       subtitle={`Create and track procurement requests for ${roleLabel}.`}
       hideHeader
-      contentAlignment="left"
-      contentWidthClassName="max-w-none"
+      contentAlignment="center"
+      contentWidthClassName="max-w-[1440px]"
       outerClassName="px-0 py-0"
       contentPaddingClassName=""
       backgroundClassName="bg-[#f8fafc]"
