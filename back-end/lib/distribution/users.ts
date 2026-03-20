@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { storage, users } from "../../database/schema.ts";
 import type { AppDb } from "../db.ts";
+import { withReferenceSchemaCompatibility } from "../reference-resolvers.ts";
 
 export type EmployeeDirectoryRecord = {
   id: string;
@@ -80,25 +81,32 @@ export async function resolveEmployeeByName(db: AppDb, employeeName: string) {
 }
 
 export async function resolveStorageId(db: AppDb, storageName?: string | null) {
-  const normalizedStorageName = storageName?.trim() || "Main warehouse / Intake";
-  const [existingStorage] = await db
-    .select({ id: storage.id })
-    .from(storage)
-    .where(eq(storage.storageName, normalizedStorageName))
-    .limit(1);
+  return withReferenceSchemaCompatibility(
+    db,
+    "distribution.resolveStorageId",
+    async () => {
+      const normalizedStorageName =
+        storageName?.trim() || "Main warehouse / Intake";
+      const [existingStorage] = await db
+        .select({ id: storage.id })
+        .from(storage)
+        .where(eq(storage.storageName, normalizedStorageName))
+        .limit(1);
 
-  if (existingStorage) {
-    return existingStorage.id;
-  }
+      if (existingStorage) {
+        return existingStorage.id;
+      }
 
-  const [createdStorage] = await db
-    .insert(storage)
-    .values({
-      storageName: normalizedStorageName,
-      storageType: "warehouse",
-      description: "Auto-created during distribution return",
-    })
-    .returning({ id: storage.id });
+      const [createdStorage] = await db
+        .insert(storage)
+        .values({
+          storageName: normalizedStorageName,
+          storageType: "warehouse",
+          description: "Auto-created during distribution return",
+        })
+        .returning({ id: storage.id });
 
-  return createdStorage.id;
+      return createdStorage.id;
+    },
+  );
 }

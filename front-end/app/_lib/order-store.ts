@@ -741,15 +741,24 @@ export async function reviewFinanceOrderItems(input: {
 }
 
 export async function receiveInventoryOrder(input: ReceiveOrderInput) {
+  const fallbackSnapshot = cachedOrdersSnapshot.length > 0
+    ? cachedOrdersSnapshot
+    : readPersistedOrders();
   const orderSnapshot = isPersistedOrderId(input.orderId)
-    ? await refreshOrdersStore().catch(() => cachedOrdersSnapshot)
-    : cachedOrdersSnapshot;
-  const existingOrder = orderSnapshot.find((order) => order.id === input.orderId);
+    ? await refreshOrdersStore().catch(() => fallbackSnapshot)
+    : fallbackSnapshot;
+  const existingOrder =
+    orderSnapshot.find((order) => order.id === input.orderId) ??
+    fallbackSnapshot.find((order) => order.id === input.orderId);
   if (!existingOrder) {
     throw new Error("Order not found.");
   }
 
-  const targetItem = existingOrder.items.find((item) => isSameOrderItem(item, input));
+  const targetItem =
+    existingOrder.items.find((item) => isSameOrderItem(item, input)) ??
+    fallbackSnapshot
+      .find((order) => order.id === input.orderId)
+      ?.items.find((item) => isSameOrderItem(item, input));
   if (!targetItem) {
     throw new Error("Order item not found.");
   }
