@@ -254,7 +254,7 @@ export async function getStorageAssetDetail(
       throw new Error("Either asset id or qrCode is required.");
     }
 
-    const filters = [];
+    const filters: ReturnType<typeof eq>[] = [];
     if (normalizedId) {
       if (/^\d+$/.test(normalizedId)) {
         filters.push(eq(assets.id, parseIntegerId("Asset id", normalizedId)));
