@@ -212,7 +212,6 @@ export const users = sqliteTable(
   "users",
   {
     id: idColumn(),
-    clerkUserId: text("clerk_user_id").unique(),
     email: text("email").notNull().unique(),
     fullName: text("full_name").notNull(),
     role: text("role", { enum: roleValues }).notNull(),

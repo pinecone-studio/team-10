@@ -13,37 +13,33 @@ export async function buildDemoDraftItems() {
     const itCategory =
       initialCatalogSnapshot.categories.find((category) => category.name === "IT Equipment") ??
       (await createCatalogCategory("IT Equipment")).category;
-    const sportsCategory =
-      initialCatalogSnapshot.categories.find(
-        (category) => category.name === "Sports Equipment",
-      ) ?? (await createCatalogCategory("Sports Equipment")).category;
     const latestProductsByCode = new Map(
       (await loadCatalogSnapshot()).products.map((product) => [product.code, product]),
     );
-    const logitechProduct =
-      latestProductsByCode.get("LMXK001") ??
+    const dellLaptopProduct =
+      latestProductsByCode.get("DLL5440") ??
       (await createCatalogProduct({
-        name: "Logitech MX Keys",
-        code: "LMXK001",
+        name: "Dell Latitude 5440 Laptop",
+        code: "DLL5440",
         categoryId: itCategory.id,
-        itemTypeName: "Keyboard",
+        itemTypeName: "Laptop",
         currencyCode: "USD",
-        defaultPrice: 399,
-        description: "Wireless productivity keyboard for office demo ordering.",
+        defaultPrice: 1450,
+        description: "Business laptop for demo inventory ordering.",
         imageUrl: null,
         status: "active",
         attributes: [],
       }));
-    const basketballProduct =
-      latestProductsByCode.get("WLSN001") ??
+    const lenovoLaptopProduct =
+      latestProductsByCode.get("LNVE14") ??
       (await createCatalogProduct({
-        name: "Wilson Evolution Basketball",
-        code: "WLSN001",
-        categoryId: sportsCategory.id,
-        itemTypeName: "Ball",
+        name: "Lenovo ThinkPad E14 Laptop",
+        code: "LNVE14",
+        categoryId: itCategory.id,
+        itemTypeName: "Laptop",
         currencyCode: "USD",
-        defaultPrice: 79,
-        description: "Indoor game ball used as a realistic non-IT demo item.",
+        defaultPrice: 1320,
+        description: "Office laptop for demo inventory ordering.",
         imageUrl: null,
         status: "active",
         attributes: [],
@@ -51,22 +47,22 @@ export async function buildDemoDraftItems() {
 
     return [
       createDemoItem(
-        logitechProduct.id,
-        logitechProduct.name,
-        logitechProduct.code,
-        logitechProduct.unit,
-        2,
-        logitechProduct.defaultPrice,
-        logitechProduct.currencyCode,
+        dellLaptopProduct.id,
+        dellLaptopProduct.name,
+        dellLaptopProduct.code,
+        dellLaptopProduct.unit,
+        1,
+        dellLaptopProduct.defaultPrice,
+        dellLaptopProduct.currencyCode,
       ),
       createDemoItem(
-        basketballProduct.id,
-        basketballProduct.name,
-        basketballProduct.code,
-        basketballProduct.unit,
+        lenovoLaptopProduct.id,
+        lenovoLaptopProduct.name,
+        lenovoLaptopProduct.code,
+        lenovoLaptopProduct.unit,
         1,
-        basketballProduct.defaultPrice,
-        basketballProduct.currencyCode,
+        lenovoLaptopProduct.defaultPrice,
+        lenovoLaptopProduct.currencyCode,
       ),
     ] satisfies OrderItem[];
   } catch (error) {
@@ -74,21 +70,21 @@ export async function buildDemoDraftItems() {
 
     return [
       createDemoItem(
-        "demo-logitech-mx-keys",
-        "Logitech MX Keys",
-        "LMXK001",
+        "demo-dell-latitude-5440",
+        "Dell Latitude 5440 Laptop",
+        "DLL5440",
         "pcs",
-        2,
-        399,
+        1,
+        1450,
         "USD",
       ),
       createDemoItem(
-        "demo-wilson-evolution-basketball",
-        "Wilson Evolution Basketball",
-        "WLSN001",
+        "demo-lenovo-thinkpad-e14",
+        "Lenovo ThinkPad E14 Laptop",
+        "LNVE14",
         "pcs",
         1,
-        79,
+        1320,
         "USD",
       ),
     ] satisfies OrderItem[];

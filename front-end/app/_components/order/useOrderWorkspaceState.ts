@@ -208,7 +208,7 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
       });
       setGoodsDrafts([
         ...demoDraftItems.map((item) => ({
-          id: item.catalogId,
+          id: `${item.catalogId}-${item.code}-${Math.random().toString(36).slice(2, 10)}`,
           itemName: item.name,
           code: item.code,
           quantity: String(item.quantity),
@@ -216,7 +216,6 @@ export function useOrderWorkspaceState(canViewHistory: boolean) {
           unitPrice: String(item.unitPrice),
           currencyCode: item.currencyCode,
         })),
-        createGoodsDraft(getNextGoodsCode(demoDraftItems.map((item) => item.code))),
       ]);
       setPermissionMessage("Please review this demo inventory order for sample office procurement items.");
     },

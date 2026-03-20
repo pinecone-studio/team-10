@@ -11,11 +11,169 @@ import {
   catalogStatusValues,
 } from "../database/schema.ts";
 import type { AppDb } from "./db.ts";
+import type { D1DatabaseLike } from "./d1.ts";
 import { parseIntegerId, resolveUserId } from "./reference-resolvers.ts";
 
 type CatalogStatus = (typeof catalogStatusValues)[number];
 type CatalogSource = (typeof catalogSourceValues)[number];
 type CurrencyCode = (typeof currencyCodeValues)[number];
+
+const catalogCompatibilityTableStatements = [
+  `CREATE TABLE IF NOT EXISTS catalog_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    display_name TEXT NOT NULL,
+    normalized_name TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'draft',
+    source TEXT NOT NULL DEFAULT 'manual',
+    created_by_user_id INTEGER,
+    approved_by_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS catalog_item_types (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER NOT NULL,
+    display_name TEXT NOT NULL,
+    normalized_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    source TEXT NOT NULL DEFAULT 'manual',
+    created_by_user_id INTEGER,
+    approved_by_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES catalog_categories(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE (category_id, normalized_name)
+  )`,
+  `CREATE TABLE IF NOT EXISTS catalog_products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_type_id INTEGER NOT NULL,
+    display_name TEXT NOT NULL,
+    normalized_name TEXT NOT NULL,
+    product_code TEXT NOT NULL UNIQUE,
+    unit TEXT NOT NULL DEFAULT 'pcs',
+    default_currency_code TEXT NOT NULL DEFAULT 'MNT',
+    default_unit_cost REAL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    source TEXT NOT NULL DEFAULT 'manual',
+    created_by_user_id INTEGER,
+    approved_by_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (item_type_id) REFERENCES catalog_item_types(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE (item_type_id, normalized_name)
+  )`,
+  `CREATE TABLE IF NOT EXISTS catalog_attribute_definitions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_type_id INTEGER NOT NULL,
+    display_name TEXT NOT NULL,
+    normalized_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    source TEXT NOT NULL DEFAULT 'manual',
+    created_by_user_id INTEGER,
+    approved_by_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (item_type_id) REFERENCES catalog_item_types(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE (item_type_id, normalized_name)
+  )`,
+  `CREATE TABLE IF NOT EXISTS catalog_product_images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    image_url TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES catalog_products(id) ON DELETE CASCADE,
+    UNIQUE (product_id, image_url)
+  )`,
+  `CREATE TABLE IF NOT EXISTS catalog_product_attributes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    catalog_attribute_definition_id INTEGER,
+    attribute_name TEXT NOT NULL,
+    attribute_value TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES catalog_products(id) ON DELETE CASCADE,
+    FOREIGN KEY (catalog_attribute_definition_id) REFERENCES catalog_attribute_definitions(id) ON DELETE SET NULL,
+    UNIQUE (product_id, attribute_name)
+  )`,
+] as const;
+
+let catalogSchemaCompatibilityReady = false;
+
+function isD1DatabaseLike(value: unknown): value is D1DatabaseLike {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "prepare" in value &&
+    typeof (value as { prepare?: unknown }).prepare === "function" &&
+    "batch" in value &&
+    typeof (value as { batch?: unknown }).batch === "function"
+  );
+}
+
+function getRawD1Client(db: AppDb): D1DatabaseLike | null {
+  const client = (db as unknown as { $client?: unknown }).$client;
+  return isD1DatabaseLike(client) ? client : null;
+}
+
+async function ensureCatalogSchemaCompatibility(db: AppDb) {
+  if (catalogSchemaCompatibilityReady) {
+    return;
+  }
+
+  const client = getRawD1Client(db);
+  if (!client) {
+    return;
+  }
+
+  for (const statement of catalogCompatibilityTableStatements) {
+    await client.prepare(statement).run();
+  }
+
+  catalogSchemaCompatibilityReady = true;
+}
+
+function isCatalogSchemaError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("no such table") ||
+    message.includes("no such column") ||
+    message.includes("has no column named")
+  );
+}
+
+async function withCatalogSchemaCompatibility<T>(
+  db: AppDb,
+  label: string,
+  action: () => Promise<T>,
+) {
+  try {
+    await ensureCatalogSchemaCompatibility(db);
+    return await action();
+  } catch (error) {
+    if (!isCatalogSchemaError(error)) {
+      throw error;
+    }
+
+    console.warn(`${label} schema compatibility retry triggered.`, error);
+    catalogSchemaCompatibilityReady = false;
+    await ensureCatalogSchemaCompatibility(db);
+    return action();
+  }
+}
 
 type CatalogCategoryRow = {
   id: number;
@@ -553,10 +711,15 @@ export async function listCatalogCategories(
   db: AppDb,
 ): Promise<CatalogCategoryRecord[]> {
   try {
-    const rows = await db
-      .select(categorySelection)
-      .from(catalogCategories)
-      .orderBy(asc(catalogCategories.displayName));
+    const rows = await withCatalogSchemaCompatibility(
+      db,
+      "listCatalogCategories",
+      () =>
+        db
+          .select(categorySelection)
+          .from(catalogCategories)
+          .orderBy(asc(catalogCategories.displayName)),
+    );
 
     return rows.map(mapCategory);
   } catch (error) {
@@ -570,19 +733,25 @@ export async function listCatalogItemTypes(
   input: ListCatalogItemTypesInput = {},
 ): Promise<CatalogItemTypeRecord[]> {
   try {
-    const query = db
-      .select(itemTypeSelection)
-      .from(catalogItemTypes)
-      .orderBy(asc(catalogItemTypes.displayName));
+    const rows = await withCatalogSchemaCompatibility(
+      db,
+      "listCatalogItemTypes",
+      async () => {
+        const query = db
+          .select(itemTypeSelection)
+          .from(catalogItemTypes)
+          .orderBy(asc(catalogItemTypes.displayName));
 
-    const rows = input.categoryId
-      ? await query.where(
-          eq(
-            catalogItemTypes.categoryId,
-            parseIntegerId("categoryId", input.categoryId),
-          ),
-        )
-      : await query;
+        return input.categoryId
+          ? query.where(
+              eq(
+                catalogItemTypes.categoryId,
+                parseIntegerId("categoryId", input.categoryId),
+              ),
+            )
+          : query;
+      },
+    );
 
     return rows.map(mapItemType);
   } catch (error) {
@@ -596,42 +765,47 @@ export async function listCatalogProducts(
   input: ListCatalogProductsInput = {},
 ): Promise<CatalogProductRecord[]> {
   try {
-    const categoryId = input.categoryId
-      ? parseIntegerId("categoryId", input.categoryId)
-      : null;
-    const itemTypeId = input.itemTypeId
-      ? parseIntegerId("itemTypeId", input.itemTypeId)
-      : null;
-    const status = input.status ? parseCatalogStatus(input.status) : null;
+    const rows = await withCatalogSchemaCompatibility(
+      db,
+      "listCatalogProducts",
+      async () => {
+        const categoryId = input.categoryId
+          ? parseIntegerId("categoryId", input.categoryId)
+          : null;
+        const itemTypeId = input.itemTypeId
+          ? parseIntegerId("itemTypeId", input.itemTypeId)
+          : null;
+        const status = input.status ? parseCatalogStatus(input.status) : null;
 
-    const filters: ReturnType<typeof eq>[] = [];
-    if (categoryId !== null) {
-      filters.push(eq(catalogItemTypes.categoryId, categoryId));
-    }
-    if (itemTypeId !== null) {
-      filters.push(eq(catalogProducts.itemTypeId, itemTypeId));
-    }
-    if (status !== null) {
-      filters.push(eq(catalogProducts.status, status));
-    }
+        const filters: ReturnType<typeof eq>[] = [];
+        if (categoryId !== null) {
+          filters.push(eq(catalogItemTypes.categoryId, categoryId));
+        }
+        if (itemTypeId !== null) {
+          filters.push(eq(catalogProducts.itemTypeId, itemTypeId));
+        }
+        if (status !== null) {
+          filters.push(eq(catalogProducts.status, status));
+        }
 
-    const joinedQuery = db
-      .select(productSelection)
-      .from(catalogProducts)
-      .innerJoin(
-        catalogItemTypes,
-        eq(catalogProducts.itemTypeId, catalogItemTypes.id),
-      );
+        const joinedQuery = db
+          .select(productSelection)
+          .from(catalogProducts)
+          .innerJoin(
+            catalogItemTypes,
+            eq(catalogProducts.itemTypeId, catalogItemTypes.id),
+          );
 
-    const rows =
-      filters.length > 0
-        ? await joinedQuery
-            .where(filters.length === 1 ? filters[0] : and(...filters))
-            .orderBy(asc(catalogProducts.displayName))
-        : await db
-            .select(productSelection)
-            .from(catalogProducts)
-            .orderBy(asc(catalogProducts.displayName));
+        return filters.length > 0
+          ? joinedQuery
+              .where(filters.length === 1 ? filters[0] : and(...filters))
+              .orderBy(asc(catalogProducts.displayName))
+          : db
+              .select(productSelection)
+              .from(catalogProducts)
+              .orderBy(asc(catalogProducts.displayName));
+      },
+    );
 
     const productIds = rows.map((row) => row.id);
     const relations = await listProductRelations(db, productIds);
@@ -649,11 +823,16 @@ export async function getCatalogProductById(
 ): Promise<CatalogProductRecord | null> {
   try {
     const numericId = parseIntegerId("Catalog product id", id);
-    const [row] = await db
-      .select(productSelection)
-      .from(catalogProducts)
-      .where(eq(catalogProducts.id, numericId))
-      .limit(1);
+    const [row] = await withCatalogSchemaCompatibility(
+      db,
+      `getCatalogProductById:${id}`,
+      () =>
+        db
+          .select(productSelection)
+          .from(catalogProducts)
+          .where(eq(catalogProducts.id, numericId))
+          .limit(1),
+    );
 
     if (!row) return null;
 
@@ -672,50 +851,52 @@ export async function createCatalogCategory(
   input: CreateCatalogCategoryInput,
   currentUserId?: string | null,
 ): Promise<CatalogCategoryRecord> {
-  const displayName = input.displayName.trim();
-  if (!displayName) {
-    throw new Error("Category name is required.");
-  }
+  return withCatalogSchemaCompatibility(db, "createCatalogCategory", async () => {
+    const displayName = input.displayName.trim();
+    if (!displayName) {
+      throw new Error("Category name is required.");
+    }
 
-  const normalizedName = normalizeCatalogName(displayName);
-  const createdByUserId = await resolveOptionalCurrentUserId(db, currentUserId);
+    const normalizedName = normalizeCatalogName(displayName);
+    const createdByUserId = await resolveOptionalCurrentUserId(db, currentUserId);
 
-  const [existingCategory] = await db
-    .select(categorySelection)
-    .from(catalogCategories)
-    .where(eq(catalogCategories.normalizedName, normalizedName))
-    .limit(1);
+    const [existingCategory] = await db
+      .select(categorySelection)
+      .from(catalogCategories)
+      .where(eq(catalogCategories.normalizedName, normalizedName))
+      .limit(1);
 
-  if (existingCategory) {
-    return mapCategory(existingCategory);
-  }
+    if (existingCategory) {
+      return mapCategory(existingCategory);
+    }
 
-  const [categoryRow] = await db
-    .insert(catalogCategories)
-    .values({
-      displayName,
-      normalizedName,
-      status: "active",
-      source: "manual",
-      createdByUserId,
-      approvedByUserId: null,
-    })
-    .returning(categorySelection);
+    const [categoryRow] = await db
+      .insert(catalogCategories)
+      .values({
+        displayName,
+        normalizedName,
+        status: "active",
+        source: "manual",
+        createdByUserId,
+        approvedByUserId: null,
+      })
+      .returning(categorySelection);
 
-  await db
-    .insert(catalogItemTypes)
-    .values({
-      categoryId: categoryRow.id,
-      displayName: "General",
-      normalizedName: "general",
-      status: "active",
-      source: "manual",
-      createdByUserId,
-      approvedByUserId: null,
-    })
-    .run();
+    await db
+      .insert(catalogItemTypes)
+      .values({
+        categoryId: categoryRow.id,
+        displayName: "General",
+        normalizedName: "general",
+        status: "active",
+        source: "manual",
+        createdByUserId,
+        approvedByUserId: null,
+      })
+      .run();
 
-  return mapCategory(categoryRow);
+    return mapCategory(categoryRow);
+  });
 }
 
 export async function deleteCatalogCategory(

@@ -255,7 +255,6 @@ CREATE TABLE `storage` (
 CREATE UNIQUE INDEX `storage_storage_name_unique` ON `storage` (`storage_name`);--> statement-breakpoint
 CREATE TABLE `users` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`clerk_user_id` text,
 	`email` text NOT NULL,
 	`full_name` text NOT NULL,
 	`role` text NOT NULL,
@@ -265,6 +264,5 @@ CREATE TABLE `users` (
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `users_clerk_user_id_unique` ON `users` (`clerk_user_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);--> statement-breakpoint
 CREATE INDEX `idx_users_role` ON `users` (`role`);

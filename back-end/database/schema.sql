@@ -73,7 +73,6 @@ INSERT OR IGNORE INTO departments (department_name, description) VALUES
 
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  clerk_user_id TEXT UNIQUE,
   email TEXT NOT NULL UNIQUE,
   full_name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (
@@ -876,7 +875,6 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_clerk_user_id ON users(clerk_user_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_position ON users(position);
 CREATE INDEX IF NOT EXISTS idx_users_department_id ON users(department_id);

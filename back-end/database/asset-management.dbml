@@ -177,7 +177,6 @@ Table departments {
 
 Table users {
   id integer [pk, increment]
-  clerkUserId text [unique, note: 'Optional external auth ID']
   email text [not null, unique]
   fullName text [not null]
   role roleEnum [not null]
@@ -190,7 +189,6 @@ Table users {
 
   Indexes {
     email [name: 'idx_users_email']
-    clerkUserId [name: 'idx_users_clerk_user_id']
     role [name: 'idx_users_role']
     position [name: 'idx_users_position']
     departmentId [name: 'idx_users_department_id']

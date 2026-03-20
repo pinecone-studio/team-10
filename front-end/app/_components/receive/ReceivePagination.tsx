@@ -37,11 +37,11 @@ export function ReceivePagination({
       <div className="flex flex-col gap-[16px] md:flex-row md:items-center md:gap-[28px] xl:ml-auto">
         <div className="flex items-center gap-[12px]">
           <span className="font-medium text-[#101828]">Rows per page</span>
-          <label className="inline-flex h-[36px] w-[68px] items-center justify-between rounded-[8px] border border-[#d0d5dd] bg-white px-[10px] text-[#344054] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+          <label className="relative inline-flex h-[36px] w-[68px] items-center rounded-[8px] border border-[#d0d5dd] bg-white px-[10px] text-[#344054] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
             <select
               value={rowsPerPage}
               onChange={(event) => onRowsPerPageChange(Number(event.target.value))}
-              className="w-full appearance-none bg-transparent outline-none"
+              className="w-full appearance-none bg-transparent pr-5 leading-none outline-none"
             >
               {rowsPerPageOptions.map((option) => (
                 <option key={option} value={option}>
@@ -49,7 +49,26 @@ export function ReceivePagination({
                 </option>
               ))}
             </select>
-            <span aria-hidden="true">⌄</span>
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[10px] top-1/2 -translate-y-1/2 text-[#667085]"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M3 4.5L6 7.5L9 4.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
           </label>
         </div>
 
@@ -64,10 +83,15 @@ export function ReceivePagination({
             disabled={currentPage === 1}
             className={BUTTON_CLASS_NAME}
           >
-            ‹
+            {"<"}
           </button>
-          <button type="button" onClick={onFirstPage} disabled={currentPage === 1} className={BUTTON_CLASS_NAME}>
-            «
+          <button
+            type="button"
+            onClick={onFirstPage}
+            disabled={currentPage === 1}
+            className={BUTTON_CLASS_NAME}
+          >
+            {"<<"}
           </button>
           <button
             type="button"
@@ -75,7 +99,7 @@ export function ReceivePagination({
             disabled={currentPage === totalPages}
             className={BUTTON_CLASS_NAME}
           >
-            ›
+            {">"}
           </button>
           <button
             type="button"
@@ -83,7 +107,7 @@ export function ReceivePagination({
             disabled={currentPage === totalPages}
             className={BUTTON_CLASS_NAME}
           >
-            »
+            {">>"}
           </button>
         </div>
       </div>

@@ -21,7 +21,7 @@ export function ReceivePageFrame(props: {
             <button
               type="button"
               onClick={props.onBack}
-              className="mb-5 inline-flex min-h-[2.75rem] w-auto cursor-pointer items-center justify-center gap-2 rounded-[0.25rem] border border-[rgba(0,0,0,0.1)] bg-white px-5 py-3 text-[15px] font-semibold leading-[1.2] text-[rgba(0,0,0,0.85)] shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all duration-[250ms] select-none hover:-translate-y-px hover:border-[rgba(0,0,0,0.15)] hover:text-[rgba(0,0,0,0.65)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] focus:border-[rgba(0,0,0,0.15)] focus:text-[rgba(0,0,0,0.65)] focus:shadow-[0_4px_12px_rgba(0,0,0,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2 active:translate-y-0 active:border-[rgba(0,0,0,0.15)] active:bg-[#F0F0F1] active:text-[rgba(0,0,0,0.65)] active:shadow-[0_2px_4px_rgba(0,0,0,0.06)]"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] border border-[rgba(15,23,42,0.08)] bg-white px-4 py-3 text-[14px] font-semibold leading-5 text-[#0f172a] shadow-[rgba(15,23,42,0.04)_0_1px_3px_0] transition-all duration-200 hover:-translate-y-[1px] hover:border-[rgba(15,23,42,0.14)] hover:text-[#334155] hover:shadow-[rgba(15,23,42,0.10)_0_4px_12px] active:translate-y-0 active:bg-[#f0f4f8] active:text-[#475569] active:shadow-[rgba(15,23,42,0.06)_0_2px_4px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c7d2fe] focus-visible:ring-offset-2"
             >
               <span aria-hidden="true">{"<-"}</span>
               <span>{props.backLabel}</span>
