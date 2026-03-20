@@ -27,6 +27,10 @@ export type StorageAssetDto = {
   requestDate: string;
   requester: string;
   department: string;
+  assetAttributes: Array<{
+    attributeName: string;
+    attributeValue: string;
+  }>;
   unitCost: number | null;
   currencyCode: string;
   createdAt: string;
@@ -113,6 +117,10 @@ function buildLocalStorageAssets(): Promise<StorageAssetDto[]> {
               requestDate: order.requestDate,
               requester: order.requester,
               department: order.department,
+              assetAttributes: intakeMetadata.specifications.map((specification) => ({
+                attributeName: specification.name,
+                attributeValue: specification.value,
+              })),
               unitCost: item.unitPrice,
               currencyCode: item.currencyCode,
               createdAt: order.createdAt,
@@ -183,6 +191,10 @@ const storageAssetListFields = gql`
     requestDate
     requester
     department
+    assetAttributes {
+      attributeName
+      attributeValue
+    }
     unitCost
     currencyCode
     createdAt
@@ -213,6 +225,10 @@ const storageAssetDetailFields = gql`
     requestDate
     requester
     department
+    assetAttributes {
+      attributeName
+      attributeValue
+    }
     unitCost
     currencyCode
     createdAt

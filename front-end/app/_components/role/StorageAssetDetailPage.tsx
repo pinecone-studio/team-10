@@ -207,20 +207,19 @@ export function StorageAssetDetailPage({
     const records = matchedHandoff ?? [];
     const currentRecord =
       records.find((record) => record.status === "active") ?? null;
-    const latestRecord = records[0] ?? null;
+    const shouldUseFallbackOwner =
+      asset && normalizeStorageStatus(asset.assetStatus) !== "available";
     const currentHolderName =
       currentRecord?.employeeName ??
-      latestRecord?.employeeName ??
-      qrContext?.ownerName ??
-      linkedOrder?.assignedTo ??
-      linkedOrder?.requester ??
-      asset?.requester ??
+      (shouldUseFallbackOwner
+        ? qrContext?.ownerName ?? linkedOrder?.assignedTo
+        : null) ??
       "Unassigned";
     const currentHolderRole =
       currentRecord?.recipientRole ??
-      latestRecord?.recipientRole ??
-      qrContext?.ownerRole ??
-      linkedOrder?.assignedRole ??
+      (shouldUseFallbackOwner
+        ? qrContext?.ownerRole ?? linkedOrder?.assignedRole
+        : null) ??
       "Unassigned";
     const previousSessions = records
       .filter((record) => !currentRecord || record.id !== currentRecord.id)
@@ -269,20 +268,27 @@ export function StorageAssetDetailPage({
         asset?.storageName ??
         "Main warehouse / Intake",
       specifications:
-        intakeMetadata.specifications.length > 0
-          ? intakeMetadata.specifications
-              .map(
-                (specification, index) =>
-                  `${index + 1}. ${specification.name}: ${specification.value}`,
-              )
-              .join("\n")
+          asset?.assetAttributes.length
+            ? asset.assetAttributes
+                .map(
+                  (attribute, index) =>
+                    `${index + 1}. ${attribute.attributeName}: ${attribute.attributeValue}`,
+                )
+                .join("\n")
+            : intakeMetadata.specifications.length > 0
+            ? intakeMetadata.specifications
+                .map(
+                  (specification, index) =>
+                    `${index + 1}. ${specification.name}: ${specification.value}`,
+                )
+                .join("\n")
           : "No specifications",
     };
-  }, [
-    asset,
-    intakeMetadata.specifications,
-    linkedOrder,
-    matchedHandoff,
+    }, [
+      asset,
+      intakeMetadata.specifications,
+      linkedOrder,
+      matchedHandoff,
     qrContext,
   ]);
 
